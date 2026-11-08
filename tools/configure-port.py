@@ -220,6 +220,23 @@ for name, spec in manifest['components'].items():
 
 print('Windows blueprint overlay configured:', bp)
 
+# Normalize dependency output even if MSVC has only a Chinese language pack.
+hook = (root / 'tools/build/msvc-deps.cmake').as_posix()
+for name in manifest['components']:
+    if name == 'qtbase':
+        continue
+    matches = list((bp / 'kde').rglob(f'{name}.py'))
+    if len(matches) != 1:
+        continue
+    target = matches[0]
+    text = target.read_text(encoding='utf-8')
+    marker = '# Locale-independent MSVC dependency output'
+    argument = '-DCMAKE_PROJECT_INCLUDE=' + hook
+    if marker not in text:
+        insertion = '        super().__init__(**kwargs)\n        ' + marker + '\n        self.subinfo.options.configure.args += [' + repr(argument) + ']'
+        text = text.replace('        super().__init__(**kwargs)', insertion, 1)
+        save(target, text)
+
 # Resolve framework tiers from this pinned checkout rather than assuming tiers.
 for target in (bp / 'kde/plasma').rglob('*.py'):
     text = target.read_text(encoding='utf-8')

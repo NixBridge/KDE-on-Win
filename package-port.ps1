@@ -103,6 +103,7 @@ foreach ($name in 'start-konsole.cmd', 'start-process-monitor.cmd', 'start-dolph
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'third_party') -Destination $stage -Recurse
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs') -Destination $stage -Recurse
 foreach ($name in 'install-notifications.cmd', 'install-notifications.ps1', 'start-notifications.ps1', 'notifications-settings.cmd') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }

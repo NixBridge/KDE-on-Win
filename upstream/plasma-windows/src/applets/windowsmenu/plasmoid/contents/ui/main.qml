@@ -52,6 +52,8 @@ PlasmoidItem {
 
         // Sidebar: All Apps + user-configured directories.
         property var sidebarDirs: []
+        property int contextRow: -1
+        Shortcut { sequence: StandardKey.Find; enabled: root.expanded; onActivated: search.forceActiveFocus() }
 
         function sidebarModel() {
             const cats = []
@@ -108,6 +110,10 @@ PlasmoidItem {
                         width: sidebarView.width
                         text: modelData.name
                         icon.name: modelData.icon || "folder-symbolic"
+                        contentItem: RowLayout {
+                            Image { source: "image://breezefileicons/" + encodeURIComponent("breeze:theme:" + (modelData.icon || "folder")); Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: Kirigami.Units.iconSizes.small; fillMode: Image.PreserveAspectFit }
+                            PC3.Label { text: sideButton.text; textFormat: Text.PlainText; Layout.fillWidth: true; elide: Text.ElideRight }
+                        }
                         highlighted: sidebarView.currentIndex === index
                         onClicked: {
                             sidebarView.currentIndex = index
@@ -131,6 +137,19 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: Kirigami.Units.smallSpacing
+                RowLayout {
+                    Layout.fillWidth: true
+                    PC3.TextField {
+                        id: search
+                        Layout.fillWidth: true
+                        placeholderText: i18n("Search this folder…")
+                        text: menu.searchText
+                        onTextEdited: menu.searchText = text
+                        Keys.onDownPressed: { grid.forceActiveFocus(); grid.currentIndex = 0 }
+                        Keys.onEscapePressed: { if (text.length) menu.searchText = ""; else root.expanded = false }
+                    }
+                    PC3.ToolButton { icon.name: "view-refresh"; text: i18n("Refresh"); onClicked: menu.reload() }
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -141,7 +160,8 @@ PlasmoidItem {
                     }
                     Kirigami.Heading {
                         level: 4
-                        text: menu.isRoot ? "" : menu.directory.split("/").pop()
+                        text: menu.directoryName
+                        textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                     }
                     Item {
@@ -151,13 +171,19 @@ PlasmoidItem {
 
                 GridView {
                     id: grid
+                    PC3.ScrollBar.vertical: PC3.ScrollBar { }
+                    focus: true
+                    Keys.onReturnPressed: { if (menu.activate(currentIndex)) root.expanded = false }
+                    Keys.onEscapePressed: root.expanded = false
+                    Keys.onBackPressed: menu.goParent()
+                    Keys.onPressed: (event) => { if (event.key === Qt.Key_Backspace) { menu.goParent(); event.accepted = true } }
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     model: menu
                     clip: true
                     cacheBuffer: Kirigami.Units.gridUnit * 8
-                    cellWidth: width / Math.max(1, Math.floor(width / (Kirigami.Units.gridUnit * 7)))
-                    cellHeight: Kirigami.Units.gridUnit * 6
+                    cellWidth: width / menu.columns
+                    cellHeight: Math.max(Kirigami.Units.gridUnit * 6, menu.iconPixels + Kirigami.Units.gridUnit * 4)
 
                 delegate: Item {
                     id: delegateItem
@@ -169,7 +195,7 @@ PlasmoidItem {
                         anchors.margins: Kirigami.Units.smallSpacing
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.highlightColor
-                        opacity: itemMouse.containsMouse ? 0.16 : 0
+                        opacity: itemMouse.containsMouse || (grid.activeFocus && grid.currentIndex === index) ? 0.16 : 0
                     }
                     ColumnLayout {
                         anchors.fill: parent
@@ -178,25 +204,20 @@ PlasmoidItem {
 
                         Item {
                             Layout.alignment: Qt.AlignHCenter
-                            width: Kirigami.Units.iconSizes.medium
-                            height: Kirigami.Units.iconSizes.medium
+                            width: menu.iconPixels
+                            height: menu.iconPixels
 
-                            Kirigami.Icon {
-                                anchors.fill: parent
-                                source: "folder"
-                                visible: model.isDir
-                            }
                             Image {
                                 anchors.fill: parent
-                                source: model.isDir ? "" : "image://breezefileicons/" + encodeURIComponent("breeze:" + model.linkPath)
+                                source: "image://breezefileicons/" + encodeURIComponent("breeze:" + (model.isDir ? "theme:" + (model.icon || "folder") : model.linkPath))
                                 fillMode: Image.PreserveAspectFit
-                                visible: !model.isDir
                             }
                         }
                         PC3.Label {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             text: model.name
+                            textFormat: Text.PlainText
                             elide: Text.ElideRight
                             wrapMode: Text.Wrap
                             maximumLineCount: 2
@@ -211,13 +232,12 @@ PlasmoidItem {
                         id: itemMouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: {
-                            if (model.isDir) {
-                                menu.directory = model.path
-                            } else {
-                                menu.launch(index)
-                                root.expanded = false
-                            }
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: (mouse) => {
+                            grid.currentIndex = index
+                            grid.forceActiveFocus()
+                            if (mouse.button === Qt.RightButton) { menuRoot.contextRow = index; itemMenu.popup(); return }
+                            if (menu.activate(index)) root.expanded = false
                         }
                     }
                     PC3.ToolTip.visible: itemMouse.containsMouse
@@ -227,6 +247,11 @@ PlasmoidItem {
             }
         }
 
+        PC3.Menu {
+            id: itemMenu
+            PC3.MenuItem { text: i18n("Open"); icon.name: "document-open"; onClicked: { if (menu.activate(menuRoot.contextRow)) root.expanded = false } }
+            PC3.MenuItem { text: i18n("Open Location"); icon.name: "folder-open"; onClicked: { menu.reveal(menuRoot.contextRow); root.expanded = false } }
+        }
         PC3.Menu {
             id: powerMenu
             title: i18n("Power")

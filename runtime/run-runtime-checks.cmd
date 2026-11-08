@@ -19,6 +19,12 @@ set "NOTIFY_EXIT=%ERRORLEVEL%"
 set "DECORATION_EXIT=%ERRORLEVEL%"
 "%~dp0bin\plasma-text-editor.exe" --self-test -platform offscreen >> "%~dp0runtime-checks.txt" 2>&1
 set "EDITOR_EXIT=%ERRORLEVEL%"
+"%~dp0bin\personalization-probe.exe" >> "%~dp0runtime-checks.txt" 2>&1
+set "PREFS_EXIT=%ERRORLEVEL%"
+"%~dp0bin\startmenu-model-probe.exe" -platform offscreen >> "%~dp0runtime-checks.txt" 2>&1
+set "STARTMENU_EXIT=%ERRORLEVEL%"
+"%~dp0bin\qml-import-probe.exe" --check-startmenu-model -platform offscreen >> "%~dp0runtime-checks.txt" 2>&1
+set "MENU_PLUGIN_EXIT=%ERRORLEVEL%"
 "%~dp0bin\context-menu-probe.exe" >> "%~dp0runtime-checks.txt" 2>&1
 set "MENU_EXIT=%ERRORLEVEL%"
 type "%~dp0runtime-checks.txt"
@@ -31,4 +37,7 @@ if not "%TASKBAR_EXIT%"=="0" exit /b %TASKBAR_EXIT%
 if not "%NOTIFY_EXIT%"=="0" exit /b %NOTIFY_EXIT%
 if not "%DECORATION_EXIT%"=="0" exit /b %DECORATION_EXIT%
 if not "%EDITOR_EXIT%"=="0" exit /b %EDITOR_EXIT%
+if not "%PREFS_EXIT%"=="0" exit /b %PREFS_EXIT%
+if not "%STARTMENU_EXIT%"=="0" exit /b %STARTMENU_EXIT%
+if not "%MENU_PLUGIN_EXIT%"=="0" exit /b %MENU_PLUGIN_EXIT%
 exit /b %MENU_EXIT%

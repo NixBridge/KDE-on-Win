@@ -1,0 +1,6 @@
+BasedOnStyle: WebKit
+IndentWidth: 4
+ColumnLimit: 120
+SortIncludes: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false

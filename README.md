@@ -40,6 +40,8 @@ documented in [docs/DESKTOP_TOOLS.md](docs/DESKTOP_TOOLS.md).
 Global standard-caption decorations and settings/editor replacements are covered
 in [docs/WINDOW_DECORATIONS.md](docs/WINDOW_DECORATIONS.md). Windows notification
 bridging and its VM permission setup are in [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md).
+Start menu folders, icons, search and live panel/wallpaper preferences are covered
+in [docs/PERSONALIZATION.md](docs/PERSONALIZATION.md).
 
 ```text
 build-port.ps1 / package-port.ps1   Build and full-runtime package entry points

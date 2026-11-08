@@ -1,4 +1,6 @@
 @echo off
+rem Prefer English diagnostics; msvc-deps.cmake also supports Chinese-only VS.
+set "VSLANG=1033"
 if not defined CRAFT_ROOT set "CRAFT_ROOT=D:\KDE\CraftRoot"
 if not defined VCVARS64 set "VCVARS64=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 call "%VCVARS64%"

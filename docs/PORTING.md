@@ -62,3 +62,16 @@ Tray balloons use Plasma's notification service. Modern toast mirroring uses a
 separate package with Windows notification-listener permission; see
 [NOTIFICATIONS.md](NOTIFICATIONS.md). SDK manifest validation and isolated relay
 tests pass; real registration, permission and toast delivery need VM acceptance.
+
+## Start menu and personalization
+
+The menu merges same-name user/system folders, preserves AppsFolder entries,
+filters without rescanning, renders category icons and retains unmatched native
+icons. Keyboard/context actions, sidebar folder management and menu sizing are
+available alongside queued panel/wallpaper preferences and application font size.
+See [PERSONALIZATION.md](PERSONALIZATION.md).
+
+MSVC dependency output is normalized for Ninja, including Chinese-only VS and
+CP936/UTF-8 output. The CMake hook is used by pinned Craft blueprints and the
+native project. An actual Chinese-path header fixture verifies that header-only
+changes schedule a rebuild. Related desktop modules are rebuilt for the overlay.

@@ -39,6 +39,7 @@ for relative, source in sources.items():
     'Includes Breeze standard Windows captions, project-owned System Settings and Text Editor. Custom titlebars are skipped.\n'
     'For modern Windows notification forwarding, run install-notifications.cmd in the VM and grant notification access.\n'
     'Legacy tray balloons are forwarded by trayhost. Native Windows toast banners can still appear; Windows Do Not Disturb suppresses those.\n'
+    'System Settings now includes Panel, Desktop, Start Menu and Diagnostics pages. See docs/PERSONALIZATION.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

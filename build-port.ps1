@@ -1,5 +1,6 @@
 param([string]$CraftRoot = 'D:\KDE\CraftRoot', [string]$Blueprints = 'D:\KDE\blueprints')
 $ErrorActionPreference = 'Stop'
+$env:VSLANG = '1033'
 $proxyUri = [System.Net.WebRequest]::DefaultWebProxy.GetProxy([uri]'https://github.com')
 if ($proxyUri.Host -ne 'github.com') {
     $env:https_proxy = $proxyUri.AbsoluteUri
