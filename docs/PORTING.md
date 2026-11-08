@@ -41,3 +41,7 @@ Logs include `%TEMP%\plasmashell-debug.log` and `runtime-checks.txt`. Host build
 Global shortcut service integration remains incomplete. Dolphin has no Baloo full-disk indexing or PackageKit installation integration. Linux-specific services and all KDE applications are not included.
 
 The root LICENSE contains an explicit AI-generation/assistance disclosure followed by the unmodified GPL v3 text. Independently authored integration code uses GPL-3.0-or-later; vendored source and patches retain their original per-file licenses. See AI_NOTICE.md and THIRD_PARTY.md.
+
+## Default taskbar launcher migration
+
+Windows panels explicitly pin the packaged Dolphin launcher instead of inheriting Linux-only default launchers. At session startup, a background D-Bus migration waits for task-manager widgets, removes only unavailable Discover/System Settings default pins, and preserves other user pins. It is idempotent. An already running session can invoke repair-taskbar-pins.cmd. The VM confirmed that the preceding opaque context-menu fix works.

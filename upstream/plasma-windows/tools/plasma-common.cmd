@@ -132,6 +132,9 @@ rem :pc_start_services - kactivitymanagerd + kded6 + trayhost in the background
 rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
+if exist "%CRAFT_ROOT%\repair-taskbar-pins.ps1" (
+    start "plasma-taskbar-migration" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\repair-taskbar-pins.ps1" -CraftRoot "%CRAFT_ROOT%"
+)
 start "plasma-activitymanager" "%CRAFT_BIN%\kactivitymanagerd.exe"
 start "plasma-kded" "%CRAFT_BIN%\kded6.exe"
 rem Windows tray host (SNI bridge into the Plasma system tray); its log

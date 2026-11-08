@@ -93,6 +93,9 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-vm-probe.cmd') -Des
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-qml-probe.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-runtime-checks.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\apply-panel-opacity.cmd') -Destination $stage
+foreach ($name in 'repair-taskbar-pins.cmd', 'repair-taskbar-pins.ps1', 'taskbar-pins-migration.js') {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
+}
 foreach ($script in Get-ChildItem -LiteralPath $stage -File | Where-Object { $_.Extension -in '.cmd', '.ps1' }) {
     $text = [IO.File]::ReadAllText($script.FullName).Replace("`r`n", "`n").Replace("`n", "`r`n")
     [IO.File]::WriteAllText($script.FullName, $text, [Text.UTF8Encoding]::new($false))

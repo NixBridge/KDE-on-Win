@@ -46,6 +46,9 @@
     "run-runtime-checks.cmd": "runtime/run-runtime-checks.cmd",
     "AI_NOTICE.md": "AI_NOTICE.md",
     "LICENSE.project": "LICENSE",
-    "THIRD_PARTY.md": "THIRD_PARTY.md"
+    "THIRD_PARTY.md": "THIRD_PARTY.md",
+    "repair-taskbar-pins.cmd": "runtime/repair-taskbar-pins.cmd",
+    "repair-taskbar-pins.ps1": "runtime/repair-taskbar-pins.ps1",
+    "taskbar-pins-migration.js": "runtime/taskbar-pins-migration.js"
   }
 }

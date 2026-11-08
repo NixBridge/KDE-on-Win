@@ -33,6 +33,7 @@ for relative, source in sources.items():
     'Only the Plasma panel is kept above Explorer taskbars; the desktop wallpaper is not made topmost.\n'
     'Run apply-panel-opacity.cmd after startup if the existing panel is transparent.\n'
     'Built-in Windows programs use equivalent Breeze icons; QWidget context menus use an opaque topmost Windows path.\n'
+    'Unavailable Linux default taskbar pins are repaired automatically after startup. Run repair-taskbar-pins.cmd to retry in a running session.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:
