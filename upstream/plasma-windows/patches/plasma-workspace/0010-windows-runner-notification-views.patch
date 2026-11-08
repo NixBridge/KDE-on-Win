@@ -1,0 +1,328 @@
+diff --git a/applets/kicker/dashboardwindow.cpp b/applets/kicker/dashboardwindow.cpp
+index ee8fe9a..6180ebe 100644
+--- a/applets/kicker/dashboardwindow.cpp
++++ b/applets/kicker/dashboardwindow.cpp
+@@ -4,6 +4,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ 
++#include "config-X11.h"
+ #include "dashboardwindow.h"
+ 
+ #include <QCoreApplication>
+@@ -12,7 +13,9 @@
+ 
+ #include <KWindowEffects>
+ #include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ 
+ #include <PlasmaQuick/PlasmaShellWaylandIntegration>
+ 
+@@ -118,7 +121,9 @@ void DashboardWindow::toggle()
+     } else {
+         showFullScreen();
+         if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+             KX11Extras::forceActiveWindow(winId());
++#endif
+         }
+     }
+ }
+@@ -130,7 +135,9 @@ bool DashboardWindow::event(QEvent *event)
+ 
+         if (pSEvent->surfaceEventType() == QPlatformSurfaceEvent::SurfaceCreated) {
+             if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+                 KX11Extras::setState(winId(), NET::SkipTaskbar | NET::SkipPager | NET::SkipSwitcher);
++#endif
+             }
+         }
+     } else if (event->type() == QEvent::Show) {
+@@ -144,7 +151,9 @@ bool DashboardWindow::event(QEvent *event)
+             m_mainItem->setVisible(false);
+         }
+     } else if (event->type() == QEvent::FocusOut && KWindowSystem::isPlatformX11() && isVisible()) {
++#if HAVE_X11
+         KX11Extras::forceActiveWindow(winId());
++#endif
+     }
+ 
+     return QQuickWindow::event(event);
+diff --git a/applets/kicker/windowsystem.cpp b/applets/kicker/windowsystem.cpp
+index a805f4e..67dc192 100644
+--- a/applets/kicker/windowsystem.cpp
++++ b/applets/kicker/windowsystem.cpp
+@@ -4,12 +4,15 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ 
++#include "config-X11.h"
+ #include "windowsystem.h"
+ 
+ #include <QQuickItem>
+ 
+ #include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ 
+ WindowSystem::WindowSystem(QObject *parent)
+     : QObject(parent)
+@@ -31,8 +34,16 @@ bool WindowSystem::eventFilter(QObject *watched, QEvent *event)
+ void WindowSystem::forceActive(QQuickItem *item)
+ {
+     if (item) {
+-        if (auto window = item->window(); KWindowSystem::isPlatformX11() && window) {
+-            KX11Extras::forceActiveWindow(window->winId());
++        if (auto window = item->window()) {
++#ifdef Q_OS_WIN
++            KWindowSystem::activateWindow(window);
++#else
++            if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
++                KX11Extras::forceActiveWindow(window->winId());
++#endif
++            }
++#endif
+         }
+     }
+ }
+diff --git a/applets/notifications/notificationapplet.cpp b/applets/notifications/notificationapplet.cpp
+index 1dffc64..663a3b4 100644
+--- a/applets/notifications/notificationapplet.cpp
++++ b/applets/notifications/notificationapplet.cpp
+@@ -4,6 +4,7 @@
+     SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+ */
+ 
++#include "config-X11.h"
+ #include "notificationapplet.h"
+ 
+ #include <QGuiApplication>
+@@ -12,7 +13,10 @@
+ #include <QQuickWindow>
+ #include <QScreen>
+ 
++#include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ 
+ #include <Plasma/Containment>
+ #include <PlasmaQuick/AppletQuickItem>
+@@ -96,7 +100,11 @@ bool NotificationApplet::isPrimaryScreen(const QRect &rect) const
+ void NotificationApplet::forceActivateWindow(QWindow *window)
+ {
+     if (window && window->winId()) {
++#ifdef Q_OS_WIN
++        KWindowSystem::activateWindow(window);
++#else
+         KX11Extras::forceActiveWindow(window->winId());
++#endif
+     }
+ }
+ 
+diff --git a/applets/notifications/notificationwindow.cpp b/applets/notifications/notificationwindow.cpp
+index 6126577..855f763 100644
+--- a/applets/notifications/notificationwindow.cpp
++++ b/applets/notifications/notificationwindow.cpp
+@@ -3,10 +3,13 @@
+   SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+ */
+ 
++#include "config-X11.h"
+ #include "notificationwindow.h"
+ 
+ #include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ #include <PlasmaQuick/PlasmaShellWaylandIntegration>
+ 
+ NotificationWindow::NotificationWindow()
+@@ -16,8 +19,10 @@ NotificationWindow::NotificationWindow()
+     PlasmaShellWaylandIntegration::get(this)->setTakesFocus(false);
+ 
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::setOnAllDesktops(winId(), true);
+         KX11Extras::setType(winId(), NET::Notification);
++#endif
+     }
+ }
+ 
+@@ -57,7 +62,9 @@ void NotificationWindow::setIsCritical(bool critical)
+     PlasmaShellWaylandIntegration::get(this)->setRole(role);
+ 
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::setType(winId(), critical ? NET::CriticalNotification : NET::Notification);
++#endif
+     }
+ 
+     Q_EMIT isCriticalChanged();
+diff --git a/krunner/view.cpp b/krunner/view.cpp
+index 19cc8bb..b92f6b8 100644
+--- a/krunner/view.cpp
++++ b/krunner/view.cpp
+@@ -4,6 +4,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ 
++#include "config-X11.h"
+ #include "view.h"
+ 
+ #include <QAction>
+@@ -23,9 +24,13 @@
+ #include <KService>
+ #include <KWindowEffects>
+ #include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Window>
++#endif
+ #include <algorithm>
+ #include <qnamespace.h>
+ 
+@@ -42,7 +47,9 @@ View::View(PlasmaQuick::SharedQmlEngine *engine, QWindow *)
+     KCrash::initialize();
+ 
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         m_x11Positioner = new X11WindowScreenRelativePositioner(this);
++#endif
+     }
+ 
+     // used only by screen readers
+@@ -154,12 +161,16 @@ void View::loadConfig()
+ void View::showEvent(QShowEvent *event)
+ {
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::setOnAllDesktops(winId(), true);
++#endif
+     }
+     QQuickWindow::showEvent(event);
+     requestActivate();
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::forceActiveWindow(winId());
++#endif
+     }
+ }
+ 
+@@ -168,6 +179,7 @@ void View::positionOnScreen()
+     const auto screens = QGuiApplication::screens();
+     auto screenIt = screens.cend();
+     if (KWindowSystem::isPlatformWayland() && m_floating) {
++#ifndef Q_OS_WIN
+         auto message = QDBusMessage::createMethodCall(u"org.kde.KWin"_s, u"/KWin"_s, u"org.kde.KWin"_s, u"activeOutputName"_s);
+         QDBusReply<QString> reply = QDBusConnection::sessionBus().call(message);
+         if (reply.isValid()) {
+@@ -176,7 +188,8 @@ void View::positionOnScreen()
+                 return screen->name() == activeOutputName;
+             });
+         }
+-    } else if (KWindowSystem::isPlatformX11()) {
++#endif
++    } else if (!KWindowSystem::isPlatformWayland()) {
+         screenIt = std::ranges::find_if(screens, [](QScreen *screen) {
+             return screen->geometry().contains(QCursor::pos(screen));
+         });
+@@ -186,6 +199,7 @@ void View::positionOnScreen()
+     setScreen(shownOnScreen);
+ 
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         auto layerWindow = LayerShellQt::Window::get(this);
+         layerWindow->setAnchors(LayerShellQt::Window::AnchorTop);
+         layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+@@ -197,7 +211,9 @@ void View::positionOnScreen()
+         } else {
+             layerWindow->setWantsToBeOnActiveScreen(true);
+         }
++#endif
+     } else if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         m_x11Positioner->setAnchors(Qt::TopEdge);
+         m_x11Positioner->setMargins(margins());
+         if (m_floating) {
+@@ -206,14 +222,24 @@ void View::positionOnScreen()
+             KX11Extras::setOnAllDesktops(winId(), true);
+         }
+         KX11Extras::setState(winId(), NET::SkipTaskbar | NET::SkipPager);
++#endif
++    }
++#ifdef Q_OS_WIN
++    else {
++        const QRect available = shownOnScreen->availableGeometry();
++        const int top = available.top() + (m_floating ? available.height() / 3 : 0);
++        setPosition(QPoint(available.left() + (available.width() - width()) / 2, top));
+     }
++#endif
+ }
+ 
+ void View::toggleDisplay()
+ {
+     if (isVisible() && !QGuiApplication::focusWindow() && KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::forceActiveWindow(winId());
+         return;
++#endif
+     }
+     if (isVisible()) {
+         setVisible(false);
+diff --git a/ksplash/ksplashqml/splashwindow.cpp b/ksplash/ksplashqml/splashwindow.cpp
+index 861d3eb..d4b092b 100644
+--- a/ksplash/ksplashqml/splashwindow.cpp
++++ b/ksplash/ksplashqml/splashwindow.cpp
+@@ -4,6 +4,7 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ 
++#include "config-X11.h"
+ #include "splashwindow.h"
+ #include "debug.h"
+ #include "splashapp.h"
+@@ -18,7 +19,9 @@
+ #include <QSurfaceFormat>
+ #include <QTimer>
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Window>
++#endif
+ 
+ #include <KPackage/Package>
+ #include <KPackage/PackageLoader>
+@@ -35,6 +38,7 @@ SplashWindow::SplashWindow(bool testing, bool window, const QString &theme, QScr
+     , m_theme(theme)
+ {
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         if (auto layerShellWindow = LayerShellQt::Window::get(this)) {
+             layerShellWindow->setScope(QStringLiteral("ksplashqml"));
+             layerShellWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+@@ -42,6 +46,7 @@ SplashWindow::SplashWindow(bool testing, bool window, const QString &theme, QScr
+             layerShellWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityExclusive);
+             layerShellWindow->setScreen(screen);
+         }
++#endif
+     }
+ 
+     setCursor(Qt::BlankCursor);
+@@ -56,8 +61,10 @@ SplashWindow::SplashWindow(bool testing, bool window, const QString &theme, QScr
+ 
+     if (!m_testing && !m_window) {
+         if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+             // X11 specific hint only on X11
+             setFlags(Qt::BypassWindowManagerHint);
++#endif
+         } else if (!KWindowSystem::isPlatformWayland()) {
+             // on other platforms go fullscreen
+             // on Wayland we cannot go fullscreen due to QTBUG 54883

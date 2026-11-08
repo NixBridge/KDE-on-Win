@@ -1,0 +1,16 @@
+{
+  "portRepository": "https://github.com/ChPu437/plasma-windows.git",
+  "portCommit": "7078fc706f780c4c28e90f222467a04d816df48b",
+  "blueprintRepository": "https://invent.kde.org/packaging/craft-blueprints-kde.git",
+  "blueprintCommit": "30527eb928471d393b8c6291f0fa0bbef870c123",
+  "craftCommit": "b575e0de959a88ed68be065ee01bcb8e13725eab",
+  "qt": "6.11.1",
+  "frameworks": "6.28.0",
+  "plasma": "6.7.4",
+  "compiler": "msvc2022-x86_64",
+  "craftRoot": "D:/KDE/CraftRoot",
+  "sourceVerification": "source-verification.json",
+  "git_components": {
+    "kio-extras": "4a8ffec0ccacb5eefce743c95f57509f862c9d23"
+  }
+}

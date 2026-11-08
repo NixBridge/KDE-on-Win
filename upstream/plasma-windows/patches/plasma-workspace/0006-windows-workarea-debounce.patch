@@ -1,0 +1,47 @@
+diff --git a/shell/panelview.cpp b/shell/panelview.cpp
+index c968a19..f11c091 100644
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -96,6 +96,19 @@ PanelView::PanelView(ShellCorona *corona, QScreen *targetScreen, QWindow *parent
+     // Windows: keep the panel above the full-screen desktop window (Plasma
+     // owns the desktop; the panel must stay visible above it).
+     setFlags(flags() | Qt::WindowStaysOnTopHint);
++#endif
++#ifdef Q_OS_WIN
++    // Deferred work-area update: the panel (auto-hide / snap) animation
++    // fires moveEvent every frame, and each SPI_SETWORKAREA with
++    // SPIF_SENDCHANGE synchronously broadcasts WM_SETTINGCHANGE to every
++    // top-level window - animating panels stalled window dragging until
++    // the animation finished. restart(0) collapses the whole animation
++    // into one update after the last frame.
++    m_workAreaTimer.setSingleShot(true);
++    m_workAreaTimer.setInterval(0);
++    connect(&m_workAreaTimer, &QTimer::timeout, this, [this]() {
++        updateWorkArea(isVisible());
++    });
+ #endif
+     updateAdaptiveOpacityEnabled();
+ 
+@@ -1100,7 +1113,9 @@ void PanelView::moveEvent(QMoveEvent *ev)
+         positionPanel();
+     }
+ #ifdef Q_OS_WIN
+-    updateWorkArea(isVisible());
++    // debounced: see constructor - per-frame SPI_SETWORKAREA during the
++    // panel animation synchronously stalls every top-level window
++    m_workAreaTimer.start(0);
+ #endif
+ }
+ 
+diff --git a/shell/panelview.h b/shell/panelview.h
+index 8f67186..a641b1c 100644
+--- a/shell/panelview.h
++++ b/shell/panelview.h
+@@ -274,6 +274,7 @@ protected:
+     bool event(QEvent *e) override;
+ #ifdef Q_OS_WIN
+     void updateWorkArea(bool visible);
++    QTimer m_workAreaTimer;
+ #endif
+ 
+ Q_SIGNALS:

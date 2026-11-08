@@ -1,0 +1,39 @@
+diff --git a/shell/panelview.cpp b/shell/panelview.cpp
+index a69a488..c968a19 100644
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -84,7 +84,14 @@ PanelView::PanelView(ShellCorona *corona, QScreen *targetScreen, QWindow *parent
+     }
+     setResizeMode(QuickViewSharedEngine::SizeRootObjectToView);
+     setColor(QColor(Qt::transparent));
++#ifdef Q_OS_WIN
++    // Windows: the panel must stay activatable so popup menus owned by
++    // third-party apps (TrackPopupMenu / Chromium self-drawn menus) receive
++    // a focus change when the user clicks the panel and dismiss correctly.
++    setFlags(Qt::FramelessWindowHint);
++#else
+     setFlags(Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus);
++#endif
+ #ifdef Q_OS_WIN
+     // Windows: keep the panel above the full-screen desktop window (Plasma
+     // owns the desktop; the panel must stay visible above it).
+@@ -1855,7 +1862,9 @@ void PanelView::refreshStatus(Plasma::Types::ItemStatus status)
+ {
+     if (status == Plasma::Types::NeedsAttentionStatus) {
+         showTemporarily();
++#ifndef Q_OS_WIN
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
++#endif
+         if (KWindowSystem::isPlatformX11()) {
+             KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
+         }
+@@ -1891,7 +1900,9 @@ void PanelView::refreshStatus(Plasma::Types::ItemStatus status)
+         }
+ 
+         restoreAutoHide();
++#ifndef Q_OS_WIN
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
++#endif
+         if (KWindowSystem::isPlatformX11()) {
+             KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
+         }

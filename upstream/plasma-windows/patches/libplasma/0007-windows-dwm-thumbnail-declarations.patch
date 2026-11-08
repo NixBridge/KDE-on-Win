@@ -1,0 +1,38 @@
+diff --git a/src/declarativeimports/core/windowthumbnail.h b/src/declarativeimports/core/windowthumbnail.h
+index 7b93bbe..88597b8 100644
+--- a/src/declarativeimports/core/windowthumbnail.h
++++ b/src/declarativeimports/core/windowthumbnail.h
+@@ -17,6 +17,10 @@
+ #include <QSGSimpleTextureNode>
+ #include <QSGTextureProvider>
+ #include <QWindow>
++#ifdef Q_OS_WIN
++#include <QImage>
++#include <QTimer>
++#endif
+ // xcb
+ #if HAVE_XCB_COMPOSITE
+ #include <xcb/damage.h>
+@@ -118,6 +122,9 @@ private Q_SLOTS:
+ protected:
+     void itemChange(ItemChange change, const ItemChangeData &data) override;
+     void releaseResources() override;
++#ifdef Q_OS_WIN
++    bool eventFilter(QObject *watched, QEvent *event) override;
++#endif
+ 
+ private:
+     void iconToTexture(WindowTextureProvider *textureProvider);
+@@ -133,6 +140,12 @@ private:
+     QImage captureThumbnail();
+     QTimer *m_refreshTimer = nullptr;
+     QImage m_cachedThumbnail;
++    void auditWindowsMode();
++    bool dwmAttach();
++    void dwmDetach();
++    void dwmSyncDest();
++    void *m_dwmThumb = nullptr;
++    bool m_dwmLive = false;
+ #endif
+     bool m_xcb = false;
+     bool m_composite = false;

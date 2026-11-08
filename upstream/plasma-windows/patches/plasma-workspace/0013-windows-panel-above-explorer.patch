@@ -1,0 +1,70 @@
+diff --git a/shell/panelview.cpp b/shell/panelview.cpp
+index e5459fe..c55364d 100644
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -110,6 +110,8 @@ PanelView::PanelView(ShellCorona *corona, QScreen *targetScreen, QWindow *parent
+     // top-level window - animating panels stalled window dragging until
+     // the animation finished. restart(0) collapses the whole animation
+     // into one update after the last frame.
++    m_windowsStackTimer.setInterval(250);
++    connect(&m_windowsStackTimer, &QTimer::timeout, this, &PanelView::enforceWindowsPanelStacking);
+     m_workAreaTimer.setSingleShot(true);
+     m_workAreaTimer.setInterval(0);
+     connect(&m_workAreaTimer, &QTimer::timeout, this, [this]() {
+@@ -1208,6 +1210,8 @@ void PanelView::showEvent(QShowEvent *event)
+     // Like the Windows taskbar, reserve the panel strip in the system work
+     // area so maximized windows do not extend under the panel.
+     updateWorkArea(true);
++    enforceWindowsPanelStacking();
++    m_windowsStackTimer.start();
+ #endif
+ }
+ 
+@@ -1216,11 +1220,34 @@ void PanelView::hideEvent(QHideEvent *event)
+     PlasmaQuick::ContainmentView::hideEvent(event);
+ 
+ #ifdef Q_OS_WIN
++    m_windowsStackTimer.stop();
+     updateWorkArea(false);
+ #endif
+ }
+ 
+ #ifdef Q_OS_WIN
++void PanelView::enforceWindowsPanelStacking()
++{
++    if (!isVisible()) return;
++    const HWND panel = reinterpret_cast<HWND>(winId());
++    DWORD explorerPid = 0;
++    GetWindowThreadProcessId(GetShellWindow(), &explorerPid);
++    if (!explorerPid) return;
++    // Only re-raise if Explorer's actual taskbar overtook this panel. This
++    // avoids constantly raising over Plasma popups or activating the panel.
++    for (HWND window = GetTopWindow(nullptr); window && window != panel; window = GetWindow(window, GW_HWNDNEXT)) {
++        DWORD pid = 0;
++        GetWindowThreadProcessId(window, &pid);
++        if (pid != explorerPid || !IsWindowVisible(window)) continue;
++        wchar_t name[64]{};
++        GetClassNameW(window, name, 64);
++        if (wcscmp(name, L"Shell_TrayWnd") == 0 || wcscmp(name, L"Shell_SecondaryTrayWnd") == 0) {
++            SetWindowPos(panel, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
++            return;
++        }
++    }
++}
++
+ void PanelView::updateWorkArea(bool visible)
+ {
+     QScreen *scr = screen();
+diff --git a/shell/panelview.h b/shell/panelview.h
+index a641b1c..b4f5839 100644
+--- a/shell/panelview.h
++++ b/shell/panelview.h
+@@ -275,6 +275,8 @@ protected:
+ #ifdef Q_OS_WIN
+     void updateWorkArea(bool visible);
+     QTimer m_workAreaTimer;
++    QTimer m_windowsStackTimer;
++    void enforceWindowsPanelStacking();
+ #endif
+ 
+ Q_SIGNALS:

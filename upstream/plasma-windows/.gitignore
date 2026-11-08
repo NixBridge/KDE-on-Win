@@ -1,0 +1,21 @@
+build/
+*.log
+.vs/
+vm-package/
+*.dmp
+*.obj
+research/
+
+# applet build artifacts (tools/build-applets.cmd)
+*.exp
+*.lib
+*.moc
+_*_out/
+
+# session logs / trayhost build output
+tmp/
+
+# tray spike build artifacts
+src/trayhost/spike/*.exe
+src/trayhost/spike/*.log
+src/trayhost/spike/*.obj

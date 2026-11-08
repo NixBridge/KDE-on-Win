@@ -1,0 +1,593 @@
+# Windows porting patches
+
+Canonical patches for building KDE components on Windows. Each patch is
+kept next to the component it modifies and is applied with `patch -p1`
+from the unpacked source root (Craft `patchToApply` for craft-managed
+packages; manual `patch -p1` for plain CMake builds).
+
+Design, usage and implementation notes for everything we built on top of
+the stock KDE sources: see `docs/windows-port-notes.md`.
+
+## plasma-workspace (6.7.4) - Phase 3 M3.1 minimal shell
+
+Applied via Craft recipe `patchToApply["6.7.4"]` (blueprint
+`kde/plasma/plasma-workspace`, local edit: platform restriction removed):
+
+* `0001-windows-build-conditions.patch` - top-level `CMakeLists.txt`:
+  add `WITH_WAYLAND` option (default OFF on Windows), guard
+  `find_package(X11)`/wayland-only subdirectories, skip Linux-only
+  components (`appmenu`, `xembed-sni-proxy`, `ksmserver`,
+  `logout-greeter`, `klipper`, `devicenotifications`, `kcminit`),
+  demote KSysGuard/Canberra to OPTIONAL in `feature_summary`.
+* `0002-subdir-wayland-guards.patch` - per-file `Q_OS_WIN`/`WITH_WAYLAND`
+  guards across libkworkspace, libtaskmanager, libnotificationmanager,
+  libclock, libklookandfeel, components (dbus, keyboardlayout,
+  sessionsprivate), shell, krunner, ksplash, startkde, applets
+  (notifications, systemtray, kicker, digital-clock), wallpapers:
+  * KX11Extras/KStartupInfo/KWaylandExtras/LayerShellQt includes and
+    usage sites,
+  * Wayland protocol header includes (`qwayland-*-v1.h`) and
+    `QWaylandClientExtension` classes,
+  * `kdisplaymanager.cpp` replaced by a Windows stub (X11 session
+    manager API), `outputorderwatcher.cpp` falls back to the base class,
+  * `virtualdesktopinfo.cpp` gets a `WindowsPrivate` fallback and the
+    `tasktools.cpp`/`utils.cpp`/`servicesFromPid` `environ` name clash
+    with MSVC CRT is renamed,
+  * DBus interface XML for KWin VirtualKeyboard and StatusNotifier*
+    installed into `CraftRoot\bin\data\dbus-1\interfaces`,
+  * MSVC `QByteArrayView` range-for fixes.
+* `0003-minimal-shell-subsets.patch` - M3.1 scope reduction: applets
+  (8 of 19 kept: calendar, digital-clock, kicker, lock_logout,
+  panelspacer, margins-separator, notifications, systemtray), all
+  runners deferred, containmentactions reduced to contextmenu/paste/
+  applauncher, optional top-level components deferred (marked
+  `# deferred: enabled in later M3 stages`).
+
+M3.1 acceptance: `plasmashell.exe` builds and starts, creates the
+full-screen desktop window (`Desktop @ QRect(0,0 2560x1440)`) and stays
+alive. The shell package (`org.kde.plasma.desktop`) is taken from the
+plasma-desktop 6.7.4 tarball (not yet built) and installed at
+`%LOCALAPPDATA%\plasma\shells\org.kde.plasma.desktop`; the session bus
+address must be `tcp:host=127.0.0.1,port=12443` (see
+`tools/start-plasma-session.cmd`).
+
+## plasma-desktop (6.7.4) - Phase 3 M3.2 desktop layout
+
+Applied via Craft recipe `patchToApply["6.7.4"]` (blueprint
+`kde/plasma/plasma-desktop`, local edit: platform restriction removed):
+
+* `0001-windows-minimal-scope.patch` - top-level `CMakeLists.txt`:
+  `BUILD_KCM_TABLET`/`BUILD_KCM_TOUCHPAD_X11` default OFF, Qt6WaylandClient
+  and X11/XCB/Plasma5Support/KSysGuard/KSMServerDBusInterface demoted to
+  QUIET/OPTIONAL, `xkbregistry`/`xkb_base` checks skipped on WIN32,
+  `ConfigureChecks.cmake` includes `CheckFunctionExists` (CMake 4);
+  scope reduction: only layout-templates, containments (desktop/panel/
+  folder) and applets (kickoff, trash, pager, showdesktop, minimizeall,
+  activitypager, showActivityManager, icontasks) are built; runners,
+  kcms, toolboxes, knetattach, emojier, kaccess and friends deferred;
+  taskmanager/window-list/kimpanel/keyboardlayout applets deferred
+  (KSysGuard/wayland dependencies); folder plugin/tests get `Qt::DBus`,
+  `foldermodel.cpp` unistd guard, `pagermodel.cpp` wayland guard +
+  `abstracttasksmodel.h` include.
+
+M3.2 acceptance: plasmashell loads the full default layout
+(`plasma-org.kde.plasma.desktop-appletsrc` contains desktopcontainment +
+org.kde.panel + kickoff/pager/icontasks/showdesktop), desktop window
+shows and the process stays alive. Package data must be mirrored to
+`%LOCALAPPDATA%\plasma\` (QStandardPaths on Windows uses LOCALAPPDATA;
+craft installs under `CraftRoot\bin\data`). Panel window rendering is
+follow-up (M3.3).
+
+## M3.3 - panel window + applets
+
+* `plasma-workspace 0002` (shell/main.cpp): on Windows a debug
+  `QtMessageHandler` writes all Qt logging to `%TEMP%\plasmashell-debug.log`
+  (Qt's default handler only writes to OutputDebugString on Windows GUI
+  programs, so QML errors were invisible otherwise).
+* `plasma-desktop 0001` (desktoppackage/contents/views/Panel.qml): guard
+  `KX11Extras.compositingActive` with `KWindowSystem.isPlatformX11`
+  (KX11Extras QML singleton is not registered on Windows).
+* Wallpaper configuration: `[Containments][n][Wallpaper][org.kde.image][General]`
+  `Image=` must point at an existing file; craft installs no wallpaper
+  images, so a generated gradient PNG is used
+  (`CraftRoot\share\wallpapers\plasma-windows-default.png`).
+
+## plasma5support (6.7.4)
+
+`0001-windows-build-fixes.patch` - `CMakeLists.txt`: add Qt6 DBus
+component (dataengines use `qt_add_dbus_interface`), `WITH_X11` default
+OFF; `src/CMakeLists.txt`: skip dataengines (X11-era weather/geolocation
+engines with MSVC narrowing errors). Provides the
+`org.kde.plasma.plasma5support` QML module required by kickoff.
+
+M3.3 acceptance: plasmashell shows desktop + wallpaper + panel window
+with kickoff/pager/icontasks/showdesktop applets loaded (no applet load
+errors in the debug log).
+
+## kcoreaddons (6.28.0) - startup hang fix
+
+`0001-skip-sam-user-picture.patch` - `src/lib/util/kuser_win.cpp`:
+`KUser::faceIconPath()` returns an empty string on Windows. The upstream
+implementation calls `SHGetUserPicturePath`, which walks the SAM account
+database over RPC (`SamConnect`) and hangs plasmashell's main thread at
+startup (CPU 100%, window not responding; recovered with WinDbg thread
+stack: `KAboutData::setProgramLogo -> SHGetUserPicturePath -> SamConnect`).
+Applied via Craft recipe `patchToApply["6.28.0"]` (blueprint
+`kde/frameworks/tier1/kcoreaddons`).
+
+## plasma-workspace M3.3 follow-up
+
+* `shell/panelshadows.cpp`: `hasShadows()` returns false on Windows
+  (KWindowShadow is not implemented by the Windows backend; every failed
+  `create()` logged a warning and panels re-triggered it constantly).
+  Shadows are deferred to a visual-polish milestone.
+
+M3.3b acceptance: plasmashell starts, stays responsive (CPU idle when
+not interacting), desktop + panel windows show, no KWindowShadow spam.
+
+## libplasma (6.7.4)
+
+Applied via Craft recipe `patchToApply["6.7.4"]` (blueprint
+`kde/plasma/libplasma`, local edit: platform restriction removed):
+
+* `0001-wayland-optional.patch` - `WITH_WAYLAND` option default OFF on
+  Windows; guard the Wayland-only find_package blocks.
+* `0002-subdir-wayland-guards.patch` - Q_OS_WIN guards for KX11Extras
+  includes in the blur/theme code, a Windows stub for
+  `plasmashellwaylandintegration` and the CMake wayland source lists.
+
+## plasma-activities-stats (6.7.4)
+
+* `0001-export-const-iterator-members.patch` - `resultset.h`: annotate
+  the nested `ResultSet::Result` and `ResultSet::const_iterator` member
+  functions with `PLASMAACTIVITIESSTATS_EXPORT`. MSVC only exports
+  explicitly marked members, so the upstream DLL is missing e.g.
+  `const_iterator::operator++`; kicker fails to link without this.
+  Applied via Craft recipe `patchToApply["6.7.4"]`.
+
+## kauth (6.28.0)
+
+* `0001-windows-build-fixes.patch` - compile fixes for the Windows
+  backend (`QMetaTypeModuleHelper` guarded, missing includes) plus
+  `find_package(Qt6DBus)` for the DBus backend (as
+  `qt_add_dbus_interface` requires).
+* `0002-qmetatype-gui-helper-qt610.patch` - `QMetaTypeModuleHelper`
+  was removed in Qt 6.10; use plain `QMetaType` on Qt >= 6.10.
+  Applied via Craft recipe `patchToApply["6.28.0"]`.
+
+## krunner (6.28.0)
+
+* `0001-find-qt6dbus.patch` - link the DBus runner against Qt6DBus.
+* `0002-dbusrunner-wayland-guard.patch` - guard the Wayland-only
+  startup-notification include with `Q_OS_WIN`.
+  Applied via Craft recipe `patchToApply["6.28.0"]`.
+
+## kwindowsystem (6.28.0) - Windows backend`0001-windows-backend.patch` adds a complete Windows platform backend
+(Phase 3 M2):
+
+* framework core: `Platform::Windows` + `isPlatformWindows()`;
+  `KWindowInfo` Windows data support (caption/pid/geometry/state via
+  Win32/DWM, snapshots in the existing private class, `CHECK_PLATFORM`
+  guard); new public `KWindowSystemWindows` (window list, stacking order,
+  active window, work area, change signals) + private interface and plugin
+  interface extension `createWindowList()`.
+* plugin `KF6WindowSystemWindowsPlugin` (`src/platforms/windows/`):
+  `KWindowSystemPrivateV5` impl (activateWindow via the classic
+  foreground-stealing dance, showingDesktop via minimize/restore, XDG
+  token APIs as documented no-ops), `KWindowEffects` (DWM accent policy:
+  acrylic blur behind, blur as background-contrast approximation),
+  `WindowList` (EnumWindows + SetWinEventHook out-of-context hooks,
+  queued signal delivery; hook handler methods must be `Q_INVOKABLE` for
+  string-based `QMetaObject::invokeMethod`).
+* build wiring: `KWINDOWSYSTEM_WINDOWS` option (auto-ON on WIN32),
+  sources/headers/install rules, plugin into
+  `kf6/org.kde.kwindowsystem.platforms`.
+
+Applied via Craft recipe `patchToApply["6.28.0"]`.
+
+## qtbase (6.11.1) - SDK 19041 fallback
+
+`0001-modernwindows-style-sdk19041-fallback.patch` (in
+`libs/qt6/qtbase/.craft/`, applied for all versions):
+`qwindows11style.cpp` uses `DWMWA_WINDOW_CORNER_PREFERENCE` and friends
+which only exist in Windows SDK >= 22000; the MSVC branch now falls back
+to the literal values (mirroring the existing MinGW fallback) when the
+constants are not defined.
+
+## kded (6.28.0)
+
+* `0001-skip-posix-signal-handling-on-windows.patch`
+  `src/kded.cpp`: guard the `signal(SIGTERM/SIGHUP)` calls with
+  `#ifdef Q_OS_UNIX` (MSVC has no `SIGHUP`).
+  Applied via Craft recipe `patchToApply["6.28.0"]` (blueprint
+  `kde/frameworks/tier3/kded`, local edit: platform restriction removed).
+
+## kactivitymanagerd (6.7.4)
+
+Built as a plain CMake project (no Craft blueprint) from the release
+tarball into `D:\Projects\CraftRoot\build\custom\kactivitymanagerd`:
+
+* `0001-sqlite-plugin-portable-sleep.patch`
+  `ResourceScoreMaintainer.cpp`: replace `unistd.h`/`sleep(1)` with
+  `QThread::sleep(1)`.
+* `0002-version-header-case-collision.patch`
+  `src/service/Application.cpp`: include the generated version header by
+  its unique name. On Windows the source tree `src/service/Version.h`
+  shadows the generated `build/version.h` (case-insensitive lookup).
+* `0003-version-header-case-collision-cmake.patch`
+  `CMakeLists.txt`: rename the generated header to
+  `kactivitymanagerd_version.h` to avoid the collision above.
+* `0004-sqlite-plugin-optional.patch`
+  `src/service/plugins/CMakeLists.txt`: make the sqlite resource
+  scoring/linking plugin optional (`BUILD_KAMD_SQLITE_PLUGIN`, default
+  OFF). It requires KIO's `kdirnotify.h` which KIO does not install on
+  Windows.
+
+## Applying to a fresh tarball
+
+```bat
+for %%f in (patches\kactivitymanagerd\*.patch) do patch -p1 -d <src-dir> -i %%f
+```
+
+## Craft notes
+
+* Blueprint local edits (platform restrictions) live in
+  `CraftRoot\etc\blueprints\locations\craft-blueprints-kde\...`; daily
+  blueprint updates are disabled (`EnableDailyUpdates = False` in
+  `CraftSettings.ini`) so local edits persist.
+* `CraftRoot\etc\BlueprintSettings.ini` carries per-package build args:
+  `KF_IGNORE_PLATFORM_CHECK=ON` (KDEPlatformCheck escape hatch),
+  `WITH_X11=OFF`, `buildTests = False`.
+
+## plasma-workspace (6.7.4) - M3.6+ shell work
+
+`0004-windows-m36-shell.patch` (applied after 0001-0003) - all shell /
+taskbar work of M3.6-M3.7:
+
+* `shell/shellcorona.cpp`: `setDashboardShown` is a no-op on Windows
+  ("show desktop" is a KWin effect; the KWindowSystem Windows backend
+  minimized every top-level window including the desktop itself).
+* `shell/desktopview.cpp`: keep the desktop at the bottom of the window
+  stack (`WS_EX_NOACTIVATE` + `HWND_BOTTOM`, re-asserted on
+  Expose/ActivationChange/WindowActivate).
+* `shell/panelview.cpp/.h`: `updateWorkArea()` ->
+  `SystemParametersInfo(SPI_SETWORKAREA)` so maximized windows stop at
+  the panel edge (show/hide/move/resize update; hide restores).
+* `shell/main.cpp`: re-assert `QIcon::setThemeSearchPaths` with
+  `<appdir>/data/icons` after the Kirigami controls plugin overwrote
+  them during QML engine setup (Windows).
+* `libtaskmanager/windowswindowtasksmodel.{h,cpp}` (new): the Windows
+  window tasks model (Win32 icons, activate/close/minimize/maximize).
+  2026-08-14 porting-review pass (A1/A2/C3/C4/C5): the model now consumes
+  `KWindowSystemWindows` events (windowAdded/windowRemoved/
+  activeWindowChanged) instead of its own EnumWindows + taskbar-candidate
+  copy on a 500ms polling timer - the duplicated candidate filter is
+  gone, the initial snapshot goes through the same
+  `KWindowSystemWindows::windows()` path, and a 2s refresh timer keeps
+  title/icon/state roles current (WinEventHook does not report those).
+  `iconForWindow` no longer destroys WM_GETICON/GCLP_HICON handles
+  (shared, owned by window/class - only the SHGetFileInfo fallback
+  handle is owned). 2026-08-14 follow-up: `setActiveWindow` filters out
+  plasmashell's own windows - clicking the panel activates it (needed
+  since 0005 for popup-menu dismissal) and without the filter the panel
+  became the tracked active window, so clicking an active task's icon
+  never matched activeWindow and TaskTools fell through to
+  requestActivate instead of requestToggleMinimized (click-to-minimize
+  broke). The real Windows taskbar never takes activation either.
+* `libtaskmanager/windowtasksmodel.cpp`: create `WindowsWindowTasksModel`
+  on Windows (Wayland/X11 branches excluded).
+* `libtaskmanager/concatenatetasksproxymodel.{h,cpp}`: on Windows a
+  hand-rolled aggregation (Qt 6.11 `QConcatenateTablesProxyModel`
+  fails to map Windows models - data() reads empty).
+* `shell/CMakeLists.txt`, `libtaskmanager/CMakeLists.txt`: link
+  KF6::IconThemes / dwmapi; add the Windows model sources.
+
+2026-08-13 hygiene pass (review-driven): dropped the encoding-damaged
+first hunk of `shell/main.cpp` (a UTF-8 BOM had sneaked into the source
+line `/*`, producing a mojibake-only change; the BOM was removed from
+the work tree too), and re-synced the `windowswindowtasksmodel.cpp`
+hunk line count (457 -> 456 after the PLASMA-DEBUG removal). Reverse
+dry-run against the work tree now passes for the whole patch.
+
+`0005-windows-panel-activatable.patch` (applied after 0004) - keep the
+panel activatable on Windows so third-party tray popup menus dismiss
+correctly:
+
+* `shell/panelview.cpp`: do not set `Qt::WindowDoesNotAcceptFocus` on
+  Windows (constructor and both `refreshStatus` branches). The
+  constructor flag maps to `WS_EX_NOACTIVATE`; with it set, clicking the
+  panel never produces a focus change, so `TrackPopupMenu` menus (and
+  Chromium self-drawn menus) opened from tray icons stay open until an
+  item is clicked. Keeping the panel activatable mirrors how the real
+  Explorer taskbar behaves.
+
+Note: the desktop window keeps its `WS_EX_NOACTIVATE` (0004) on purpose.
+Making it activatable (or activating the panel from a desktop click)
+causes every window to flash: activation raises the full-screen desktop
+and the HWND_BOTTOM re-assertion pulls it back (and any deferred
+SetForegroundWindow triggers a DWM animation). Trade-off accepted for
+now: tray popup menus are dismissed by clicking other windows or the
+panel, not the desktop.
+
+`0006-windows-workarea-debounce.patch` (applied after 0005) - debounce
+the work-area update so the panel (auto-hide / snap) animation no longer
+stalls window dragging:
+
+* `shell/panelview.cpp`: `moveEvent` used to call `updateWorkArea()`
+  synchronously; the hide/show animation fires `moveEvent` every frame
+  and each `SPI_SETWORKAREA` with `SPIF_SENDCHANGE` synchronously
+  broadcasts `WM_SETTINGCHANGE` to every top-level window - dragging a
+  window while the panel animated was severely laggy until the animation
+  finished. `moveEvent` now restarts a single-shot `QTimer` (0 ms) which
+  collapses the whole animation into one `updateWorkArea()` call after
+  the last frame; show/hide keep their direct calls.
+* `shell/panelview.h`: add `QTimer m_workAreaTimer` member.
+
+`0007-windows-session-backend.patch` (applied after 0006) - Windows power
+backend for the KDE session actions (powers the kickoff LeaveButtons /
+windowsmenu power menu):
+
+* `libkworkspace/sessionmanagementbackend.cpp`: new `WindowsSessionBackend`
+  - shutdown/reboot via `InitiateSystemShutdownExW` (enables the
+  SE_SHUTDOWN_NAME privilege), suspend/hibernate via `SetSuspendState`,
+  all canXyz true; `SessionBackend::self()` selects it on Windows
+  (logind does not exist there).
+* `libkworkspace/sessionmanagement.cpp`: `requestShutdown`/`requestReboot`/
+  `requestLogout` bypass the ksmserver/LogoutPrompt DBus calls on Windows
+  and hand the action straight to the backend (logout =
+  `ExitWindowsEx(EWX_LOGOFF)`, lock = `LockWorkStation`).
+
+## kwindowsystem (6.28.0) - 0001 updated
+
+`0001-windows-backend.patch` regenerated from the clean 6.28.0 source;
+adds `windowslist.cpp::setShowingDesktop` skipping windows of the
+current process (so "show desktop" never hides the plasma desktop/panel).
+
+2026-08-14 (A2 from the porting review): `EVENT_OBJECT_HIDE` now routes to
+`handleWindowRemoved` instead of `handleWindowAdded` - routing HIDE to
+the add-path dropped the window in `isTaskbarCandidate`
+(`IsWindowVisible == false`) and never emitted `windowRemoved`, leaving
+stale entries in the taskbar. SHOW re-adds; behaviour matches Explorer.
+Also widened the object hook range from `EVENT_OBJECT_CREATE..DESTROY`
+to `EVENT_OBJECT_CREATE..HIDE`: SHOW(0x8002)/HIDE(0x8003) are outside
+the old range, so windows created while invisible were never re-added on
+SHOW (taskbar did not grow when opening windows).
+Note: `setShowingDesktop` remains unused by the shell (KWin effect
+semantics differ); documented so nobody misuses it.
+
+Also carries (2026-08-13, re-verified by craft rebuild from clean tar):
+
+* `slideWindow` popup animation: KWin slide emulation for popups/dialogs
+  only (180 ms OutCubic position slide from the panel edge + opacity
+  fade-in; panels are excluded - a fade would break the floating panel's
+  height animation).
+* **AccentState enum fix**: `AccentEnableBlurbehind` is 3 and
+  `AccentEnableAcrylicBlurBehind` is 4 (the implementation used 4/5,
+  which map to ACRYLIC/HOSTBACKDROP; blur-behind popups fell back to a
+  plain translucent surface). Verified with `probe/blurprobe.cpp` and a
+  `GetWindowCompositionAttribute` readback.
+
+## kiconthemes (6.28.0)
+
+`0001-windows-icon-theme-paths.patch` (new):
+
+* `src/kicontheme.cpp`: add `QCoreApplication::applicationDirPath()/data/icons`
+  to the icon theme dir list (ctor + `KIconTheme::list()`) - Craft
+  bundles data next to the executable, QStandardPaths does not know it.
+* `KIconTheme::current()`: skip the KIconEngine virtual theme names
+  (`KIconEngine` / `breeze-internal`) on Windows and fall through to
+  the configured (kdeglobals) theme.
+
+## libplasma (6.7.4) - 0003 regenerated
+
+`0003-windows-popup-positioning.patch` regenerated; adds
+`PopupPlasmaWindow::updatePosition()` `Q_OS_WIN` branch (apply the
+TransientPlacementHelper rect like X11), visualParent recovery from the
+QML parent chain, popup-only off-screen parking at componentComplete
+(anti-flicker; must not affect the desktop window), delayed
+re-positioning in `PlasmaWindow::showEvent`, and removal of the
+`socketWindowPositionChanged` call in `updateVisibility` (it squashed
+the widget explorer).
+
+2026-08-13 update (craft-rebuild verified):
+
+* all `PLASMA-DEBUG` ad-hoc logging removed (the "visualParent NULL"
+  and "windowStateChanged" qWarning calls were never meant to stay).
+* **`Dialog::showEvent` re-applies `updateTheme()` on Windows**: the
+  popup's HWND only exists once the window is shown, so the
+  blur/background-contrast request made earlier (when QML set
+  backgroundHints) was dropped by the KWindowEffects backend and never
+  retried - popups stayed semi-transparent instead of blurred.
+
+2026-08-15 update (craft-rebuild verified):
+
+* `updatePosition()` `Q_OS_WIN` branch now gives **hover popups
+  (tooltips)** an 8 px gap from the panel window. On X11/Wayland the
+  visual gap comes from the KWin compositor shadow; Windows has none,
+  so tooltips sat flush against - or, anchored to buttons inside the
+  panel, on top of - the panel. Hover popups are detected by class
+  (`ToolTipDialog`; the Qt::ToolTip window flag is not set reliably).
+  The push direction is decided by where the tooltip sits relative to
+  the panel (left/right/top/bottom neighbor, center-distance fallback
+  for overlap), clamped to the screen. Click popups (kickoff, tray,
+  volume) intentionally stay flush with the panel edge - the flat
+  border there is upstream Plasma behavior, and the `syncBorders`
+  logic keeps it that way.
+
+## libplasma (6.7.4) - 0004 window thumbnail
+
+`0004-windows-window-thumbnail.patch` - `WindowThumbnail` gets a
+Windows branch: live-ish window preview via `PrintWindow`
+(PW_RENDERFULLCONTENT -> RGB32 -> texture, refreshed every 500 ms while
+visible); icon fallback for minimized/invalid windows.
+
+2026-08-13 fix: the Windows icon-fallback path used
+`QStringLiteral(plasma)` (missing quotes - upstream writes
+`QStringLiteral("plasma")`); it only compiled because the object file
+was never rebuilt from the patched source. Fixed and verified by a
+craft rebuild from the clean tarball.
+
+`0005-windows-thumbnail-cache.patch` (2026-08-14, porting review C2) -
+move `PrintWindow` out of the QSG render thread: `updatePaintNode` runs
+on the render thread and `PrintWindow` synchronously waits for the
+target window to process WM_PRINT - a hung target stalled the whole
+scene graph. The 500ms `refreshThumbnail` timer now captures into a
+cached QImage on the GUI thread; `windowsThumbnailToTexture` only
+consumes the cache (icon fallback when empty).
+
+## libplasma (6.7.4) - 0006 dwm live thumbnail
+
+`0006-windows-dwm-live-thumbnail.patch` (2026-08-27) - **live** previews
+via `DwmRegisterThumbnail`/`DwmUpdateThumbnailProperties` (public dwmapi,
+Vista+): DWM itself composites the source window into a rect of our own
+top-level window - always current-frame pixels, no capture, no CPU copy.
+`updatePaintNode` renders a fully transparent hole while live, so the
+preview shows through translucent dialogs under either DWM z-order
+semantics; destination rect = item scene rect x devicePixelRatio,
+aspect-fitted around center from `DwmQueryThumbnailSourceSize`;
+re-synced on window Move/Resize/ScreenChange plus a low-frequency timer
+audit catching source minimize/unminimize. Fallback chain untouched
+(PrintWindow cache -> icon); `PLASMA_NO_DWM_THUMBNAILS=1` kill switch;
+MSVC-only `#pragma comment(lib,"dwmapi.lib")`.
+
+Repro note: the committed `0004-windows-window-thumbnail.patch` carried
+a corrupted *context* line (`QLatin1String(xcb)` instead of upstream's
+quoted form), so plain `git apply` rejected hunk 2 outside the original
+authoring tree (fuzzy `patch` tolerated it locally). Replaced by an
+LF-normalized quote-repaired copy; verified against the official
+libplasma-6.7.4 tarball (sha256 match) - stack 0002->0006 now applies
+cleanly end-to-end with raw `git apply`.
+
+## kio (6.28.0) - Dolphin prerequisite
+
+`0001-windows-export-all-symbols.patch` - `CMakeLists.txt` sets
+`CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON` on Windows. MSVC does not export
+move special members of dllexport classes (`KFileItem(KFileItem&&)`,
+`operator=(KFileItem&&)`), which makes Dolphin fail to link
+("undefined symbol: QList<KFileItem>::QList(QList&&)"). Member-level
+export is impossible (C2487), hence the whole-library export. See
+`docs/dolphin-windows.md` for the Dolphin build.
+
+2026-08-14 (porting review B5): the suggested alternative - inlining
+`= default` move members in the header - was verified and rejected:
+`KFileItem` is PIMPL (`QExplicitlySharedDataPointer<KFileItemPrivate>`),
+the private class is only complete in the .cpp, so consumers fail to
+compile the inline move ctor (`KFileItemPrivate` incomplete in
+qshareddata.h). `EXPORT_ALL_SYMBOLS` stays; the patch was regenerated
+(clean diff vs the tarball) and documents the PIMPL reason.
+
+## kconfig (6.28.0)
+
+`0001-windows-trust-desktop-files.patch` (new, 2026-08-13): let
+`KDesktopFile` accept the generated `.desktop` bridge files used to
+expose native Windows apps (notepad/calc/...) in kickoff. Applied via
+Craft recipe `patchToApply["6.28.0"]` (blueprint
+`kde/frameworks/tier1/kconfig`).
+
+## Known limitations / accepted trade-offs (2026-08-14, porting review)
+
+* **Tray popup menus do not dismiss on desktop clicks** (plasma-workspace):
+  the desktop keeps `WS_EX_NOACTIVATE` on purpose - making it activatable
+  (or programmatically activating the panel from a desktop click) flashes
+  every window (activation raises the full-screen desktop, HWND_BOTTOM
+  re-assertion pulls it back; any deferred SetForegroundWindow also
+  triggers a DWM animation). Menus dismiss via other windows or the panel.
+* **libplasma `Dialog` re-declares `Q_PROPERTY(bool visible)`** (0003):
+  intentional and correct (QML `visible` bindings go through
+  `Dialog::setVisible` which positions the popup) - upstream-candidate,
+  not a bug; intentionally not guarded so Windows gets the fix.
+* **plasma-workspace `dbustype.h` adds `operator==` unconditionally**
+  (0002): friend functions, no ABI impact; needed for MSVC containers.
+* **kconfig `isAuthorizedDesktopFile` returns true on Windows** (0001):
+  no executable-bit concept; all shipped `.desktop` files are trusted.
+  Risk is low (no .desktop interpreter ecosystem on Windows) but user-
+  writable paths are trusted too.
+* **kiconthemes skips virtual theme names** (`KIconEngine`,
+  `breeze-internal`): symptom-level fix, brittle if the KIconEngine
+  plugin renames; accepted.
+* **kwindowsystem `slideWindow` animation vs libplasma popup positioning**
+  (0003/0004): the animation writes `pos` from a 180ms QPropertyAnimation
+  while popup positioning also writes the final position at show - a
+  re-position during the animation could land stale. Not observed in
+  practice (clock/preview popups); accepted.
+* **kwindowsystem `AlignedTimer` (Windows)** only aligns once at
+  construction (Linux realigns every cycle): clock drift is negligible
+  with VeryCoarseTimer; accepted.
+* **plasmashell log handler** (`plasmaWindowsLogHandler`) opens/appends/
+  closes `%TEMP%\plasmashell-debug.log` per message, no locking: debug
+  only; acceptable.
+* **`SetWinEventHook` never unhooked** (kwindowsystem plugin): process-
+  resident plugin, hook dies with the process; accepted.
+* **kio `CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS`** kept: the inlined `= default`
+  alternative fails (PIMPL, see the kio section above).
+
+## Runtime data (not source patches)
+
+* **`CraftRoot\bin\data\wallpapers\Next` wallpaper package** (2026-08-13):
+  `defaultWallpaperPackage()` falls back to `wallpapers/Next`, which
+  Craft never installs; without it the image wallpaper's `providerType`
+  stays `Unknown`, `loadWallpaper()` never completes and **the panel is
+  never created** (UiReady never fires). The package contains
+  `metadata.json` (KPackageStructure `Wallpaper/Images`) and
+  `contents/images/1920x1080.png` (size-encoded filename so
+  `findPreferredImageInPackage` picks it). The older
+  `share\wallpapers\plasma-windows-default.png` + `Image=` config entry
+  is superseded by this (the config entry is lost on config restore,
+  the package is found automatically).
+
+## Build notes (craft rebuild, 2026-08-13)
+
+* Patches are applied by Craft with GNU `patch.exe` (MSYS build) from
+  the **blueprint copies** under
+  `CraftRoot\etc\blueprints\locations\craft-blueprints-kde\...` - keep
+  them in sync with `patches/` (there is no shared link).
+* **Never rebuild `work\build` trees with a long cwd**: paths like
+  `...\CMakeFiles\plasmashell-6.0-...-panels.dir\..._autogen\mocs_compilation.cpp.obj`
+  exceed MAX_PATH (260) and cl.exe fails with a misleading
+  `C1083: 无法打开源文件 ... Invalid argument`. Always drive ninja from
+  the Craft short path instead:
+  `ninja -C D:\_\9ad84e1c\build install` (short paths are per-package
+  junctions listed in `D:\_`).
+* A craft build from a clean tarball is the only reliable patch
+  validation (`craft --ignoreInstalled --no-cache <pkg>` after deleting
+  `build\kde\plasma\<pkg>\work` and the `image-*` dirs); the binary
+  cache and installdb otherwise report "up to date" and never reapply
+  the patches.
+
+## Windows 11 integration verification
+
+All non-Qt component patch sequences were regenerated from diffs against the pinned official release tarballs. This corrects malformed hunk counts and missing file headers in the imported patches. All 14 sequences now apply with git apply to fresh release sources without recount or fuzz. This validates patch application only; compilation and runtime acceptance are tracked separately.
+
+### Windows build dependency correction
+
+`plasma-workspace/0008-windows-no-libkscreen.patch` guards the libkscreen package lookup and notificationmanager linkage on Windows, where the existing tracker uses QScreen. Generated from the source tree; strict forward application check passed. The static verifier now rejects mismatched hunk counts.
+
+### DWM thumbnail header completeness
+
+`libplasma/0007-windows-dwm-thumbnail-declarations.patch` supplies the event filter, DWM helper declarations and initialized handle/state members used by 0006. Without them the Windows build fails with C2065/C3861/C2509. Generated from the unpacked source tree; all seven libplasma patches were then applied strictly to fresh release sources.
+
+### Shell platform boundaries
+
+`plasma-workspace/0009-windows-shell-platform-guards.patch` guards X11 and LayerShellQt operations in desktop/panel views and panel configuration. The non-Wayland Qt geometry branch now also serves the Windows panel ruler. Existing Win32 panel work-area handling remains active. Generated from the build-tree diff; all nine workspace patches apply strictly to clean release sources.
+
+### Runner, splash and notification windows
+
+`plasma-workspace/0010-windows-runner-notification-views.patch` guards X11/Wayland APIs in the other compiled views, positions KRunner with QScreen/QWindow on Windows, and activates launcher/notification windows through KWindowSystem. This completes the ten-patch sequence verified on clean release input.
+
+### Splash initialization
+
+`plasma-workspace/0011-windows-splash-initialization.patch` excludes LayerShellQt initialization from the Windows splash application. All other remaining workspace sources compiled under the keep-going build; the full eleven-patch release sequence passed strict application verification.
+
+### Desktop protocol worker
+
+`plasma-workspace/0012-windows-desktop-kio-workers.patch` restores the desktop worker and desktop notifier on Windows. The source was already Windows-guarded but excluded by the imported top-level port patch. Generated from the edited build tree and verified strictly after the existing eleven-patch sequence. The worker and notifier compile under MSVC; a read-only KIO listDir probe successfully resolves desktop:/ to the Windows desktop.
+
+### Native Windows desktop file icons
+
+`plasma-desktop/0002-windows-native-file-icons.patch` uses the Windows file icon image provider for local directories, archives, programs and shortcuts, with a fallback for missing theme icons. Existing image previews retain the original decoration path. Native extraction uses Shell file associations and Qt HICON conversion. The two-patch sequence applies strictly to clean release input.
+
+### Windows launch and panel stacking integration
+
+`plasma-desktop/0003-windows-shortcut-launch-breeze-icons.patch` opens the original local Windows shortcut through ShellExecuteEx, retaining its arguments and working directory, normalizes drive-prefixed URLs, and routes desktop images through the Breeze raster provider. A FolderModel integration probe successfully launches a test shortcut and verifies its arguments/cwd.
+
+`plasma-workspace/0013-windows-panel-above-explorer.patch` checks only Explorer taskbar windows and re-raises a visible panel without activating it if the taskbar overtakes it. It does not make the desktop wallpaper topmost. Native MSVC build passed; VM stacking acceptance pending.

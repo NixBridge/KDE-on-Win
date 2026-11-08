@@ -1,0 +1,27 @@
+diff --git a/ksplash/ksplashqml/splashapp.cpp b/ksplash/ksplashqml/splashapp.cpp
+index 66ef171..c460d9d 100644
+--- a/ksplash/ksplashqml/splashapp.cpp
++++ b/ksplash/ksplashqml/splashapp.cpp
+@@ -21,7 +21,9 @@
+ #include <KConfigGroup>
+ #include <KSharedConfig>
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Shell>
++#endif
+ 
+ #define TEST_STEP_INTERVAL 2000
+ 
+@@ -141,10 +143,12 @@ void SplashApp::adoptScreen(QScreen *screen)
+ 
+ void SplashApp::setupWaylandIntegration()
+ {
++#ifndef Q_OS_WIN
+     if (!KWindowSystem::isPlatformWayland()) {
+         return;
+     }
+     LayerShellQt::Shell::useLayerShell();
++#endif
+ }
+ 
+ #include "moc_splashapp.cpp"

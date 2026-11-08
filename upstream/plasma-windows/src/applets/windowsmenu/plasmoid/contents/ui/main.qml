@@ -1,0 +1,281 @@
+/*
+    SPDX-FileCopyrightText: 2026 Plasma Windows contributors
+    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
+*/
+import QtQuick
+import QtQuick.Layouts
+import org.kde.plasma.components as PC3
+import org.kde.plasma.plasmoid
+import org.kde.kirigami as Kirigami
+import org.kde.plasma.windowsmenu
+
+PlasmoidItem {
+    id: root
+
+    // Panel: a start button. Clicking expands the full menu.
+    compactRepresentation: MouseArea {
+        id: compactArea
+        Layout.preferredWidth: Kirigami.Units.iconSizes.medium + Kirigami.Units.smallSpacing * 2
+        Layout.preferredHeight: Kirigami.Units.iconSizes.medium + Kirigami.Units.smallSpacing * 2
+
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            source: "start-here-symbolic"
+            implicitWidth: Kirigami.Units.iconSizes.medium
+            implicitHeight: Kirigami.Units.iconSizes.medium
+        }
+        onClicked: root.expanded = !root.expanded
+    }
+
+    // The menu itself (shown in the popup when expanded).
+    fullRepresentation: Rectangle {
+        color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 1)
+        radius: Kirigami.Units.smallSpacing
+        clip: true
+        id: menuRoot
+        // Explicit size: the popup sizes itself from the content's
+        // implicit size - a ColumnLayout-wrapped sidebar collapses the
+        // implicit width to ~0 (3px grid observed) without this.
+        implicitWidth: Kirigami.Units.gridUnit * 36
+        implicitHeight: Kirigami.Units.gridUnit * 28
+        Layout.preferredWidth: implicitWidth
+        Layout.preferredHeight: implicitHeight
+
+        StartMenuModel {
+            id: menu
+            directory: "all"
+        }
+
+        PowerActions {
+            id: power
+        }
+
+        // Sidebar: All Apps + user-configured directories.
+        property var sidebarDirs: []
+
+        function sidebarModel() {
+            const cats = []
+            for (let i = 0; i < menu.categories.length; i++) {
+                cats.push({ name: menu.categories[i].name, path: "cat:" + menu.categories[i].name, icon: menu.categories[i].icon || "folder-symbolic" })
+            }
+            return [
+                { name: i18n("All Apps"), path: "all", icon: "view-grid-symbolic" },
+                ...cats,
+                ...sidebarDirs,
+            ]
+        }
+
+        function currentSidebarIndex() {
+            const list = sidebarModel()
+            for (let i = 0; i < list.length; i++) {
+                if ((list[i].path === "all" && menu.isRoot) || (list[i].path !== "all" && menu.directory === list[i].path)) {
+                    return i
+                }
+            }
+            return 0
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
+
+            // Left column: sidebar (All Apps + categories) and the
+            // power menu at the bottom. Plain Column with explicit
+            // width: a nested ColumnLayout here made the RowLayout
+            // assign the whole width to this column (implicit-size
+            // loop through the inner fillWidth items) and squeezed
+            // the right column to a few px.
+            Column {
+                id: leftCol
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 9
+                Layout.fillHeight: true
+                width: Kirigami.Units.gridUnit * 9
+                spacing: Kirigami.Units.smallSpacing
+
+                // Left: sidebar (All Apps + user dirs)
+                ListView {
+                    id: sidebarView
+                    width: parent.width
+                    height: parent.height - powerButton.height - parent.spacing
+
+                    model: menuRoot.sidebarModel()
+                    currentIndex: menuRoot.currentSidebarIndex()
+                    clip: true
+
+                    delegate: PC3.ToolButton {
+                        id: sideButton
+                        width: sidebarView.width
+                        text: modelData.name
+                        icon.name: modelData.icon || "folder-symbolic"
+                        highlighted: sidebarView.currentIndex === index
+                        onClicked: {
+                            sidebarView.currentIndex = index
+                            menu.directory = modelData.path
+                        }
+                    }
+                }
+
+                // Power menu (shutdown / reboot / suspend / hibernate / lock)
+                PC3.ToolButton {
+                    id: powerButton
+                    width: parent.width
+                    text: i18n("Power")
+                    icon.name: "system-shutdown-symbolic"
+                    onClicked: powerMenu.popup(powerButton, powerButton.width - powerMenu.width, powerButton.height)
+                }
+            }
+
+            // Right: current view (all apps grid or dir contents)
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: Kirigami.Units.smallSpacing
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: !menu.isRoot
+                    PC3.ToolButton {
+                        icon.name: "go-previous-symbolic"
+                        onClicked: menu.goParent()
+                    }
+                    Kirigami.Heading {
+                        level: 4
+                        text: menu.isRoot ? "" : menu.directory.split("/").pop()
+                        elide: Text.ElideMiddle
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
+
+                GridView {
+                    id: grid
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    model: menu
+                    clip: true
+                    cacheBuffer: Kirigami.Units.gridUnit * 8
+                    cellWidth: width / Math.max(1, Math.floor(width / (Kirigami.Units.gridUnit * 7)))
+                    cellHeight: Kirigami.Units.gridUnit * 6
+
+                delegate: Item {
+                    id: delegateItem
+                    width: grid.cellWidth
+                    height: grid.cellHeight
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: Kirigami.Units.smallSpacing
+                        radius: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.highlightColor
+                        opacity: itemMouse.containsMouse ? 0.16 : 0
+                    }
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Kirigami.Units.smallSpacing * 2
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Item {
+                            Layout.alignment: Qt.AlignHCenter
+                            width: Kirigami.Units.iconSizes.medium
+                            height: Kirigami.Units.iconSizes.medium
+
+                            Kirigami.Icon {
+                                anchors.fill: parent
+                                source: "folder"
+                                visible: model.isDir
+                            }
+                            Image {
+                                anchors.fill: parent
+                                source: model.isDir ? "" : "image://breezefileicons/" + encodeURIComponent("breeze:" + model.linkPath)
+                                fillMode: Image.PreserveAspectFit
+                                visible: !model.isDir
+                            }
+                        }
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            text: model.name
+                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignTop
+                            color: Kirigami.Theme.textColor
+                            font: Kirigami.Theme.defaultFont
+                        }
+                    }
+
+                    MouseArea {
+                        id: itemMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            if (model.isDir) {
+                                menu.directory = model.path
+                            } else {
+                                menu.launch(index)
+                                root.expanded = false
+                            }
+                        }
+                    }
+                    PC3.ToolTip.visible: itemMouse.containsMouse
+                    PC3.ToolTip.text: model.name
+                }
+                }
+            }
+        }
+
+        PC3.Menu {
+            id: powerMenu
+            title: i18n("Power")
+
+            PC3.MenuItem {
+                text: i18n("Shut Down")
+                icon.name: "system-shutdown-symbolic"
+                enabled: power.canShutdown
+                onClicked: {
+                    root.expanded = false
+                    power.shutdown()
+                }
+            }
+            PC3.MenuItem {
+                text: i18n("Restart")
+                icon.name: "system-reboot-symbolic"
+                enabled: power.canReboot
+                onClicked: {
+                    root.expanded = false
+                    power.reboot()
+                }
+            }
+            PC3.MenuItem {
+                text: i18n("Sleep")
+                icon.name: "system-suspend-symbolic"
+                enabled: power.canSuspend
+                onClicked: {
+                    root.expanded = false
+                    power.suspend()
+                }
+            }
+            PC3.MenuItem {
+                text: i18n("Hibernate")
+                icon.name: "system-suspend-hibernate-symbolic"
+                enabled: power.canHibernate
+                onClicked: {
+                    root.expanded = false
+                    power.hibernate()
+                }
+            }
+            PC3.MenuItem {
+                text: i18n("Lock Screen")
+                icon.name: "system-lock-screen-symbolic"
+                enabled: power.canLock
+                onClicked: {
+                    root.expanded = false
+                    power.lock()
+                }
+            }
+        }
+    }
+}

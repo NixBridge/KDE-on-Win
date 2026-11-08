@@ -1,0 +1,105 @@
+diff --git a/containments/desktop/package/contents/ui/FolderItemDelegate.qml b/containments/desktop/package/contents/ui/FolderItemDelegate.qml
+index 0f84155..1c203eb 100644
+--- a/containments/desktop/package/contents/ui/FolderItemDelegate.qml
++++ b/containments/desktop/package/contents/ui/FolderItemDelegate.qml
+@@ -320,8 +320,7 @@ Item {
+                     z: icon.z + 1
+                     opacity: icon.opacity
+                     source: Qt.platform.os === "windows" && main.linkDestinationUrl.startsWith("file:")
+-                        && (main.isDir || /\.(lnk|zip|7z|rar|exe|msi)(?:$|[?#])/i.test(main.linkDestinationUrl) || !icon.valid)
+-                        ? "image://windowsfileicons/" + encodeURIComponent(main.linkDestinationUrl) : ""
++                        ? "image://breezefileicons/" + encodeURIComponent("breeze:" + main.linkDestinationUrl) : ""
+                     fillMode: Image.PreserveAspectFit
+                     visible: status === Image.Ready
+                 }
+diff --git a/containments/desktop/plugins/folder/CMakeLists.txt b/containments/desktop/plugins/folder/CMakeLists.txt
+index ea8fe21..a478085 100644
+--- a/containments/desktop/plugins/folder/CMakeLists.txt
++++ b/containments/desktop/plugins/folder/CMakeLists.txt
+@@ -53,3 +53,7 @@ ecm_finalize_qml_module(folderplugin)
+ if(BUILD_TESTING)
+     add_subdirectory(autotests)
+ endif(BUILD_TESTING)
++
++if(WIN32)
++    target_link_libraries(folderplugin PRIVATE shell32)
++endif()
+diff --git a/containments/desktop/plugins/folder/foldermodel.cpp b/containments/desktop/plugins/folder/foldermodel.cpp
+index 5076f92..91691fa 100644
+--- a/containments/desktop/plugins/folder/foldermodel.cpp
++++ b/containments/desktop/plugins/folder/foldermodel.cpp
+@@ -16,6 +16,10 @@
+ #include "screenmapper.h"
+ 
+ #include <QApplication>
++#ifdef Q_OS_WIN
++#include <windows.h>
++#include <shellapi.h>
++#endif
+ #include <QClipboard>
+ #include <QCollator>
+ #include <QDir>
+@@ -869,12 +873,51 @@ void FolderModel::run(int row)
+     KFileItem item = itemForIndex(index(row, 0));
+ 
+     QUrl url(item.targetUrl());
++#ifdef Q_OS_WIN
++    const QString tracePath = qEnvironmentVariable("KDE_WINDOWS_LAUNCH_TRACE");
++    if (!tracePath.isEmpty()) {
++        QFile trace(tracePath);
++        if (trace.open(QIODevice::WriteOnly | QIODevice::Append)) {
++            trace.write((QStringLiteral("run row=%1 target=%2 original=%3\n").arg(row).arg(url.toString(), item.url().toString())).toUtf8());
++        }
++    }
++#endif
++
+ 
+     // FIXME TODO: This can go once we depend on a KIO w/ fe1f50caaf2.
+     if (url.scheme().isEmpty()) {
+         url.setScheme(QStringLiteral("file"));
+     }
+ 
++#ifdef Q_OS_WIN
++    // Keep Windows shortcut arguments and working directories intact by opening
++    // the shortcut itself through the Shell rather than treating it as a document.
++    const QString originalPath = item.localPath();
++    if (!originalPath.isEmpty()) {
++        const QString localPath = QDir::toNativeSeparators(originalPath);
++        const QString suffix = QFileInfo(localPath).suffix().toLower();
++        if (suffix == QLatin1String("lnk") || suffix == QLatin1String("exe")
++            || suffix == QLatin1String("com") || suffix == QLatin1String("bat")
++            || suffix == QLatin1String("cmd")) {
++            SHELLEXECUTEINFOW info{};
++            info.cbSize = sizeof(info);
++            info.fMask = SEE_MASK_NOASYNC;
++            info.lpFile = reinterpret_cast<LPCWSTR>(localPath.utf16());
++            info.nShow = SW_SHOWNORMAL;
++            if (!ShellExecuteExW(&info)) {
++                qCWarning(FOLDERMODEL) << "Windows desktop launch failed" << localPath << GetLastError();
++            }
++            return;
++        }
++    }
++#endif
++
++#ifdef Q_OS_WIN
++    // A Windows drive prefix must not be interpreted as a URL protocol.
++    if (url.scheme().size() == 1 && url.toString().at(1) == QLatin1Char(':')) {
++        url = QUrl::fromLocalFile(url.toString());
++    }
++#endif
+     auto job = new KIO::OpenUrlJob(url);
+     job->setUiDelegate(KIO::createDefaultJobUiDelegate(KJobUiDelegate::AutoHandlingEnabled, nullptr));
+     // On desktop:/ we want to be able to run .desktop files right away,
+@@ -1528,6 +1571,11 @@ QVariant FolderModel::data(const QModelIndex &index, int role) const
+             }
+         }
+ 
++#ifdef Q_OS_WIN
++        if (!item.localPath().isEmpty()) {
++            return QUrl::fromLocalFile(item.localPath());
++        }
++#endif
+         return item.targetUrl();
+     } else if (role == SizeRole) {
+         bool isDir = data(index, IsDirRole).toBool();

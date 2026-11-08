@@ -1,0 +1,390 @@
+diff --git a/shell/desktopview.cpp b/shell/desktopview.cpp
+index d073a8a..be92f09 100644
+--- a/shell/desktopview.cpp
++++ b/shell/desktopview.cpp
+@@ -32,14 +32,18 @@
+ #ifndef Q_OS_WIN
+ #include <KWaylandExtras>
+ #endif
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ #include <klocalizedstring.h>
+ #include <kwindowsystem.h>
+ #include <plasmaactivities/controller.h>
+ 
+ #include <KPackage/Package>
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Window>
++#endif
+ 
+ using namespace Qt::StringLiterals;
+ 
+@@ -53,6 +57,7 @@ DesktopView::DesktopView(Plasma::Corona *corona, QScreen *targetScreen)
+     setFlags(Qt::Window | Qt::FramelessWindowHint);
+ 
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         m_layerWindow = LayerShellQt::Window::get(this);
+         m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+         m_layerWindow->setExclusiveZone(-1);
+@@ -60,9 +65,12 @@ DesktopView::DesktopView(Plasma::Corona *corona, QScreen *targetScreen)
+         m_layerWindow->setScope(QStringLiteral("desktop"));
+         m_layerWindow->setCloseOnDismissed(false);
+         m_layerWindow->setActivateOnShow(false);
++#endif
+     } else {
++#if HAVE_X11
+         KX11Extras::setType(winId(), NET::Desktop);
+         KX11Extras::setState(winId(), NET::KeepBelow);
++#endif
+     }
+ 
+     if (targetScreen) {
+@@ -132,7 +140,9 @@ void DesktopView::setScreenToFollow(QScreen *screen)
+     }
+     m_screenToFollow = screen;
+     if (m_layerWindow) {
++#ifndef Q_OS_WIN
+         m_layerWindow->setScreen(screen);
++#endif
+     }
+     setScreen(screen);
+     connect(m_screenToFollow.data(), &QScreen::geometryChanged, this, &DesktopView::screenGeometryChanged);
+@@ -436,6 +446,7 @@ bool DesktopView::handleKRunnerTextInput(QKeyEvent *e)
+             return false;
+         }
+         if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+             if (!m_krunnerFuture.isCanceled()) {
+                 m_krunnerFuture.cancel();
+             }
+@@ -457,6 +468,7 @@ bool DesktopView::handleKRunnerTextInput(QKeyEvent *e)
+                 });
+                 QDBusConnection::sessionBus().asyncCall(message);
+             });
++#endif
+ #endif
+         } else {
+             auto message = QDBusMessage::createMethodCall(QStringLiteral("org.kde.krunner"),
+diff --git a/shell/panelconfigview.cpp b/shell/panelconfigview.cpp
+index 9c6c5fa..a1a64a1 100644
+--- a/shell/panelconfigview.cpp
++++ b/shell/panelconfigview.cpp
+@@ -10,7 +10,9 @@
+ #include "panelshadows_p.h"
+ #include "shellcorona.h"
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Window>
++#endif
+ 
+ #include <QAction>
+ #include <QDebug>
+@@ -50,12 +52,14 @@ PanelRulerView::PanelRulerView(Plasma::Containment *containment, PanelView *pane
+     , m_mainConfigView(mainConfigView)
+ {
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         m_layerWindow = LayerShellQt::Window::get(this);
+         m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+         m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+         m_layerWindow->setScope(QStringLiteral("dock"));
+         m_layerWindow->setCloseOnDismissed(false);
+         m_layerWindow->setScreen(m_panelView->screen());
++#endif
+     }
+     setScreen(m_panelView->screen());
+ 
+@@ -93,10 +97,11 @@ void PanelRulerView::syncPanelLocation()
+         setBorders(Qt::TopEdge);
+     }
+ 
+-    if (KWindowSystem::isPlatformX11()) {
++    if (!KWindowSystem::isPlatformWayland()) {
+ #if HAVE_X11
+         KX11Extras::setType(winId(), NET::Dock);
+         KX11Extras::setState(winId(), NET::KeepAbove);
++#endif
+ 
+         switch (m_containment->location()) {
+         case Plasma::Types::LeftEdge:
+@@ -126,8 +131,8 @@ void PanelRulerView::syncPanelLocation()
+         default:
+             setPosition(available.bottomLeft() + screen->geometry().topLeft() - QPoint(0, height()));
+         }
+-#endif
+     } else if (m_layerWindow) {
++#ifndef Q_OS_WIN
+         switch (m_containment->location()) {
+         case Plasma::Types::LeftEdge:
+         case Plasma::Types::RightEdge:
+@@ -187,6 +192,7 @@ void PanelRulerView::syncPanelLocation()
+         m_layerWindow->setAnchors(anchors);
+ 
+         requestUpdate();
++#endif
+     }
+ }
+ 
+diff --git a/shell/panelview.cpp b/shell/panelview.cpp
+index f11c091..e5459fe 100644
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -33,13 +33,17 @@
+ #include <QScreen>
+ 
+ #include <KLocalizedString>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ #include <kwindowsystem.h>
+ 
+ #include <Plasma/Containment>
+ #include <PlasmaQuick/AppletQuickItem>
+ 
++#ifndef Q_OS_WIN
+ #include <LayerShellQt/Window>
++#endif
+ 
+ #if HAVE_X11
+ #include <NETWM>
+@@ -71,11 +75,13 @@ PanelView::PanelView(ShellCorona *corona, QScreen *targetScreen, QWindow *parent
+     , m_backgroundHints(Plasma::Types::StandardBackground)
+ {
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         m_layerWindow = LayerShellQt::Window::get(this);
+         m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+         m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+         m_layerWindow->setScope(QStringLiteral("dock"));
+         m_layerWindow->setCloseOnDismissed(false);
++#endif
+     }
+     if (targetScreen) {
+         setPosition(targetScreen->geometry().center());
+@@ -645,8 +651,11 @@ KWindowEffects::SlideFromLocation PanelView::slideLocation() const
+ 
+ void PanelView::updateLayerWindow()
+ {
++#ifndef Q_OS_WIN
+     if (!m_layerWindow) {
++#ifndef Q_OS_WIN
+         return;
++#endif
+     }
+ 
+     QMargins margins;
+@@ -722,6 +731,7 @@ void PanelView::updateLayerWindow()
+     m_layerWindow->setMargins(margins);
+ 
+     requestUpdate();
++#endif
+ }
+ 
+ void PanelView::positionPanel()
+@@ -771,11 +781,13 @@ void PanelView::positionAndResizePanel()
+ 
+     // At least one QWindow setGeometry is needed to avoid a protocol error
+     if (m_layerWindow && !size().isEmpty()) {
++#ifndef Q_OS_WIN
+         m_layerWindow->setDesiredSize(geom.size());
+ 
+         // Should not be needed on Wayland in general, but popups and things like that still need it.
+         // After all popups are ported to semantic positioning apis, this setPosition() can be removed.
+         setPosition(geom.topLeft());
++#endif
+     } else {
+         setGeometry(geom);
+     }
+@@ -1155,11 +1167,13 @@ void PanelView::integrateScreen()
+     updateMask();
+ #if HAVE_X11
+     if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         KX11Extras::setOnAllDesktops(winId(), true);
+         KX11Extras::setType(winId(), NET::Dock);
+         if (auto xcbWindow = nativeInterface<QNativeInterface::Private::QXcbWindow>()) {
+             xcbWindow->setWindowType(QNativeInterface::Private::QXcbWindow::Dock);
+         }
++#endif
+     }
+ #endif
+     setVisibilityMode(m_visibilityMode);
+@@ -1281,7 +1295,9 @@ void PanelView::setScreenToFollow(QScreen *screen)
+     m_screenToFollow = screen;
+ 
+     if (m_layerWindow) {
++#ifndef Q_OS_WIN
+         m_layerWindow->setScreen(screen);
++#endif
+     }
+ 
+     setScreen(screen);
+@@ -1552,7 +1568,11 @@ void PanelView::updateMask()
+                                                  mask);
+     }
+ 
+-    if (!KWindowSystem::isPlatformX11() || KX11Extras::compositingActive()) {
++    bool supportsAlphaMask = true;
++#if HAVE_X11
++    supportsAlphaMask = !KWindowSystem::isPlatformX11() || KX11Extras::compositingActive();
++#endif
++    if (supportsAlphaMask) {
+         const QRect bounding = mask.boundingRect();
+         // Always go to screen edge, to preserve fitts law
+         switch (containment()->location()) {
+@@ -1581,7 +1601,9 @@ bool PanelView::canSetStrut() const
+ {
+ #if HAVE_X11
+     if (!KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+         return true;
++#endif
+     }
+     // read the wm name, need to do this every time which means a roundtrip unfortunately
+     // but WM might have changed
+@@ -1643,10 +1665,12 @@ bool PanelView::canSetStrut() const
+ 
+ void PanelView::updateExclusiveZone()
+ {
++#ifndef Q_OS_WIN
+     if (!containment()) {
+         return;
+     }
+     if (m_corona->isEditMode() && m_layerWindow && m_layerWindow->exclusionZone() == -1) {
++#ifndef Q_OS_WIN
+         // We set the exclusve zone to make sure the ruler does not
+         // overlap with the panel regardless of the visibility mode,
+         // and to make all panels possible to interact with even if
+@@ -1663,12 +1687,14 @@ void PanelView::updateExclusiveZone()
+         default:
+             qWarning() << "Warning: unexpected panel formFactor:" << containment()->formFactor() << "Horizontal or Vertical expected";
+         }
++#endif
+     }
+     if (m_corona->isEditMode() || !m_screenToFollow) {
+         return;
+     }
+ 
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         switch (m_visibilityMode) {
+         case NormalPanel:
+             if (m_corona->shouldPanelReserveSpace(this)) {
+@@ -1684,6 +1710,7 @@ void PanelView::updateExclusiveZone()
+             break;
+         }
+         requestUpdate();
++#endif
+     } else {
+ #if HAVE_X11
+         qreal top_width = 0, top_start = 0, top_end = 0;
+@@ -1767,6 +1794,7 @@ void PanelView::updateExclusiveZone()
+                                      bottom_end);
+ #endif
+     }
++#endif
+ }
+ 
+ void PanelView::refreshContainment()
+@@ -1881,24 +1909,32 @@ void PanelView::refreshStatus(Plasma::Types::ItemStatus status)
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
+ #endif
+         if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+             KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
++#endif
+         }
+         if (m_layerWindow) {
++#ifndef Q_OS_WIN
+             m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+             requestUpdate();
++#endif
+         }
+     } else if (status == Plasma::Types::AcceptingInputStatus) {
+         m_corona->savePreviousWindow();
+         setFlags(flags() & ~Qt::WindowDoesNotAcceptFocus);
+         if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+             KX11Extras::forceActiveWindow(winId());
++#endif
+         } else {
+             showTemporarily();
+         }
+ 
+         if (m_layerWindow) {
++#ifndef Q_OS_WIN
+             m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+             requestUpdate();
++#endif
+         }
+ 
+         const auto nextItem = rootObject()->nextItemInFocusChain();
+@@ -1919,11 +1955,15 @@ void PanelView::refreshStatus(Plasma::Types::ItemStatus status)
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
+ #endif
+         if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
+             KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
++#endif
+         }
+         if (m_layerWindow) {
++#ifndef Q_OS_WIN
+             m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+             requestUpdate();
++#endif
+         }
+     }
+ }
+diff --git a/shell/shellcorona.cpp b/shell/shellcorona.cpp
+index b56eb15..bd445fc 100644
+--- a/shell/shellcorona.cpp
++++ b/shell/shellcorona.cpp
+@@ -34,7 +34,9 @@
+ #include <KPackage/PackageLoader>
+ #include <KSycoca>
+ #include <KWindowSystem>
++#if HAVE_X11
+ #include <KX11Extras>
++#endif
+ 
+ #include <Plasma/Plasma>
+ #include <Plasma/PluginLoader>
+@@ -1365,7 +1367,9 @@ void ShellCorona::savePreviousWindow()
+ {
+ #if HAVE_X11
+     if (KWindowSystem::isPlatformX11() && m_previousWId == 0) {
++#if HAVE_X11
+         m_previousWId = KX11Extras::activeWindow();
++#endif
+     }
+ #endif
+ #ifndef Q_OS_WIN
+@@ -1383,7 +1387,9 @@ void ShellCorona::restorePreviousWindow()
+ 
+ #if HAVE_X11
+     if (KWindowSystem::isPlatformX11() && m_previousWId) {
++#if HAVE_X11
+         KX11Extras::forceActiveWindow(m_previousWId);
++#endif
+     }
+ #endif
+ #ifndef Q_OS_WIN
+@@ -1790,6 +1796,7 @@ void ShellCorona::toggleWidgetExplorer()
+ {
+     auto viewIt = m_desktopViewForScreen.cbegin();
+     if (KWindowSystem::isPlatformWayland()) {
++#ifndef Q_OS_WIN
+         auto message = QDBusMessage::createMethodCall(u"org.kde.KWin"_s, u"/KWin"_s, u"org.kde.KWin"_s, u"activeOutputName"_s);
+         QDBusReply<QString> reply = QDBusConnection::sessionBus().call(message);
+         if (reply.isValid()) {
+@@ -1798,6 +1805,7 @@ void ShellCorona::toggleWidgetExplorer()
+                 return view->screen()->name() == activeOutputName;
+             });
+         }
++#endif
+     } else {
+         const QPoint cursorPos = QCursor::pos();
+         viewIt = std::find_if(m_desktopViewForScreen.cbegin(), m_desktopViewForScreen.cend(), [&cursorPos](DesktopView *view) {

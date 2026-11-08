@@ -1,0 +1,35 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6d7c3b9..36b5fc2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -85,7 +85,9 @@ set_package_properties(KSysGuard PROPERTIES
+     DESCRIPTION "Components to monitor the system"
+     TYPE OPTIONAL
+ )
+-find_package(KF6Screen ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
++if(NOT WIN32)
++    find_package(KF6Screen ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
++endif()
+ if (WITH_WAYLAND)
+     find_package(LayerShellQt ${PROJECT_DEP_VERSION} CONFIG REQUIRED)
+ endif()
+diff --git a/libnotificationmanager/CMakeLists.txt b/libnotificationmanager/CMakeLists.txt
+index 1db7a20..2ab0155 100644
+--- a/libnotificationmanager/CMakeLists.txt
++++ b/libnotificationmanager/CMakeLists.txt
+@@ -100,7 +100,6 @@ target_link_libraries(notificationmanager
+         KF6::KIOFileWidgets
+         Plasma::Plasma
+         PW::LibTaskManager
+-        KF6::Screen
+         KF6::Service
+     )
+ if (TARGET PkgConfig::Flatpak)
+@@ -160,3 +159,7 @@ install(FILES plasmanotify.portal
+     DESTINATION ${KDE_INSTALL_DATADIR}/xdg-desktop-portal/portals)
+ 
+ add_subdirectory(kconf_update)
++
++if(NOT WIN32)
++    target_link_libraries(notificationmanager PRIVATE KF6::Screen)
++endif()

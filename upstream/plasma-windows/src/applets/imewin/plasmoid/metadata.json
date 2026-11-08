@@ -1,0 +1,25 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "plasma-windows@local",
+                "Name": "Plasma Windows"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Input Method",
+        "Icon": "input-keyboard",
+        "Id": "org.kde.plasma.imewin",
+        "License": "LGPL-2.1-or-later",
+        "Name": "Input Method",
+        "Name[zh_CN]": "输入法",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "Version": "1.0"
+    },
+    "X-KDE-ParentApp": "org.kde.plasma.desktop",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "MainScript": "ui/main.qml"
+}

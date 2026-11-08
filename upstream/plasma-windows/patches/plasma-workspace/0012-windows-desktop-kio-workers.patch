@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 36b5fc2..39f5d02 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -458,7 +458,11 @@ add_subdirectory(runners)
+ add_subdirectory(applets)
+ add_subdirectory(wallpapers)
+ 
+-# add_subdirectory(kioworkers)  # Windows: KIO workers are a separate porting track
++if(WIN32)
++    add_subdirectory(kioworkers/desktop)
++else()
++    add_subdirectory(kioworkers)
++endif()
+ # add_subdirectory(ktimezoned)  # deferred: enabled in later M3 stages
+ if(TARGET KF6::NetworkManagerQt)
+     # add_subdirectory(geotimezoned)  # deferred: enabled in later M3 stages

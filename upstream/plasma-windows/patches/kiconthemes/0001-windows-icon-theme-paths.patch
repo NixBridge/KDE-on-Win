@@ -1,0 +1,45 @@
+diff --git a/src/kicontheme.cpp b/src/kicontheme.cpp
+index 31ed28f..952f22e 100644
+--- a/src/kicontheme.cpp
++++ b/src/kicontheme.cpp
+@@ -387,6 +387,12 @@ KIconTheme::KIconTheme(const QString &name, const QString &appName, const QStrin
+     // local embedded icons
+     icnlibs << QStringLiteral(":/icons");
+ 
++#ifdef Q_OS_WIN
++    // Craft bundles data next to the executable (bin/data); QStandardPaths
++    // does not know about that layout on Windows.
++    icnlibs += QCoreApplication::applicationDirPath() + QStringLiteral("/data/icons");
++#endif
++
+     QString fileName;
+     QString mainSection;
+     const QString pathSuffix = QLatin1Char('/') + name + QLatin1Char('/');
+@@ -680,6 +686,14 @@ QString KIconTheme::current()
+         // a good theme there.
+         theme = QIcon::themeName();
+     }
++#ifdef Q_OS_WIN
++    // The KIconEngine plugin reports a virtual theme name ("KIconEngine" /
++    // "breeze-internal") that has no theme directory; fall through to the
++    // real configured theme on Windows instead of failing to load anything.
++    if (theme == QLatin1String("KIconEngine") || theme == QLatin1String("breeze-internal")) {
++        theme.clear();
++    }
++#endif
+     if (theme.isEmpty() || theme == QLatin1String("hicolor")) {
+         // Still no theme, try config with kdeglobals.
+         KConfigGroup cg(KSharedConfig::openConfig(), "Icons");
+@@ -719,6 +733,12 @@ QStringList KIconTheme::list()
+     // local embedded icons
+     icnlibs << QStringLiteral(":/icons");
+ 
++#ifdef Q_OS_WIN
++    // Craft bundles data next to the executable (bin/data); QStandardPaths
++    // does not know about that layout on Windows.
++    icnlibs += QCoreApplication::applicationDirPath() + QStringLiteral("/data/icons");
++#endif
++
+     for (const QString &iconDir : std::as_const(icnlibs)) {
+         QDir dir(iconDir);
+         const QStringList themeDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);

@@ -1,0 +1,19 @@
+diff --git a/src/core/kdesktopfile.cpp b/src/core/kdesktopfile.cpp
+index 3c18cb8..0164d78 100644
+--- a/src/core/kdesktopfile.cpp
++++ b/src/core/kdesktopfile.cpp
+@@ -101,6 +101,14 @@ bool KDesktopFile::isAuthorizedDesktopFile(const QString &path)
+         return false; // Empty paths are not ok.
+     }
+ 
++#ifdef Q_OS_WIN
++    // Windows has no executable-bit / trusted-file concept; every .desktop
++    // shipped with the shell is trusted. Without this, launchers (kickoff)
++    // silently fail to start apps because the bridge .desktop files are not
++    // inside Qt's ApplicationsLocation.
++    return true;
++#endif
++
+     if (QDir::isRelativePath(path)) {
+         return true; // Relative paths are ok.
+     }

@@ -1,0 +1,15 @@
+diff --git a/src/kded.cpp b/src/kded.cpp
+index a5482c1..7ad8f87 100644
+--- a/src/kded.cpp
++++ b/src/kded.cpp
+@@ -579,8 +579,10 @@ int main(int argc, char *argv[])
+     bCheckUpdates = cg.readEntry("CheckUpdates", true);
+     delayedCheck = cg.readEntry("DelayedCheck", false);
+ 
++#ifdef Q_OS_UNIX
+     signal(SIGTERM, sighandler);
+     signal(SIGHUP, sighandler);
++#endif
+ 
+     KCrash::setFlags(KCrash::AutoRestart);
+ 

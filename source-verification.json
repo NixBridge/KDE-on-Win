@@ -1,0 +1,115 @@
+[
+  {
+    "name": "kconfig",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kconfig-6.28.0.tar.xz",
+    "sha256": "24e26e516b7904a26661eab7d2064bee1ac57165571e85b4da6020fd36f14322",
+    "patches_applied": 1
+  },
+  {
+    "name": "kcoreaddons",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kcoreaddons-6.28.0.tar.xz",
+    "sha256": "a713febee2f43bc31986d6c27d846ccab556fc7bc7c1919c3a662495720b431a",
+    "patches_applied": 1
+  },
+  {
+    "name": "kiconthemes",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kiconthemes-6.28.0.tar.xz",
+    "sha256": "edf83069f25f8edf759d07502a6f8302c8c064cd562651deedefe6393fefcace",
+    "patches_applied": 1
+  },
+  {
+    "name": "kauth",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kauth-6.28.0.tar.xz",
+    "sha256": "fb4d90ee46a2f6202e53cdd5af8f77069c380955e3f340881f2f36ec8312079b",
+    "patches_applied": 2
+  },
+  {
+    "name": "kded",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kded-6.28.0.tar.xz",
+    "sha256": "31ba5c920b199dd13fff634001d22c993df3d639a8df989e0a55ec1d13a8279f",
+    "patches_applied": 1
+  },
+  {
+    "name": "kwindowsystem",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kwindowsystem-6.28.0.tar.xz",
+    "sha256": "5adbdf9c82b1ecbb92bda6498ea1b8f88c08f9ec57dbff70d582e2453bf16b12",
+    "patches_applied": 1
+  },
+  {
+    "name": "krunner",
+    "url": "https://download.kde.org/stable/frameworks/6.28/krunner-6.28.0.tar.xz",
+    "sha256": "c4c1fccbe6e04acc8d5891df4eca20a4b6be24c032a10e92839a41c1bb847cc4",
+    "patches_applied": 2
+  },
+  {
+    "name": "kio",
+    "url": "https://download.kde.org/stable/frameworks/6.28/kio-6.28.0.tar.xz",
+    "sha256": "158f47746806c3dd87a09091eaa46ffee286cd658f9e26b4422656b66176627a",
+    "patches_applied": 1
+  },
+  {
+    "name": "plasma-activities-stats",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-activities-stats-6.7.4.tar.xz",
+    "sha256": "98b888372c7f74c60b02af6e1ca8b18fe8262748febf5e0480bd0ecc9e2bddef",
+    "patches_applied": 1
+  },
+  {
+    "name": "libplasma",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/libplasma-6.7.4.tar.xz",
+    "sha256": "8f187850ea0cd46e545b33787619fa28f682388e4b828d090a0692874a7c9955",
+    "patches_applied": 7,
+    "patches": [
+      "0001-wayland-optional.patch",
+      "0002-subdir-wayland-guards.patch",
+      "0003-windows-popup-positioning.patch",
+      "0004-windows-window-thumbnail.patch",
+      "0005-windows-thumbnail-cache.patch",
+      "0006-windows-dwm-live-thumbnail.patch",
+      "0007-windows-dwm-thumbnail-declarations.patch"
+    ]
+  },
+  {
+    "name": "plasma5support",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/plasma5support-6.7.4.tar.xz",
+    "sha256": "793fd67604547f34c6ecc89104c9d39c56d388b6b73181302e5c8d775782e6dd",
+    "patches_applied": 1
+  },
+  {
+    "name": "kactivitymanagerd",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/kactivitymanagerd-6.7.4.tar.xz",
+    "sha256": "b2e9c2537ddcc243774d41355428335167c2bb8e9fc48143c4e467528536c87f",
+    "patches_applied": 4
+  },
+  {
+    "name": "plasma-desktop",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-desktop-6.7.4.tar.xz",
+    "sha256": "c2f0c2b7ab70cbd99ef17ffad4c3117dab12ef6a71790da33e39688386474962",
+    "patches_applied": 3
+  },
+  {
+    "name": "plasma-workspace",
+    "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-workspace-6.7.4.tar.xz",
+    "sha256": "21ec3c002929eb65377a1ae0eb105b9ab6f608049dac5493e188f51bd50398d5",
+    "patches_applied": 13,
+    "patches": [
+      "0001-windows-build-conditions.patch",
+      "0002-subdir-wayland-guards.patch",
+      "0003-minimal-shell-subsets.patch",
+      "0004-windows-m36-shell.patch",
+      "0005-windows-panel-activatable.patch",
+      "0006-windows-workarea-debounce.patch",
+      "0007-windows-session-backend.patch",
+      "0008-windows-no-libkscreen.patch",
+      "0009-windows-shell-platform-guards.patch",
+      "0010-windows-runner-notification-views.patch",
+      "0011-windows-splash-initialization.patch"
+    ]
+  },
+  {
+    "name": "kio-extras",
+    "repository": "https://invent.kde.org/network/kio-extras.git",
+    "commit": "4a8ffec0ccacb5eefce743c95f57509f862c9d23",
+    "patches_applied": 1,
+    "verification": "strict git apply to clean committed CMakeLists.txt"
+  }
+]

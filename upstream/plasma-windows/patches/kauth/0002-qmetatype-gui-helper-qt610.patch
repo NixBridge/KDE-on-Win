@@ -1,0 +1,35 @@
+diff --git a/src/backends/dbus/DBusHelperProxy.cpp b/src/backends/dbus/DBusHelperProxy.cpp
+index 19dfbfd..492cbd1 100644
+--- a/src/backends/dbus/DBusHelperProxy.cpp
++++ b/src/backends/dbus/DBusHelperProxy.cpp
+@@ -21,7 +21,9 @@
+ #include <QTimer>
+ #include <qplugin.h>
+ 
++#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+ extern Q_CORE_EXPORT const QtPrivate::QMetaTypeInterface *qMetaTypeGuiHelper;
++#endif
+ 
+ namespace KAuth
+ {
+@@ -234,8 +236,10 @@ QByteArray DBusHelperProxy::performAction(const QString &action,
+ 
+     // Make sure we don't try restoring gui variants, in particular QImage/QPixmap/QIcon are super dangerous
+     // since they end up calling the image loaders and thus are a vector for crashing → executing code
++#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+     auto origMetaTypeGuiHelper = qMetaTypeGuiHelper;
+     qMetaTypeGuiHelper = nullptr;
++#endif
+ 
+     QVariantMap args;
+     QDataStream s(&arguments, QIODevice::ReadOnly);
+@@ -245,7 +249,9 @@ QByteArray DBusHelperProxy::performAction(const QString &action,
+         args.insert(key, QVariant::fromValue(value));
+     }
+ 
++#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+     qMetaTypeGuiHelper = origMetaTypeGuiHelper;
++#endif
+ 
+     m_currentAction = action;
+     Q_EMIT remoteSignal(ActionStarted, action, QByteArray());

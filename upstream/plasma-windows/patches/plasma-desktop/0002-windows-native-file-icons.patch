@@ -1,0 +1,31 @@
+diff --git a/containments/desktop/package/contents/ui/FolderItemDelegate.qml b/containments/desktop/package/contents/ui/FolderItemDelegate.qml
+index a137009..0f84155 100644
+--- a/containments/desktop/package/contents/ui/FolderItemDelegate.qml
++++ b/containments/desktop/package/contents/ui/FolderItemDelegate.qml
+@@ -9,6 +9,7 @@ import QtQuick
+ import QtQuick.Window
+ import Qt5Compat.GraphicalEffects
+ 
++import org.kde.plasma.windowsmenu
+ import org.kde.plasma.plasmoid
+ import org.kde.plasma.core as PlasmaCore
+ import org.kde.plasma.extras as PlasmaExtras
+@@ -311,6 +312,18 @@ Item {
+                     animated: false
+ 
+                     source: main.decoration
++                    visible: nativeFileIcon.status !== Image.Ready
++                }
++                Image {
++                    id: nativeFileIcon
++                    anchors.fill: icon
++                    z: icon.z + 1
++                    opacity: icon.opacity
++                    source: Qt.platform.os === "windows" && main.linkDestinationUrl.startsWith("file:")
++                        && (main.isDir || /\.(lnk|zip|7z|rar|exe|msi)(?:$|[?#])/i.test(main.linkDestinationUrl) || !icon.valid)
++                        ? "image://windowsfileicons/" + encodeURIComponent(main.linkDestinationUrl) : ""
++                    fillMode: Image.PreserveAspectFit
++                    visible: status === Image.Ready
+                 }
+ 
+                 PlasmaExtras.ShadowedLabel {
