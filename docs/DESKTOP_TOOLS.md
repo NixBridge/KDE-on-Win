@@ -27,3 +27,8 @@ enumeration and termination of a test-owned child, filter behavior, icon mapping
 and titlebar controls. Actual Konsole and Dolphin load the style successfully.
 Interactive dragging, resizing, snapping, Chinese input and multi-monitor behavior
 still require acceptance testing inside the Windows VM.
+
+The taskbar maps the three executable identities to their own desktop launchers
+and rasterized Breeze icons. This avoids generic EXE icons and theme engines
+which exist but return empty pixmaps on Windows. `taskbar-icon-probe.exe` verifies
+the real launcher metadata path renders three distinct icons.

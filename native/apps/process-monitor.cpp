@@ -17,6 +17,7 @@
 #include <QProcess>
 #include <QFontDatabase>
 #include <KIconTheme>
+#include <KIconLoader>
 #include "windowsiconmap.h"
 #include <windows.h>
 #include <tlhelp32.h>
@@ -105,7 +106,7 @@ int main(int argc,char **argv)
     QApplication app(argc,argv);
     app.setApplicationName("plasma-process-monitor");
     app.setDesktopFileName("org.nixbridge.processmonitor");
-    app.setWindowIcon(QIcon::fromTheme("utilities-system-monitor"));
+    app.setWindowIcon(QIcon(KIconLoader::global()->loadIcon(QStringLiteral("utilities-system-monitor"), KIconLoader::Desktop, 48)));
     if(app.arguments().contains("--ui-smoke-test")) {
         const int font=QFontDatabase::addApplicationFont(qEnvironmentVariable("WINDIR")+"/Fonts/segoeui.ttf");
         if(font>=0)app.setFont(QFont(QFontDatabase::applicationFontFamilies(font).value(0),10));

@@ -1,0 +1,131 @@
+diff --git a/libtaskmanager/CMakeLists.txt b/libtaskmanager/CMakeLists.txt
+index 1bd1112..4bebcc9 100644
+--- a/libtaskmanager/CMakeLists.txt
++++ b/libtaskmanager/CMakeLists.txt
+@@ -102,7 +102,7 @@ if (HAVE_X11)
+ endif()
+ 
+ if (WIN32)
+-    target_link_libraries(taskmanager PRIVATE dwmapi)
++    target_link_libraries(taskmanager PRIVATE dwmapi KF6::IconThemes)
+ endif()
+ 
+ set_target_properties(taskmanager PROPERTIES
+diff --git a/libtaskmanager/tasktools.cpp b/libtaskmanager/tasktools.cpp
+index aaddd0d..da743a8 100644
+--- a/libtaskmanager/tasktools.cpp
++++ b/libtaskmanager/tasktools.cpp
+@@ -7,6 +7,9 @@
+ 
+ #include "tasktools.h"
+ #include "abstracttasksmodel.h"
++#ifdef Q_OS_WIN
++#include "windowsdesktopapps.h"
++#endif
+ 
+ #include <ranges>
+ 
+@@ -169,6 +172,16 @@ AppData appDataFromUrl(const QUrl &url, const QIcon &fallbackIcon)
+         }
+     }
+ 
++#ifdef Q_OS_WIN
++    if (!QUrlQuery(url).hasQueryItem(QLatin1String("iconData"))) {
++        if (const auto *app = windowsDesktopApp(data.id.isEmpty() ? url.path() : data.id)) {
++            data.icon = windowsRasterThemeIcon(QLatin1String(app->icon));
++        } else if (const auto service = KService::serviceByStorageId(data.id)) {
++            const QIcon raster = windowsRasterThemeIcon(service->icon());
++            if (!raster.isNull()) data.icon = raster;
++        }
++    }
++#endif
+     if (data.name.isEmpty()) {
+         data.name = url.fileName();
+     }
+diff --git a/libtaskmanager/windowsdesktopapps.h b/libtaskmanager/windowsdesktopapps.h
+new file mode 100644
+index 0000000..0b03d4a
+--- /dev/null
++++ b/libtaskmanager/windowsdesktopapps.h
+@@ -0,0 +1,34 @@
++// SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++#pragma once
++#include <KIconLoader>
++#include <QFileInfo>
++#include <QIcon>
++
++namespace TaskManager {
++struct WindowsDesktopApp { const char *exe; const char *desktop; const char *icon; };
++inline constexpr WindowsDesktopApp windowsDesktopApps[] = {
++    {"konsole.exe", "org.kde.konsole.desktop", "utilities-terminal"},
++    {"dolphin.exe", "org.kde.dolphin.desktop", "system-file-manager"},
++    {"plasma-process-monitor.exe", "org.nixbridge.processmonitor.desktop", "utilities-system-monitor"},
++};
++inline const WindowsDesktopApp *windowsDesktopApp(const QString &value)
++{
++    const QString name = QFileInfo(value).fileName();
++    for (const auto &app : windowsDesktopApps) {
++        if (name.compare(QLatin1String(app.exe), Qt::CaseInsensitive) == 0
++            || name.compare(QLatin1String(app.desktop), Qt::CaseInsensitive) == 0) return &app;
++    }
++    return nullptr;
++}
++inline QIcon windowsRasterThemeIcon(const QString &name)
++{
++    // On Windows a non-null theme engine may still produce no pixmap.
++    // Use KDE's resource-aware loader and keep raster sizes for task delegates.
++    QIcon icon;
++    for (int size : {16, 22, 32, 48, 64}) {
++        const QPixmap image = KIconLoader::global()->loadIcon(name, KIconLoader::Desktop, size, 0, {}, nullptr, true);
++        if (!image.isNull()) icon.addPixmap(image);
++    }
++    return icon;
++}
++}
+diff --git a/libtaskmanager/windowswindowtasksmodel.cpp b/libtaskmanager/windowswindowtasksmodel.cpp
+index 986a61a..4be2b4e 100644
+--- a/libtaskmanager/windowswindowtasksmodel.cpp
++++ b/libtaskmanager/windowswindowtasksmodel.cpp
+@@ -4,6 +4,7 @@
+     SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
+ */
+ #include "windowswindowtasksmodel.h"
++#include "windowsdesktopapps.h"
+ 
+ #include <KWindowInfo>
+ #include <KWindowSystem>
+@@ -247,10 +248,17 @@ QVariant WindowsWindowTasksModel::data(const QModelIndex &index, int role) const
+         return QString::fromWCharArray(buf, len);
+     }
+     case Qt::DecorationRole:
++        if (const auto *app = windowsDesktopApp(exePathForWindow(wid))) {
++            const QIcon icon = windowsRasterThemeIcon(QLatin1String(app->icon));
++            if (!icon.isNull()) return icon;
++        }
+         return iconForWindow(hwnd);
+     case AbstractTasksModel::AppId:
+     case AbstractTasksModel::AppName: {
+         const QString exe = exePathForWindow(wid);
++        if (role == AbstractTasksModel::AppId) {
++            if (const auto *app = windowsDesktopApp(exe)) return QLatin1String(app->desktop);
++        }
+         return exe.isEmpty() ? QString() : QFileInfo(exe).completeBaseName();
+     }
+     case AbstractTasksModel::GenericName:
+@@ -258,6 +266,7 @@ QVariant WindowsWindowTasksModel::data(const QModelIndex &index, int role) const
+     case AbstractTasksModel::LauncherUrl:
+     case AbstractTasksModel::LauncherUrlWithoutIcon: {
+         const QString exe = exePathForWindow(wid);
++        if (const auto *app = windowsDesktopApp(exe)) return QUrl(QStringLiteral("applications:") + QLatin1String(app->desktop));
+         return exe.isEmpty() ? QUrl() : QUrl::fromLocalFile(exe);
+     }
+     case AbstractTasksModel::WinIdList:
+@@ -359,7 +368,7 @@ QVariant WindowsWindowTasksModel::data(const QModelIndex &index, int role) const
+     case AbstractTasksModel::IsExcludedFromCapture:
+         return false;
+     default:
+-        return {};
++        return AbstractWindowTasksModel::data(index, role);
+     }
+ }
+ 

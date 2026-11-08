@@ -129,7 +129,8 @@
         "0010-windows-runner-notification-views.patch",
         "0011-windows-splash-initialization.patch",
         "0012-windows-desktop-kio-workers.patch",
-        "0013-windows-panel-above-explorer.patch"
+        "0013-windows-panel-above-explorer.patch",
+        "0014-windows-taskbar-icons-and-identities.patch"
       ]
     },
     "plasma5support": {

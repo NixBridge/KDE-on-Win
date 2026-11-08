@@ -11,6 +11,8 @@ set "QML_EXIT=%ERRORLEVEL%"
 set "DESKTOP_EXIT=%ERRORLEVEL%"
 "%~dp0bin\breeze-mapping-probe.exe" -platform offscreen >> "%~dp0runtime-checks.txt" 2>&1
 set "ICON_EXIT=%ERRORLEVEL%"
+"%~dp0bin\taskbar-icon-probe.exe" -platform offscreen >> "%~dp0runtime-checks.txt" 2>&1
+set "TASKBAR_EXIT=%ERRORLEVEL%"
 "%~dp0bin\context-menu-probe.exe" >> "%~dp0runtime-checks.txt" 2>&1
 set "MENU_EXIT=%ERRORLEVEL%"
 type "%~dp0runtime-checks.txt"
@@ -19,4 +21,5 @@ pause
 if not "%QML_EXIT%"=="0" exit /b %QML_EXIT%
 if not "%DESKTOP_EXIT%"=="0" exit /b %DESKTOP_EXIT%
 if not "%ICON_EXIT%"=="0" exit /b %ICON_EXIT%
+if not "%TASKBAR_EXIT%"=="0" exit /b %TASKBAR_EXIT%
 exit /b %MENU_EXIT%

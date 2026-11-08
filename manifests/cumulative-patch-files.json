@@ -164,6 +164,8 @@
     "bin/plasmashell.exe",
     "bin/qml-import-probe.exe",
     "bin/qt.conf",
+    "bin/taskbar-icon-probe.exe",
+    "bin/taskmanager.dll",
     "plugins/kf6/kded/desktopnotifier.dll",
     "plugins/kf6/kio/desktop.dll",
     "plugins/kf6/parts/konsolepart.dll",
