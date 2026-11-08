@@ -16,6 +16,8 @@
 #include <QJsonValue>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QCoreApplication>
+#include <KDesktopFile>
 
 #include <shlobj.h>
 #include <shlwapi.h>
@@ -157,6 +159,18 @@ void StartMenuModel::scan()
 
     // Ensure COM is usable on this thread for IShellLink (idempotent).
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+    if (m_isRoot) {
+        struct Tool { const char *role; const char *executable; const char *desktop; };
+        for (const auto &tool : {Tool{"konsole","konsole.exe","org.kde.konsole.desktop"}, Tool{"process-monitor","plasma-process-monitor.exe","org.nixbridge.processmonitor.desktop"}, Tool{"dolphin","dolphin.exe","org.kde.dolphin.desktop"}}) {
+            const QString executable=QCoreApplication::applicationDirPath()+QLatin1Char('/')+QLatin1String(tool.executable);
+            if (!QFileInfo::exists(executable)) continue;
+            KDesktopFile desktop(QCoreApplication::applicationDirPath()+QStringLiteral("/data/applications/")+QLatin1String(tool.desktop));
+            Entry entry;entry.name=desktop.readName();entry.exec=executable;entry.linkPath=QStringLiteral("kde:")+QLatin1String(tool.role);entry.path=entry.linkPath;
+            if(entry.name.isEmpty())entry.name=QLatin1String(tool.role);
+            m_entries.append(entry);
+        }
+    }
 
     QStringList dirs;
     if (m_isRoot) {
@@ -317,6 +331,23 @@ void StartMenuModel::launch(int row) const
     const Entry &e = m_entries.at(row);
     if (e.isDir || e.exec.isEmpty()) {
         return;
+    }
+    if (e.linkPath.startsWith(QLatin1String("kde:"))) {
+        QProcess::startDetached(QCoreApplication::applicationDirPath()+QStringLiteral("/plasma-kde-launcher.exe"),{e.linkPath.mid(4)});
+        return;
+    }
+    // Standard Windows shell/task-manager shortcuts use the matching KDE tool.
+    // Keep customized shortcut command lines on their original launch path.
+    if (!e.linkPath.startsWith(QLatin1String("apps:")) && readWindowsShortcut(e.linkPath).arguments.trimmed().isEmpty()) {
+        const QString program=QFileInfo(QDir::fromNativeSeparators(e.exec)).fileName().toLower();
+        const QString bin=QCoreApplication::applicationDirPath();
+        if(program==QLatin1String("taskmgr.exe") && QFileInfo::exists(bin+QStringLiteral("/plasma-process-monitor.exe"))) {
+            QProcess::startDetached(bin+QStringLiteral("/plasma-kde-launcher.exe"),{QStringLiteral("process-monitor")});return;
+        }
+        if(QStringList{QStringLiteral("cmd.exe"),QStringLiteral("powershell.exe"),QStringLiteral("pwsh.exe")}.contains(program) && QFileInfo::exists(bin+QStringLiteral("/konsole.exe"))) {
+            const QString shell=QFileInfo::exists(e.exec)?e.exec:QStandardPaths::findExecutable(program);
+            if(!shell.isEmpty()){QProcess::startDetached(bin+QStringLiteral("/plasma-kde-launcher.exe"),{QStringLiteral("konsole"),QStringLiteral("-e"),QDir::toNativeSeparators(shell)});return;}
+        }
     }
     if (e.linkPath.startsWith(QLatin1String("apps:"))) {
         /* UWP: activate via IApplicationActivationManager - the

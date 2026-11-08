@@ -27,7 +27,10 @@ foreach ($relative in 'Next\metadata.json', 'Next\contents\images\5120x2880.png'
 }
 & python (Join-Path $PSScriptRoot 'tools\verify-runtime-imports.py') --root $CraftRoot
 if ($LASTEXITCODE) { throw 'Runtime import validation failed' }
-$required = 'plasmashell.exe', 'dbus-daemon.exe', 'kded6.exe', 'kactivitymanagerd.exe', 'kbuildsycoca6.exe'
+$required = 'plasmashell.exe', 'dbus-daemon.exe', 'kded6.exe', 'kactivitymanagerd.exe', 'kbuildsycoca6.exe', 'konsole.exe', 'plasma-process-monitor.exe', 'plasma-kde-launcher.exe'
+foreach ($style in 'plasmawindowsstyle.dll', 'breeze6.dll') {
+    if (-not (Test-Path -LiteralPath (Join-Path $CraftRoot "plugins\styles\$style"))) { throw "Missing desktop style: $style" }
+}
 foreach ($name in $required) {
     if (-not (Test-Path -LiteralPath (Join-Path $CraftRoot "bin\$name"))) {
         throw "Runtime incomplete: missing $name"
@@ -96,6 +99,10 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\apply-panel-opacity.cmd
 foreach ($name in 'repair-taskbar-pins.cmd', 'repair-taskbar-pins.ps1', 'taskbar-pins-migration.js') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }
+foreach ($name in 'start-konsole.cmd', 'start-process-monitor.cmd', 'start-dolphin.cmd') {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
+}
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'third_party') -Destination $stage -Recurse
 foreach ($script in Get-ChildItem -LiteralPath $stage -File | Where-Object { $_.Extension -in '.cmd', '.ps1' }) {
     $text = [IO.File]::ReadAllText($script.FullName).Replace("`r`n", "`n").Replace("`n", "`r`n")
     [IO.File]::WriteAllText($script.FullName, $text, [Text.UTF8Encoding]::new($false))

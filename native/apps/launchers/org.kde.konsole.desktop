@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Konsole
+GenericName=Terminal
+GenericName[zh_CN]=终端
+Exec=plasma-kde-launcher.exe konsole
+Icon=utilities-terminal
+Terminal=false
+Categories=Qt;KDE;System;TerminalEmulator;

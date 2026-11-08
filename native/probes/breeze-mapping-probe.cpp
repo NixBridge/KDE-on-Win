@@ -10,7 +10,7 @@ int main(int argc, char **argv)
     QGuiApplication app(argc, argv);
     bool ok = true;
     QTextStream out(stdout);
-    for (const auto &program : {"notepad.exe", "calc.exe", "explorer.exe", "mspaint.exe", "cmd.exe",
+    for (const auto &program : {"kde:konsole", "kde:process-monitor", "kde:dolphin", "notepad.exe", "calc.exe", "explorer.exe", "mspaint.exe", "cmd.exe",
          "powershell.exe", "taskmgr.exe", "regedit.exe", "control.exe", "snippingtool.exe", "mstsc.exe",
          "magnify.exe", "osk.exe", "charmap.exe", "wmplayer.exe", "msedge.exe", "eventvwr.msc",
          "services.msc", "devmgmt.msc", "apps:Microsoft.WindowsCalculator_8wekyb3d8bbwe!App",

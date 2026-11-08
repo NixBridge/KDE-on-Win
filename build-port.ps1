@@ -37,7 +37,7 @@ foreach ($property in $setupEnv.PSObject.Properties) {
 function craft { & $script:PythonExe $script:CraftScript @args }
 $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-foreach ($package in 'kconfig', 'kcoreaddons', 'kwindowsystem', 'kauth', 'kded', 'kiconthemes', 'kio', 'krunner', 'plasma-activities-stats', 'libplasma', 'plasma5support', 'plasma-workspace', 'plasma-desktop', 'kactivitymanagerd', 'dolphin') {
+foreach ($package in 'kconfig', 'kcoreaddons', 'kwindowsystem', 'kauth', 'kded', 'kiconthemes', 'kio', 'krunner', 'plasma-activities-stats', 'libplasma', 'plasma5support', 'plasma-workspace', 'plasma-desktop', 'kactivitymanagerd', 'dolphin', 'konsole') {
     Write-Host "Building $package"
     Write-Host "Stage deps $package"
     & craft --install-deps $package *> (Join-Path $logDir "$package-deps.log")

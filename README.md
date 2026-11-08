@@ -35,9 +35,14 @@ Source archive hashes and applied patch counts are recorded in `manifests/source
 
 ## Repository layout
 
+The native terminal, process monitor and scoped Breeze window appearance are
+documented in [docs/DESKTOP_TOOLS.md](docs/DESKTOP_TOOLS.md).
+
 ```text
 build-port.ps1 / package-port.ps1   Build and full-runtime package entry points
 native/                            Native CMake targets and runtime integration
+  apps/                            Scoped launcher, process monitor and desktop entries
+  style/                           First-party Breeze main-window chrome
   cmake/                           Plasma module and probe target definitions
   probes/                          Headless/VM acceptance executables
 tools/                             Blueprint, verification and packaging tools
@@ -48,6 +53,7 @@ manifests/                         Source pins, verification and cumulative file
 interfaces/                        Official D-Bus interface generation
 docs/                              Port status and implementation notes
 upstream/plasma-windows/            Vendored source and canonical source patches
+third_party/                       Redistributed upstream license notices
 ```
 
 Create a cumulative overlay with `python tools/make-cumulative-patch.py --version VERSION`. Generated archives, caches and local experiment output belong in ignored `dist/`, `logs/` and `work/` directories.

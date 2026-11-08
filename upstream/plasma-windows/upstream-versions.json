@@ -150,6 +150,12 @@
         "0003-version-header-case-collision-cmake.patch",
         "0004-sqlite-plugin-optional.patch"
       ]
+    },
+    "konsole": {
+      "version": "26.04.3",
+      "tarball": "konsole-26.04.3.tar.xz",
+      "sha256": "fe54d0297c24a52b2ec8ebf45bf75b22736f65301663846b8f3539044943e1ac",
+      "patches": []
     }
   },
   "git_components": {

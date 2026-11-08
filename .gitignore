@@ -18,3 +18,5 @@ __pycache__/
 *.lib
 
 /work/
+
+!/third_party/**/COPYING.LIB

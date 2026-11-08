@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Dolphin
+GenericName=File Manager
+GenericName[zh_CN]=文件管理器
+Exec=plasma-kde-launcher.exe dolphin %U
+Icon=system-file-manager
+Terminal=false
+MimeType=inode/directory;
+Categories=Qt;KDE;System;FileManager;

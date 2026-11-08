@@ -5,7 +5,7 @@ panel.height = 2 * Math.ceil(gridUnit * 2.5 / 2);
 panel.addWidget("org.kde.plasma.windowsmenu");
 var tasks = panel.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
-tasks.writeConfig("launchers", ["applications:org.kde.dolphin.desktop"]);
+tasks.writeConfig("launchers", ["applications:org.kde.konsole.desktop", "applications:org.kde.dolphin.desktop", "applications:org.nixbridge.processmonitor.desktop"]);
 panel.addWidget("org.kde.plasma.marginsseparator");
 panel.addWidget("org.kde.plasma.systemtray");
 panel.addWidget("org.kde.plasma.volumewin");

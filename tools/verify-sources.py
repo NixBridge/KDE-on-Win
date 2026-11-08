@@ -20,7 +20,7 @@ def verify(item):
     name, spec = item
     version = spec['version']
     filename = f'{name}-{version}.tar.xz'
-    family = f'plasma/{version}' if version.startswith('6.7.') else 'frameworks/6.28'
+    family = f'release-service/{version}/src' if name == 'konsole' else f'plasma/{version}' if version.startswith('6.7.') else 'frameworks/6.28'
     archive = store / filename
     url = f'https://download.kde.org/stable/{family}/{filename}'
     subprocess.run(['curl.exe', '-fL', '--retry', '2', '--connect-timeout', '20', '--max-time', '240', '-C', '-', '-o', str(archive), url], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

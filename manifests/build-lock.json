@@ -12,5 +12,9 @@
   "sourceVerification": "source-verification.json",
   "git_components": {
     "kio-extras": "4a8ffec0ccacb5eefce743c95f57509f862c9d23"
+  },
+  "applications": {
+    "dolphin": "26.04.3",
+    "konsole": "26.04.3"
   }
 }

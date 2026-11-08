@@ -12,3 +12,5 @@ The root GPL-3.0-or-later license applies to new, independently authored integra
 Upstream authors' copyright notices are preserved. Do not replace them with this project's name when editing vendored source. Build caches, private logs, VM archives and upstream Git metadata are excluded from the repository.
 
 AI authorship disclosure is recorded in LICENSE and AI_NOTICE.md; it adds no distribution conditions and does not apply to upstream authorship.
+
+Konsole 26.04.3 and its PtyQt backend retain the upstream notices under third_party/konsole/. The backend probe reuses the actual MIT-licensed ConPTY implementation. The new process monitor and window-style integration are project code, rather than ports of Plasma System Monitor or KWin.

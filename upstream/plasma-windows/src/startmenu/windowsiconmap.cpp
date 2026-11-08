@@ -8,6 +8,9 @@ QStringList windowsProgramIconCandidates(const QString &program)
 {
     const QString value = QDir::fromNativeSeparators(program).toLower();
     const QString name = QFileInfo(value).fileName();
+    if(value==QLatin1String("kde:konsole"))return {QStringLiteral("utilities-terminal")};
+    if(value==QLatin1String("kde:process-monitor"))return {QStringLiteral("utilities-system-monitor")};
+    if(value==QLatin1String("kde:dolphin"))return {QStringLiteral("system-file-manager")};
     struct Entry { const char *program; const char *icons; };
     static const Entry entries[] = {
         {"notepad.exe", "accessories-text-editor;org.kde.kwrite;text-plain"},

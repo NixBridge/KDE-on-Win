@@ -44,4 +44,11 @@ The root LICENSE contains an explicit AI-generation/assistance disclosure follow
 
 ## Default taskbar launcher migration
 
-Windows panels explicitly pin the packaged Dolphin launcher instead of inheriting Linux-only default launchers. At session startup, a background D-Bus migration waits for task-manager widgets, removes only unavailable Discover/System Settings default pins, and preserves other user pins. It is idempotent. An already running session can invoke repair-taskbar-pins.cmd. The VM confirmed that the preceding opaque context-menu fix works.
+Windows panels explicitly pin the packaged Konsole, Dolphin and project-owned Process Monitor launchers. At session startup, a background D-Bus migration waits for task-manager widgets, removes unavailable Discover/System Settings default pins, and preserves other user pins. Installed desktop tools are added once, preserving later user unpinning. An already running session can invoke repair-taskbar-pins.cmd. The VM confirmed that the preceding opaque context-menu fix works.
+
+## Native desktop tools
+
+Konsole 26.04.3 builds with its Windows ConPTY backend. The scoped launcher enables
+Breeze widgets and custom main-window chrome for Konsole, Dolphin and the new
+project-owned process monitor. Headless backend/UI probes pass; interactive VM
+acceptance remains pending. See [DESKTOP_TOOLS.md](DESKTOP_TOOLS.md) for scope and use.

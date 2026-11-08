@@ -143,6 +143,12 @@ for patch_dir in sorted((port / 'patches').iterdir()):
     save(target, text + '\n')
 
 workspace = bp / 'kde/plasma/plasma-workspace/plasma-workspace.py'
+konsole = bp / 'kde/applications/konsole/konsole.py'
+text = konsole.read_text(encoding='utf-8')
+if '# Native Windows ConPTY backend' not in text:
+    text = text.replace('        self.runtimeDependencies["kde/frameworks/tier2/kpty"] = None', '        # Native Windows ConPTY backend\n        if not CraftCore.compiler.isWindows:\n            self.runtimeDependencies["kde/frameworks/tier2/kpty"] = None')
+    text = text.replace('        super().__init__(**kwargs)', '        super().__init__(**kwargs)\n        self.subinfo.options.configure.args += ["-DBUILD_TESTING=OFF", "-DHAVE_LIBSSH=OFF"]', 1)
+    save(konsole, text)
 text = workspace.read_text(encoding='utf-8')
 if '# Notification chart runtime' not in text:
     text = text.replace('    def setDependencies(self):', '    def setDependencies(self):\n        # Notification chart runtime\n        self.runtimeDependencies["kde/frameworks/tier1/kquickcharts"] = None', 1)

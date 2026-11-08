@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Process Monitor
+Name[zh_CN]=进程监视器
+GenericName=Task Manager
+GenericName[zh_CN]=任务管理器
+Exec=plasma-kde-launcher.exe process-monitor
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Qt;KDE;System;Monitor;

@@ -21,7 +21,7 @@ add_library(startmenuplugin MODULE
 set_target_properties(startmenuplugin PROPERTIES PREFIX "")
 target_compile_definitions(startmenuplugin PRIVATE UNICODE _UNICODE NOMINMAX)
 target_compile_options(startmenuplugin PRIVATE /utf-8 /Zc:__cplusplus)
-target_link_libraries(startmenuplugin PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick KF6::IconThemes PW::KWorkspace ole32 user32 shell32 gdi32)
+target_link_libraries(startmenuplugin PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick KF6::IconThemes KF6::ConfigCore PW::KWorkspace ole32 user32 shell32 gdi32)
 install(TARGETS startmenuplugin RUNTIME DESTINATION qml/org/kde/plasma/windowsmenu LIBRARY DESTINATION qml/org/kde/plasma/windowsmenu)
 install(FILES "${SOURCE_ROOT}/startmenu/qmldir" DESTINATION qml/org/kde/plasma/windowsmenu)
 foreach(name volumewin imewin windowsmenu)
