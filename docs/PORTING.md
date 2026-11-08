@@ -44,7 +44,7 @@ The root LICENSE contains an explicit AI-generation/assistance disclosure follow
 
 ## Default taskbar launcher migration
 
-Windows panels explicitly pin the packaged Konsole, Dolphin and project-owned Process Monitor launchers. At session startup, a background D-Bus migration waits for task-manager widgets, removes unavailable Discover/System Settings default pins, and preserves other user pins. Installed desktop tools are added once, preserving later user unpinning. An already running session can invoke repair-taskbar-pins.cmd. The VM confirmed that the preceding opaque context-menu fix works.
+Windows panels explicitly pin the packaged Konsole, Dolphin and project-owned Process Monitor, Text Editor and System Settings launchers. At session startup, a background D-Bus migration waits for task-manager widgets, removes unavailable Discover/System Settings default pins, and preserves other user pins. Installed desktop tools are added once, preserving later user unpinning. An already running session can invoke repair-taskbar-pins.cmd. The VM confirmed that the preceding opaque context-menu fix works.
 
 ## Native desktop tools
 
@@ -52,3 +52,13 @@ Konsole 26.04.3 builds with its Windows ConPTY backend. The scoped launcher enab
 Breeze widgets and custom main-window chrome for Konsole, Dolphin and the new
 project-owned process monitor. Headless backend/UI probes pass; interactive VM
 acceptance remains pending. See [DESKTOP_TOOLS.md](DESKTOP_TOOLS.md) for scope and use.
+
+The session also starts standard-caption decorations without an application
+whitelist; custom and client-extended captions are skipped. Text Editor and System
+Settings are project-owned replacements, with Windows OS settings delegated to
+their real pages. See [WINDOW_DECORATIONS.md](WINDOW_DECORATIONS.md).
+
+Tray balloons use Plasma's notification service. Modern toast mirroring uses a
+separate package with Windows notification-listener permission; see
+[NOTIFICATIONS.md](NOTIFICATIONS.md). SDK manifest validation and isolated relay
+tests pass; real registration, permission and toast delivery need VM acceptance.

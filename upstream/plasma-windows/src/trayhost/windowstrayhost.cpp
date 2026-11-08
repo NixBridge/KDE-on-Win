@@ -17,6 +17,7 @@
 #include <tlhelp32.h>
 
 #include "snibridge.h"
+#include "notificationrelay.h"
 
 QFile s_logFile;
 QTextStream s_log;
@@ -115,6 +116,28 @@ QString nidFlagsToString(DWORD flags)
 WindowsTrayHost::WindowsTrayHost(QObject *parent)
     : QObject(parent)
 {
+    m_notifications = new NotificationRelay(this);
+    connect(m_notifications, &NotificationRelay::delivered, this, [this](const QString &key) { balloonCallback(key, NIN_BALLOONSHOW); });
+    connect(m_notifications, &NotificationRelay::activated, this, [this](const QString &key) { balloonCallback(key, NIN_BALLOONUSERCLICK); });
+    connect(m_notifications, &NotificationRelay::dismissed, this, [this](const QString &key, uint reason) { balloonCallback(key, reason == 1 ? NIN_BALLOONTIMEOUT : NIN_BALLOONHIDE); });
+    connect(m_notifications, &NotificationRelay::failed, this, [](const QString &, const QString &error) { logLine(QStringLiteral("KDE notification delivery failed: ") + error); });
+}
+
+void WindowsTrayHost::balloonCallback(const QString &key, UINT event)
+{
+    bool valid = false;
+    const quint64 id = key.mid(5).toULongLong(&valid, 16);
+    const auto it = m_icons.constFind(id);
+    if (!valid || it == m_icons.cend()) return;
+    const IconEntry &entry = it.value();
+    DWORD pid = 0;
+    if (!entry.callbackMessage || !GetWindowThreadProcessId(entry.hwnd, &pid) || pid != entry.ownerPid) return;
+    if (entry.version >= NOTIFYICON_VERSION_4) {
+        POINT cursor{}; GetCursorPos(&cursor);
+        PostMessageW(entry.hwnd, entry.callbackMessage, MAKEWPARAM(cursor.x, cursor.y), MAKELPARAM(event, entry.uID));
+    } else {
+        PostMessageW(entry.hwnd, entry.callbackMessage, entry.uID, event);
+    }
 }
 
 WindowsTrayHost::~WindowsTrayHost()
@@ -335,6 +358,7 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
             }
         }
         if (erased) {
+            m_notifications->withdraw(QStringLiteral("tray:%1").arg(delKey, 0, 16));
             m_icons.remove(delKey);
         }
         if (hasGuid) {
@@ -386,6 +410,7 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
         e.hwnd = reinterpret_cast<HWND>(static_cast<quintptr>(nid->hWnd));
         e.uID = nid->uID;
         e.callbackMessage = nid->uCallbackMessage;
+        GetWindowThreadProcessId(e.hwnd, &e.ownerPid);
     }
     if (nid->uFlags & NIF_ICON && nid->hIcon) {
         e.hIcon = nid->hIcon;
@@ -397,10 +422,17 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
         e.hidden = (nid->dwState & NIS_HIDDEN) != 0;
     }
     if (nid->uFlags & NIF_INFO) {
-        logLine(QStringLiteral("  BALLOON title=[%1] info=[%2] flags=0x%3")
-                    .arg(QString::fromWCharArray(nid->szInfoTitle))
-                    .arg(QString::fromWCharArray(nid->szInfo))
-                    .arg(nid->dwInfoFlags, 0, 16));
+        const QString key = QStringLiteral("tray:%1").arg(primaryKey, 0, 16);
+        const QString body = QString::fromWCharArray(nid->szInfo, int(wcsnlen(nid->szInfo, 256)));
+        const QString title = QString::fromWCharArray(nid->szInfoTitle, int(wcsnlen(nid->szInfoTitle, 64)));
+        if (body.isEmpty()) {
+            m_notifications->withdraw(key);
+        } else {
+            const UINT type = nid->dwInfoFlags & NIIF_ICON_MASK;
+            const QString icon = type == NIIF_ERROR ? QStringLiteral("dialog-error") : type == NIIF_WARNING ? QStringLiteral("dialog-warning") : QStringLiteral("dialog-information");
+            m_notifications->publish(key, e.tip.isEmpty() ? QStringLiteral("Windows") : e.tip, title, body, icon,
+                                     e.callbackMessage && e.ownerPid, type == NIIF_ERROR ? 2 : 1);
+        }
     }
 
     // keep the SNI bridge in sync
@@ -553,6 +585,7 @@ void WindowsTrayHost::logIcons()
         if (it.value().hwnd && !it.value().hasGuid && !IsWindow(it.value().hwnd)) {
             logLine(QStringLiteral("  cleanup dead icon key=0x%1 hwnd=0x%2").arg(it.key(), 0, 16).arg(reinterpret_cast<quintptr>(it.value().hwnd), 0, 16));
             unregisterBridge(it.key());
+            m_notifications->withdraw(QStringLiteral("tray:%1").arg(it.key(), 0, 16));
             it = m_icons.erase(it);
         } else {
             ++it;

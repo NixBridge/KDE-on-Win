@@ -22,7 +22,7 @@ int main(int argc, char **argv)
         QTextStream(stdout) << (valid ? "PASS " : "FAIL ") << entry.desktop << " -> " << entry.icon << '\n';
         ok &= valid;
     }
-    ok &= images.size() == 3;
+    ok &= images.size() == std::size(TaskManager::windowsDesktopApps);
     QTextStream(stdout) << "Distinct rendered icons: " << images.size() << '\n';
     return ok ? 0 : 1;
 }

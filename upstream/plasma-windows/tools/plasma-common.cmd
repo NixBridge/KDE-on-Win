@@ -132,6 +132,12 @@ rem :pc_start_services - kactivitymanagerd + kded6 + trayhost in the background
 rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
+if exist "%CRAFT_BIN%\plasma-window-decorations.exe" (
+    start "plasma-window-decorations" "%CRAFT_BIN%\plasma-window-decorations.exe"
+)
+if exist "%CRAFT_ROOT%\start-notifications.ps1" (
+    start "plasma-notifications" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\start-notifications.ps1"
+)
 if exist "%CRAFT_ROOT%\repair-taskbar-pins.ps1" (
     start "plasma-taskbar-migration" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\repair-taskbar-pins.ps1" -CraftRoot "%CRAFT_ROOT%"
 )

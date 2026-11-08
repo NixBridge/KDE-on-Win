@@ -4,6 +4,9 @@ install(FILES "${CMAKE_CURRENT_LIST_DIR}/qt.conf" DESTINATION bin)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus)
+add_library(notificationrelay STATIC notifications/notificationrelay.cpp notifications/notificationrelay.h)
+target_include_directories(notificationrelay PUBLIC "${CMAKE_CURRENT_LIST_DIR}/notifications")
+target_link_libraries(notificationrelay PUBLIC Qt6::Core Qt6::DBus)
 set(SOURCE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../upstream/plasma-windows/src")
 add_executable(trayhost
     "${SOURCE_ROOT}/trayhost/trayhost_main.cpp"
@@ -13,7 +16,7 @@ add_executable(trayhost
     "${SOURCE_ROOT}/trayhost/snibridge.h")
 target_compile_definitions(trayhost PRIVATE UNICODE _UNICODE WIN32 WIN64 NOMINMAX)
 target_compile_options(trayhost PRIVATE /utf-8 /permissive- /Zc:__cplusplus)
-target_link_libraries(trayhost PRIVATE Qt6::Core Qt6::DBus user32 shell32 gdi32)
+target_link_libraries(trayhost PRIVATE notificationrelay Qt6::Core Qt6::DBus user32 shell32 gdi32)
 install(TARGETS trayhost RUNTIME DESTINATION bin)
 add_executable(titlebar "${SOURCE_ROOT}/titlebar/titlebar.c")
 set_property(TARGET titlebar PROPERTY AUTOMOC OFF)

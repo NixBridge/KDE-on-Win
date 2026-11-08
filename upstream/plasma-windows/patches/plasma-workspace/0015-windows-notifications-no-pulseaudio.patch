@@ -1,0 +1,12 @@
+diff --git a/applets/notifications/global/Globals.qml b/applets/notifications/global/Globals.qml
+index 15f893d..67a2ed5 100644
+--- a/applets/notifications/global/Globals.qml
++++ b/applets/notifications/global/Globals.qml
+@@ -734,6 +734,7 @@ QtObject {
+ 
+     // TODO use pulseaudio-qt for this once it becomes a framework
+     property Loader pulseAudio: Loader {
++        active: Qt.platform.os !== "windows"
+         source: "PulseAudio.qml"
+     }
+ 

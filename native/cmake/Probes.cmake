@@ -1,4 +1,8 @@
 # Native diagnostic executables; enabled explicitly for VM packages.
+add_executable(notification-relay-probe "${PROJECT_SOURCE_DIR}/probes/notification-relay-probe.cpp")
+target_compile_options(notification-relay-probe PRIVATE /utf-8)
+target_link_libraries(notification-relay-probe PRIVATE notificationrelay)
+install(TARGETS notification-relay-probe RUNTIME DESTINATION bin)
 set(WORKSPACE_SOURCE "D:/_/ed4c8194/plasma-workspace-6.7.4" CACHE PATH "Patched workspace source for taskbar probe")
 if(EXISTS "${WORKSPACE_SOURCE}/libtaskmanager/windowsdesktopapps.h")
     find_package(KF6Service REQUIRED)

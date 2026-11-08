@@ -7,6 +7,8 @@ if (-not (Test-Path -LiteralPath $qdbus)) { throw 'qdbus.exe not found in CraftR
 $script = [IO.File]::ReadAllText($migration)
 $toolsAvailable = (Test-Path -LiteralPath (Join-Path $CraftRoot 'bin\konsole.exe')) -and (Test-Path -LiteralPath (Join-Path $CraftRoot 'bin\plasma-process-monitor.exe')) -and (Test-Path -LiteralPath (Join-Path $CraftRoot 'plugins\styles\plasmawindowsstyle.dll'))
 $script = 'var kdeDesktopToolsAvailable = ' + $toolsAvailable.ToString().ToLowerInvariant() + ";`n" + $script
+$extrasAvailable = (Test-Path -LiteralPath (Join-Path $CraftRoot 'bin\plasma-text-editor.exe')) -and (Test-Path -LiteralPath (Join-Path $CraftRoot 'bin\plasma-system-settings.exe'))
+$script = 'var kdeDesktopExtrasAvailable = ' + $extrasAvailable.ToString().ToLowerInvariant() + ";`n" + $script
 $env:DBUS_SESSION_BUS_ADDRESS = 'tcp:host=127.0.0.1,port=12443'
 $timer = [Diagnostics.Stopwatch]::StartNew()
 do {

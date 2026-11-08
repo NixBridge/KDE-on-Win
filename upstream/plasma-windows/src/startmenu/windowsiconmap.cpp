@@ -11,6 +11,8 @@ QStringList windowsProgramIconCandidates(const QString &program)
     if(value==QLatin1String("kde:konsole"))return {QStringLiteral("utilities-terminal")};
     if(value==QLatin1String("kde:process-monitor"))return {QStringLiteral("utilities-system-monitor")};
     if(value==QLatin1String("kde:dolphin"))return {QStringLiteral("system-file-manager")};
+    if(value==QLatin1String("kde:text-editor"))return {QStringLiteral("accessories-text-editor")};
+    if(value==QLatin1String("kde:system-settings"))return {QStringLiteral("preferences-system")};
     struct Entry { const char *program; const char *icons; };
     static const Entry entries[] = {
         {"notepad.exe", "accessories-text-editor;org.kde.kwrite;text-plain"},
@@ -44,6 +46,8 @@ QStringList windowsProgramIconCandidates(const QString &program)
         if (name == QLatin1String(entry.program)) return QString::fromLatin1(entry.icons).split(';');
     struct App { const char *id; const char *icons; };
     static const App apps[] = {
+        {"microsoft.windowsnotepad", "accessories-text-editor;org.kde.kwrite"},
+        {"windows.immersivecontrolpanel", "preferences-system;systemsettings"},
         {"microsoft.windowscalculator", "accessories-calculator;kcalc"},
         {"microsoft.windowsnotepad", "accessories-text-editor;org.kde.kwrite"},
         {"microsoft.paint", "kolourpaint;applications-graphics"},

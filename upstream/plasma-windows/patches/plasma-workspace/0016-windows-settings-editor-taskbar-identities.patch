@@ -1,0 +1,13 @@
+diff --git a/libtaskmanager/windowsdesktopapps.h b/libtaskmanager/windowsdesktopapps.h
+index 0b03d4a..c74a963 100644
+--- a/libtaskmanager/windowsdesktopapps.h
++++ b/libtaskmanager/windowsdesktopapps.h
+@@ -10,6 +10,8 @@ inline constexpr WindowsDesktopApp windowsDesktopApps[] = {
+     {"konsole.exe", "org.kde.konsole.desktop", "utilities-terminal"},
+     {"dolphin.exe", "org.kde.dolphin.desktop", "system-file-manager"},
+     {"plasma-process-monitor.exe", "org.nixbridge.processmonitor.desktop", "utilities-system-monitor"},
++    {"plasma-text-editor.exe", "org.nixbridge.texteditor.desktop", "accessories-text-editor"},
++    {"plasma-system-settings.exe", "org.nixbridge.systemsettings.desktop", "preferences-system"},
+ };
+ inline const WindowsDesktopApp *windowsDesktopApp(const QString &value)
+ {

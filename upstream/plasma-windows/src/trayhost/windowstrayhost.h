@@ -47,6 +47,7 @@ private:
         QString tip;
         UINT callbackMessage = 0;
         UINT version = 0;
+        DWORD ownerPid = 0;
         bool hidden = false;
         class Snibridge *bridge = nullptr;
     };
@@ -60,6 +61,8 @@ private:
     void unregisterBridge(quint64 key);
     void updateBridgeFromEntry(class Snibridge *bridge, const IconEntry &e);
     void reRegisterAllBridges();
+    void balloonCallback(const QString &key, UINT event);
+    class NotificationRelay *m_notifications = nullptr;
 
     static LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 

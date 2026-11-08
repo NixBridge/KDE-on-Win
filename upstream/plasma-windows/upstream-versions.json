@@ -130,7 +130,9 @@
         "0011-windows-splash-initialization.patch",
         "0012-windows-desktop-kio-workers.patch",
         "0013-windows-panel-above-explorer.patch",
-        "0014-windows-taskbar-icons-and-identities.patch"
+        "0014-windows-taskbar-icons-and-identities.patch",
+        "0015-windows-notifications-no-pulseaudio.patch",
+        "0016-windows-settings-editor-taskbar-identities.patch"
       ]
     },
     "plasma5support": {

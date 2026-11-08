@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Text Editor
+Name[zh_CN]=文本编辑器
+GenericName=Text Editor
+GenericName[zh_CN]=文本编辑器
+Exec=plasma-kde-launcher.exe text-editor %F
+Icon=accessories-text-editor
+Terminal=false
+MimeType=text/plain;
+Categories=Qt;KDE;Utility;TextEditor;

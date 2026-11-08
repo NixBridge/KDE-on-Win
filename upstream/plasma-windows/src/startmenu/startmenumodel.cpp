@@ -162,7 +162,7 @@ void StartMenuModel::scan()
 
     if (m_isRoot) {
         struct Tool { const char *role; const char *executable; const char *desktop; };
-        for (const auto &tool : {Tool{"konsole","konsole.exe","org.kde.konsole.desktop"}, Tool{"process-monitor","plasma-process-monitor.exe","org.nixbridge.processmonitor.desktop"}, Tool{"dolphin","dolphin.exe","org.kde.dolphin.desktop"}}) {
+        for (const auto &tool : {Tool{"konsole","konsole.exe","org.kde.konsole.desktop"}, Tool{"process-monitor","plasma-process-monitor.exe","org.nixbridge.processmonitor.desktop"}, Tool{"dolphin","dolphin.exe","org.kde.dolphin.desktop"}, Tool{"text-editor","plasma-text-editor.exe","org.nixbridge.texteditor.desktop"}, Tool{"system-settings","plasma-system-settings.exe","org.nixbridge.systemsettings.desktop"}}) {
             const QString executable=QCoreApplication::applicationDirPath()+QLatin1Char('/')+QLatin1String(tool.executable);
             if (!QFileInfo::exists(executable)) continue;
             KDesktopFile desktop(QCoreApplication::applicationDirPath()+QStringLiteral("/data/applications/")+QLatin1String(tool.desktop));
@@ -336,11 +336,20 @@ void StartMenuModel::launch(int row) const
         QProcess::startDetached(QCoreApplication::applicationDirPath()+QStringLiteral("/plasma-kde-launcher.exe"),{e.linkPath.mid(4)});
         return;
     }
+    if (e.linkPath.startsWith(QLatin1String("apps:"))) {
+        const QString id = e.linkPath.toLower();
+        const QString role = id.contains(QLatin1String("microsoft.windowsnotepad_")) ? QStringLiteral("text-editor") : id.contains(QLatin1String("windows.immersivecontrolpanel_")) ? QStringLiteral("system-settings") : QString();
+        if (!role.isEmpty()) { QProcess::startDetached(QCoreApplication::applicationDirPath()+QStringLiteral("/plasma-kde-launcher.exe"), {role}); return; }
+    }
     // Standard Windows shell/task-manager shortcuts use the matching KDE tool.
     // Keep customized shortcut command lines on their original launch path.
     if (!e.linkPath.startsWith(QLatin1String("apps:")) && readWindowsShortcut(e.linkPath).arguments.trimmed().isEmpty()) {
         const QString program=QFileInfo(QDir::fromNativeSeparators(e.exec)).fileName().toLower();
         const QString bin=QCoreApplication::applicationDirPath();
+        if (program == QLatin1String("notepad.exe") || program == QLatin1String("control.exe") || program == QLatin1String("systemsettings.exe")) {
+            const QString role = program == QLatin1String("notepad.exe") ? QStringLiteral("text-editor") : QStringLiteral("system-settings");
+            QProcess::startDetached(bin+QStringLiteral("/plasma-kde-launcher.exe"), {role}); return;
+        }
         if(program==QLatin1String("taskmgr.exe") && QFileInfo::exists(bin+QStringLiteral("/plasma-process-monitor.exe"))) {
             QProcess::startDetached(bin+QStringLiteral("/plasma-kde-launcher.exe"),{QStringLiteral("process-monitor")});return;
         }

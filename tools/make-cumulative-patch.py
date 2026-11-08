@@ -36,6 +36,9 @@ for relative, source in sources.items():
     'Unavailable Linux default taskbar pins are repaired automatically after startup. Run repair-taskbar-pins.cmd to retry in a running session.\n'
     'Includes real Konsole (Windows shells), a project-owned process monitor and scoped Breeze titlebars for Konsole/Dolphin/monitor.\n'
     'Launch through the Plasma menu or start-konsole.cmd, start-dolphin.cmd and start-process-monitor.cmd.\n'
+    'Includes Breeze standard Windows captions, project-owned System Settings and Text Editor. Custom titlebars are skipped.\n'
+    'For modern Windows notification forwarding, run install-notifications.cmd in the VM and grant notification access.\n'
+    'Legacy tray balloons are forwarded by trayhost. Native Windows toast banners can still appear; Windows Do Not Disturb suppresses those.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

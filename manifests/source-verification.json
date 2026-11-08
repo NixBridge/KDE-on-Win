@@ -3,55 +3,84 @@
     "name": "kconfig",
     "url": "https://download.kde.org/stable/frameworks/6.28/kconfig-6.28.0.tar.xz",
     "sha256": "24e26e516b7904a26661eab7d2064bee1ac57165571e85b4da6020fd36f14322",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-windows-trust-desktop-files.patch"
+    ]
   },
   {
     "name": "kcoreaddons",
     "url": "https://download.kde.org/stable/frameworks/6.28/kcoreaddons-6.28.0.tar.xz",
     "sha256": "a713febee2f43bc31986d6c27d846ccab556fc7bc7c1919c3a662495720b431a",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-skip-sam-user-picture.patch"
+    ]
   },
   {
     "name": "kiconthemes",
     "url": "https://download.kde.org/stable/frameworks/6.28/kiconthemes-6.28.0.tar.xz",
     "sha256": "edf83069f25f8edf759d07502a6f8302c8c064cd562651deedefe6393fefcace",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-windows-icon-theme-paths.patch"
+    ]
   },
   {
     "name": "kauth",
     "url": "https://download.kde.org/stable/frameworks/6.28/kauth-6.28.0.tar.xz",
     "sha256": "fb4d90ee46a2f6202e53cdd5af8f77069c380955e3f340881f2f36ec8312079b",
-    "patches_applied": 2
+    "patches_applied": 2,
+    "patches": [
+      "0001-windows-build-fixes.patch",
+      "0002-qmetatype-gui-helper-qt610.patch"
+    ]
   },
   {
     "name": "kded",
     "url": "https://download.kde.org/stable/frameworks/6.28/kded-6.28.0.tar.xz",
     "sha256": "31ba5c920b199dd13fff634001d22c993df3d639a8df989e0a55ec1d13a8279f",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-skip-posix-signal-handling-on-windows.patch"
+    ]
   },
   {
     "name": "kwindowsystem",
     "url": "https://download.kde.org/stable/frameworks/6.28/kwindowsystem-6.28.0.tar.xz",
     "sha256": "5adbdf9c82b1ecbb92bda6498ea1b8f88c08f9ec57dbff70d582e2453bf16b12",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-windows-backend.patch"
+    ]
   },
   {
     "name": "krunner",
     "url": "https://download.kde.org/stable/frameworks/6.28/krunner-6.28.0.tar.xz",
     "sha256": "c4c1fccbe6e04acc8d5891df4eca20a4b6be24c032a10e92839a41c1bb847cc4",
-    "patches_applied": 2
+    "patches_applied": 2,
+    "patches": [
+      "0001-find-qt6dbus.patch",
+      "0002-dbusrunner-wayland-guard.patch"
+    ]
   },
   {
     "name": "kio",
     "url": "https://download.kde.org/stable/frameworks/6.28/kio-6.28.0.tar.xz",
     "sha256": "158f47746806c3dd87a09091eaa46ffee286cd658f9e26b4422656b66176627a",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-windows-export-all-symbols.patch"
+    ]
   },
   {
     "name": "plasma-activities-stats",
     "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-activities-stats-6.7.4.tar.xz",
     "sha256": "98b888372c7f74c60b02af6e1ca8b18fe8262748febf5e0480bd0ecc9e2bddef",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-export-const-iterator-members.patch"
+    ]
   },
   {
     "name": "libplasma",
@@ -65,32 +94,48 @@
       "0004-windows-window-thumbnail.patch",
       "0005-windows-thumbnail-cache.patch",
       "0006-windows-dwm-live-thumbnail.patch",
-      "0007-windows-dwm-thumbnail-declarations.patch"
+      "0007-windows-dwm-thumbnail-declarations.patch",
+      "0008-windows-opaque-context-menus.patch"
     ]
   },
   {
     "name": "plasma5support",
     "url": "https://download.kde.org/stable/plasma/6.7.4/plasma5support-6.7.4.tar.xz",
     "sha256": "793fd67604547f34c6ecc89104c9d39c56d388b6b73181302e5c8d775782e6dd",
-    "patches_applied": 1
+    "patches_applied": 1,
+    "patches": [
+      "0001-windows-build-fixes.patch"
+    ]
   },
   {
     "name": "kactivitymanagerd",
     "url": "https://download.kde.org/stable/plasma/6.7.4/kactivitymanagerd-6.7.4.tar.xz",
     "sha256": "b2e9c2537ddcc243774d41355428335167c2bb8e9fc48143c4e467528536c87f",
-    "patches_applied": 4
+    "patches_applied": 4,
+    "patches": [
+      "0001-sqlite-plugin-portable-sleep.patch",
+      "0002-version-header-case-collision.patch",
+      "0003-version-header-case-collision-cmake.patch",
+      "0004-sqlite-plugin-optional.patch"
+    ]
   },
   {
     "name": "plasma-desktop",
     "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-desktop-6.7.4.tar.xz",
     "sha256": "c2f0c2b7ab70cbd99ef17ffad4c3117dab12ef6a71790da33e39688386474962",
-    "patches_applied": 4
+    "patches_applied": 4,
+    "patches": [
+      "0001-windows-minimal-scope.patch",
+      "0002-windows-native-file-icons.patch",
+      "0003-windows-shortcut-launch-breeze-icons.patch",
+      "0004-windows-opaque-context-menu.patch"
+    ]
   },
   {
     "name": "plasma-workspace",
     "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-workspace-6.7.4.tar.xz",
     "sha256": "21ec3c002929eb65377a1ae0eb105b9ab6f608049dac5493e188f51bd50398d5",
-    "patches_applied": 14,
+    "patches_applied": 16,
     "patches": [
       "0001-windows-build-conditions.patch",
       "0002-subdir-wayland-guards.patch",
@@ -103,7 +148,11 @@
       "0009-windows-shell-platform-guards.patch",
       "0010-windows-runner-notification-views.patch",
       "0011-windows-splash-initialization.patch",
-      "0014-windows-taskbar-icons-and-identities.patch"
+      "0012-windows-desktop-kio-workers.patch",
+      "0013-windows-panel-above-explorer.patch",
+      "0014-windows-taskbar-icons-and-identities.patch",
+      "0015-windows-notifications-no-pulseaudio.patch",
+      "0016-windows-settings-editor-taskbar-identities.patch"
     ]
   },
   {
@@ -118,6 +167,7 @@
     "url": "https://download.kde.org/stable/release-service/26.04.3/src/konsole-26.04.3.tar.xz",
     "sha256": "fe54d0297c24a52b2ec8ebf45bf75b22736f65301663846b8f3539044943e1ac",
     "patches_applied": 0,
-    "verification": "SHA256 matches official release sidecar; native MSVC build passed"
+    "verification": "SHA256 matches official release sidecar; native MSVC build passed",
+    "patches": []
   }
 ]

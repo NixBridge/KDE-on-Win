@@ -14,6 +14,9 @@
 #include <QFile>
 #include <QAbstractNativeEventFilter>
 #include <KIconLoader>
+#include <KColorScheme>
+#include <KSharedConfig>
+#include "../apps/appearance.h"
 #include <windows.h>
 #include <windowsx.h>
 
@@ -132,12 +135,25 @@ class PlasmaWindowsStyle final : public QProxyStyle
     static QStyle *base() {if(auto *style=QStyleFactory::create("breeze"))return style;return QStyleFactory::create("Fusion");}
 public:
     PlasmaWindowsStyle() : QProxyStyle(base()) {traceAppearance(QStringLiteral("Breeze style loaded"));}
+    void polish(QApplication *application) override {
+        QProxyStyle::polish(application);
+        auto update = [application] {
+            QSettings settings(appearanceSettingsPath(), QSettings::IniFormat);
+            const bool dark = settings.value(QStringLiteral("dark"), false).toBool();
+            if (application->property("plasmaAppearanceDark").isValid() && application->property("plasmaAppearanceDark").toBool() == dark) return;
+            const QString path = application->applicationDirPath() + QStringLiteral("/data/color-schemes/") + (dark ? QStringLiteral("BreezeDark.colors") : QStringLiteral("BreezeLight.colors"));
+            if (QFileInfo::exists(path)) application->setPalette(KColorScheme::createApplicationPalette(KSharedConfig::openConfig(path, KConfig::SimpleConfig)));
+            application->setProperty("plasmaAppearanceDark", dark);
+        };
+        auto *timer = new QTimer(application); QObject::connect(timer, &QTimer::timeout, application, update); timer->start(1000);
+        QTimer::singleShot(0, application, update);
+    }
     void polish(QWidget *widget) override {
         QProxyStyle::polish(widget);
         auto *window = qobject_cast<QMainWindow *>(widget);
         if (!window || window->property("plasmaBreezeChrome").toBool()) return;
         const QString executable=QFileInfo(QCoreApplication::applicationFilePath()).fileName().toLower();
-        if (!QStringList{"konsole.exe","dolphin.exe","plasma-process-monitor.exe","breeze-window-probe.exe"}.contains(executable)) return;
+        if (!QStringList{"konsole.exe","dolphin.exe","plasma-process-monitor.exe","plasma-text-editor.exe","plasma-system-settings.exe","breeze-window-probe.exe"}.contains(executable)) return;
         window->setProperty("plasmaBreezeChrome",true);
         // Polish can run during construction; wait until the main window exists.
         QTimer::singleShot(0,window,[window] { new WindowChrome(window); });

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=System Settings
+Name[zh_CN]=系统设置
+GenericName=System Settings
+GenericName[zh_CN]=系统设置
+Exec=plasma-kde-launcher.exe system-settings
+Icon=preferences-system
+Terminal=false
+Categories=Qt;KDE;Settings;
