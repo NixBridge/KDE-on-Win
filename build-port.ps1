@@ -10,7 +10,7 @@ $settings = Join-Path $CraftRoot 'etc\CraftSettings.ini'
 if (-not (Test-Path -LiteralPath (Join-Path $CraftRoot 'craft\bin\craft.py'))) {
     throw 'Craft bootstrap must complete before building the port.'
 }
-& python (Join-Path $PSScriptRoot 'configure-port.py') --blueprints $Blueprints --craft (Join-Path $CraftRoot 'craft')
+& python (Join-Path $PSScriptRoot 'tools\configure-port.py') --blueprints $Blueprints --craft (Join-Path $CraftRoot 'craft')
 if ($LASTEXITCODE) { throw 'Blueprint configuration failed' }
 $content = [IO.File]::ReadAllText($settings)
 $content = $content.Replace('EnableDailyUpdates = True', 'EnableDailyUpdates = False')

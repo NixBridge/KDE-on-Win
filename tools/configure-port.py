@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--blueprints', type=Path, required=True)
 parser.add_argument('--craft', type=Path)
 args = parser.parse_args()
-root = Path(__file__).resolve().parent
+root = Path(__file__).resolve().parents[1]
 port = root / 'upstream/plasma-windows'
 bp = args.blueprints.resolve()
 prebuilt_versions = bp / 'libs/_msvc/version.ini'
@@ -166,7 +166,7 @@ if '-DUSE_DBUS=ON' not in text:
 nighttime = bp / 'kde/plasma/knighttime/knighttime.py'
 text = nighttime.read_text(encoding='utf-8')
 if '# Verified SHA256 release input' not in text:
-    records = json.loads((root / 'extra-source-verification.json').read_text(encoding='utf-8'))
+    records = json.loads((root / 'manifests' / 'extra-source-verification.json').read_text(encoding='utf-8'))
     digest = next(record['sha256'] for record in records if record['name'] == 'knighttime')
     text = 'from Utils import CraftHash\n' + text
     addition = f'\n        # Verified SHA256 release input\n        self.targetDigestUrls.pop("6.7.4", None)\n        self.targetDigests["6.7.4"] = ([{digest!r}], CraftHash.HashAlgorithm.SHA256)'

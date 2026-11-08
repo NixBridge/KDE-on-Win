@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
+#pragma once
+#include <QString>
+#include <QStringList>
+
+QStringList windowsProgramIconCandidates(const QString &program);
+QString breezeIconForWindowsProgram(const QString &program);

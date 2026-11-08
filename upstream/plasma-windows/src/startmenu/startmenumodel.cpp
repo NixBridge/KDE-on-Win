@@ -4,6 +4,7 @@
 */
 
 #include "startmenumodel.h"
+#include "windowsshortcut.h"
 
 #include <QDebug>
 #include <QDir>
@@ -302,35 +303,10 @@ void StartMenuModel::reload()
 
 QString StartMenuModel::resolveLnk(const QString &lnkPath, QString *targetOut) const
 {
-    QString name = QFileInfo(lnkPath).completeBaseName();
-    QString target;
-
-    IShellLinkW *shellLink = nullptr;
-    if (SUCCEEDED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW, reinterpret_cast<void **>(&shellLink)))) {
-        IPersistFile *persist = nullptr;
-        if (SUCCEEDED(shellLink->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&persist)))) {
-            if (SUCCEEDED(persist->Load(reinterpret_cast<LPCWSTR>(lnkPath.utf16()), STGM_READ))) {
-                wchar_t path[MAX_PATH] = {};
-                if (SUCCEEDED(shellLink->GetPath(path, MAX_PATH, nullptr, 0))) {
-                    target = QString::fromWCharArray(path);
-                }
-                wchar_t desc[MAX_PATH] = {};
-                if (SUCCEEDED(shellLink->GetDescription(desc, MAX_PATH))) {
-                    const QString d = QString::fromWCharArray(desc);
-                    if (!d.isEmpty()) {
-                        name = d;
-                    }
-                }
-            }
-            persist->Release();
-        }
-        shellLink->Release();
-    }
-
-    if (targetOut) {
-        *targetOut = target;
-    }
-    return name;
+    const auto shortcut = readWindowsShortcut(lnkPath);
+    if (targetOut) *targetOut = shortcut.target;
+    // Shortcut descriptions are tooltips, not application names.
+    return QFileInfo(lnkPath).completeBaseName();
 }
 
 void StartMenuModel::launch(int row) const

@@ -4,6 +4,9 @@
 */
 
 #include "startmenuimageprovider.h"
+#include "windowsshortcut.h"
+#include "windowsiconmap.h"
+#include <QRegularExpression>
 
 #include <QFileInfo>
 #include <QDir>
@@ -41,9 +44,7 @@ QImage hbmpToImage(HBITMAP hbmp)
     return out;
 }
 
-// Render an HICON into an ARGB32 QImage using the system's own icon
-// compositing (DrawIconEx handles both 32-bit alpha and legacy mask
-// icons), avoiding all-black results from naive mask interpretation.
+// Qt handles alpha and legacy AND/XOR masks when converting Shell icons.
 QImage iconToImage(HICON hIcon)
 {
     return hIcon ? QImage::fromHICON(hIcon) : QImage();
@@ -57,8 +58,6 @@ StartMenuImageProvider::StartMenuImageProvider()
 
 QImage StartMenuImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
-    Q_UNUSED(requestedSize)
-
     QString lnkPath = QUrl::fromPercentEncoding(id.toUtf8());
     const bool breeze = lnkPath.startsWith(QLatin1String("breeze:"));
     if (breeze) lnkPath.remove(0, 7);
@@ -70,12 +69,19 @@ QImage StartMenuImageProvider::requestImage(const QString &id, QSize *size, cons
     }
     if (breeze) {
         const QFileInfo file(lnkPath);
-        QString name;
+        QString program = lnkPath;
+        if (file.suffix().compare(QLatin1String("lnk"), Qt::CaseInsensitive) == 0) {
+            const auto shortcut = readWindowsShortcut(lnkPath);
+            program = shortcut.target;
+            const auto match = QRegularExpression(QStringLiteral("([a-zA-Z0-9_-]+\\.msc)"), QRegularExpression::CaseInsensitiveOption).match(shortcut.arguments);
+            if (match.hasMatch()) program = match.captured(1);
+        }
+        QString name = breezeIconForWindowsProgram(program);
         if (file.isDir()) name = QStringLiteral("folder");
-        else if (lnkPath.startsWith(QLatin1String("apps:")) || file.suffix().compare(QLatin1String("lnk"), Qt::CaseInsensitive) == 0
-                 || file.suffix().compare(QLatin1String("exe"), Qt::CaseInsensitive) == 0)
+        else if (name.isEmpty() && (lnkPath.startsWith(QLatin1String("apps:")) || file.suffix().compare(QLatin1String("lnk"), Qt::CaseInsensitive) == 0
+                 || file.suffix().compare(QLatin1String("exe"), Qt::CaseInsensitive) == 0))
             name = QStringLiteral("application-x-executable");
-        else name = QMimeDatabase().mimeTypeForFile(file).iconName();
+        else if (name.isEmpty()) name = QMimeDatabase().mimeTypeForFile(file).iconName();
         const int pixels = requestedSize.width() > 0 ? requestedSize.width() : 64;
         QImage image = KIconLoader::global()->loadIcon(name, KIconLoader::Desktop, pixels).toImage();
         if (size) *size = image.size();
@@ -130,30 +136,10 @@ QImage StartMenuImageProvider::iconForLink(const QString &lnkPath) const
         if (!image.isNull()) return image;
     }
 
-    // 1. explicit icon location from the .lnk (usually the exe + index)
-    QString iconSource;
-    int iconIndex = 0;
-    QString exec;
-    IShellLinkW *shellLink = nullptr;
-    if (SUCCEEDED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW, reinterpret_cast<void **>(&shellLink)))) {
-        IPersistFile *persist = nullptr;
-        if (SUCCEEDED(shellLink->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&persist)))) {
-            if (SUCCEEDED(persist->Load(reinterpret_cast<LPCWSTR>(lnkPath.utf16()), STGM_READ))) {
-                wchar_t path[MAX_PATH] = {};
-                if (SUCCEEDED(shellLink->GetPath(path, MAX_PATH, nullptr, 0))) {
-                    exec = QString::fromWCharArray(path);
-                }
-                wchar_t iconBuf[MAX_PATH] = {};
-                int idx = 0;
-                if (SUCCEEDED(shellLink->GetIconLocation(iconBuf, MAX_PATH, &idx))) {
-                    iconSource = QString::fromWCharArray(iconBuf);
-                    iconIndex = idx;
-                }
-            }
-            persist->Release();
-        }
-        shellLink->Release();
-    }
+    const auto shortcut = readWindowsShortcut(lnkPath);
+    const QString &iconSource = shortcut.iconLocation;
+    const int iconIndex = shortcut.iconIndex;
+    const QString &exec = shortcut.target;
 
     HICON hIcon = nullptr;
     if (!iconSource.isEmpty() && QFileInfo::exists(iconSource)) {

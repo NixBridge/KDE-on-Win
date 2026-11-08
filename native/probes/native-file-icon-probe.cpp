@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "../upstream/plasma-windows/src/startmenu/startmenuimageprovider.h"
+#include "startmenuimageprovider.h"
 #include <QGuiApplication>
 #include <QTextStream>
 #include <QUrl>

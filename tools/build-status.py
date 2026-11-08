@@ -1,9 +1,15 @@
 """Print compact build progress without dumping compiler include traces."""
 import re
+import sys
+sys.stdout.reconfigure(encoding="utf-8")
 from pathlib import Path
 
-root = Path(__file__).resolve().parent
-pipeline = (root / 'build-port.log').read_text(encoding='utf-8', errors='replace')
+root = Path(__file__).resolve().parents[1]
+pipeline_path = next((p for p in [root / 'logs/build-port.log', root / 'work/build-port.log', root / 'build-port.log'] if p.exists()), None)
+if pipeline_path is None:
+    print('No build pipeline log found in logs/ or work/.')
+    raise SystemExit(0)
+pipeline = pipeline_path.read_text(encoding='utf-8', errors='replace')
 packages = re.findall(r'^Building (.+)$', pipeline, re.M)
 print('Current package:', packages[-1] if packages else 'initialization')
 done = []

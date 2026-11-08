@@ -5,7 +5,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-root = Path(__file__).resolve().parent
+root = Path(__file__).resolve().parents[2]
 port = root / 'upstream/plasma-windows'
 store = Path('D:/KDE/sources')
 manifest = json.loads((port / 'upstream-versions.json').read_text())

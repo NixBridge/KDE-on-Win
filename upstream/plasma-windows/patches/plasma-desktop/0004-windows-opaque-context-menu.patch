@@ -1,0 +1,19 @@
+diff --git a/containments/desktop/plugins/folder/foldermodel.cpp b/containments/desktop/plugins/folder/foldermodel.cpp
+index 91691fa..67f8526 100644
+--- a/containments/desktop/plugins/folder/foldermodel.cpp
++++ b/containments/desktop/plugins/folder/foldermodel.cpp
+@@ -2165,7 +2165,13 @@ void FolderModel::openContextMenu(QQuickItem *visualParent, Qt::KeyboardModifier
+         }
+     }
+ 
+-    menu->setAttribute(Qt::WA_TranslucentBackground);
++    #ifdef Q_OS_WIN
++        menu->setAttribute(Qt::WA_TranslucentBackground, false);
++        menu->setAutoFillBackground(true);
++        menu->setWindowFlag(Qt::WindowStaysOnTopHint, true);
++#else
++        menu->setAttribute(Qt::WA_TranslucentBackground);
++#endif
+     menu->winId(); // force surface creation before ensurePolish call in menu::Popup which happens before show
+ 
+     if (visualParent && menu->windowHandle()) {

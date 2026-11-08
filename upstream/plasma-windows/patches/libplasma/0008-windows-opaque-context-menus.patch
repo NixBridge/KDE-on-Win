@@ -1,0 +1,36 @@
+diff --git a/src/declarativeimports/plasmaextracomponents/qmenu.cpp b/src/declarativeimports/plasmaextracomponents/qmenu.cpp
+index fe8f8e5..4be7705 100644
+--- a/src/declarativeimports/plasmaextracomponents/qmenu.cpp
++++ b/src/declarativeimports/plasmaextracomponents/qmenu.cpp
+@@ -31,7 +31,13 @@ QMenuProxy::QMenuProxy(QObject *parent)
+         // Breeze and Oxygen have rounded corners on menus. They set this attribute in polish()
+         // but at that time the underlying surface has already been created where setting this
+         // flag makes no difference anymore (Bug 385311)
++        #ifdef Q_OS_WIN
++        m_menu->setAttribute(Qt::WA_TranslucentBackground, false);
++        m_menu->setAutoFillBackground(true);
++        m_menu->setWindowFlag(Qt::WindowStaysOnTopHint, true);
++#else
+         m_menu->setAttribute(Qt::WA_TranslucentBackground);
++#endif
+ 
+         KAcceleratorManager::manage(m_menu);
+         connect(m_menu, &QMenu::triggered, this, &QMenuProxy::itemTriggered);
+diff --git a/src/plasmaquick/plasmoid/containmentitem.cpp b/src/plasmaquick/plasmoid/containmentitem.cpp
+index aeed956..dcff23e 100644
+--- a/src/plasmaquick/plasmoid/containmentitem.cpp
++++ b/src/plasmaquick/plasmoid/containmentitem.cpp
+@@ -838,7 +838,13 @@ void ContainmentItem::mousePressEvent(QMouseEvent *event)
+ 
+     if (!m_contextMenu) {
+         m_contextMenu.reset(new QMenu);
++        #ifdef Q_OS_WIN
++        m_contextMenu->setAttribute(Qt::WA_TranslucentBackground, false);
++        m_contextMenu->setAutoFillBackground(true);
++        m_contextMenu->setWindowFlag(Qt::WindowStaysOnTopHint, true);
++#else
+         m_contextMenu->setAttribute(Qt::WA_TranslucentBackground);
++#endif
+         // this is a workaround where Qt now creates the menu widget
+         // in .exec before oxygen can polish it and set the following attribute
+         // end workaround

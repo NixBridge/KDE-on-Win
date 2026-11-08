@@ -591,3 +591,7 @@ All non-Qt component patch sequences were regenerated from diffs against the pin
 `plasma-desktop/0003-windows-shortcut-launch-breeze-icons.patch` opens the original local Windows shortcut through ShellExecuteEx, retaining its arguments and working directory, normalizes drive-prefixed URLs, and routes desktop images through the Breeze raster provider. A FolderModel integration probe successfully launches a test shortcut and verifies its arguments/cwd.
 
 `plasma-workspace/0013-windows-panel-above-explorer.patch` checks only Explorer taskbar windows and re-raises a visible panel without activating it if the taskbar overtakes it. It does not make the desktop wallpaper topmost. Native MSVC build passed; VM stacking acceptance pending.
+
+### Opaque Windows context menus
+
+The Windows branches in libplasma/0008 and plasma-desktop/0004 disable translucent QWidget menu backgrounds and mark menus topmost before their native surface is created. Other platforms keep the upstream translucent behavior. Native builds and an offscreen FolderModel menu probe passed (visible, opaque, topmost and painted); final VM interaction remains pending.

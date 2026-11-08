@@ -1,3 +1,12 @@
+PROJECT AUTHORSHIP NOTICE (not part of the GNU GPL text)
+New integration code and modifications in this project were AI-generated
+and AI-assisted using OpenAI Codex. Human review and VM testing are ongoing.
+This notice does not claim that vendored KDE/Qt or other upstream code was
+AI-generated. Their original authorship and per-file licenses are retained.
+This disclosure adds no restriction to the GPL. See AI_NOTICE.md and THIRD_PARTY.md.
+
+The unmodified GNU GPL version 3 text follows:
+
 GNU GENERAL PUBLIC LICENSE
 Version 3, 29 June 2007
 

@@ -25,7 +25,7 @@ foreach ($relative in 'Next\metadata.json', 'Next\contents\images\5120x2880.png'
         throw "Runtime incomplete: missing wallpaper $relative"
     }
 }
-& python (Join-Path $PSScriptRoot 'verify-runtime-imports.py') --root $CraftRoot
+& python (Join-Path $PSScriptRoot 'tools\verify-runtime-imports.py') --root $CraftRoot
 if ($LASTEXITCODE) { throw 'Runtime import validation failed' }
 $required = 'plasmashell.exe', 'dbus-daemon.exe', 'kded6.exe', 'kactivitymanagerd.exe', 'kbuildsycoca6.exe'
 foreach ($name in $required) {
@@ -81,14 +81,18 @@ if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
 }
 [IO.File]::WriteAllText((Join-Path $stage 'VM-TEST.txt'), "Extract this archive to D:\KDE\CraftRoot in the test VM, or C:\KDE\CraftRoot with drive D: available for a temporary SUBST mapping. Run deploy-vm.cmd with no arguments for a manual session. Optionally run run-vm-probe.cmd to check the window backend; results are written to bin\kws-probe-result.txt. Save logs before changing the login shell. This build has not passed VM acceptance yet.", [Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $tools 'dbus\session-plasma.conf') -Destination (Join-Path $stage 'dbus-session-plasma.conf')
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'source-verification.json') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'extra-source-verification.json') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'PORTING.md') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'build-lock.json') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime-import-verification.json') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'run-vm-probe.cmd') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'run-qml-probe.cmd') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'apply-panel-opacity.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\source-verification.json') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\extra-source-verification.json') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\PORTING.md') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AI_NOTICE.md') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD_PARTY.md') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination (Join-Path $stage 'LICENSE.project')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\build-lock.json') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\runtime-import-verification.json') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-vm-probe.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-qml-probe.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-runtime-checks.cmd') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\apply-panel-opacity.cmd') -Destination $stage
 foreach ($script in Get-ChildItem -LiteralPath $stage -File | Where-Object { $_.Extension -in '.cmd', '.ps1' }) {
     $text = [IO.File]::ReadAllText($script.FullName).Replace("`r`n", "`n").Replace("`n", "`r`n")
     [IO.File]::WriteAllText($script.FullName, $text, [Text.UTF8Encoding]::new($false))

@@ -5,8 +5,8 @@ import json
 import subprocess
 from pathlib import Path
 
-root = Path(__file__).resolve().parent
-manifest = json.loads((root / 'cache-26.05.json').read_text(encoding='utf-8'))
+root = Path(__file__).resolve().parents[2]
+manifest = json.loads((root / 'work' / 'cache-26.05.json').read_text(encoding='utf-8'))
 cache = Path('D:/KDE/CraftRoot/download/cache/26.05/windows/cl/msvc2022/x86_64/RelWithDebInfo')
 base = 'https://files.kde.org/craft/Qt6/26.05/windows/cl/msvc2022/x86_64/RelWithDebInfo/'
 names = {'qtbase', 'qtdeclarative', 'qttools', 'qtshadertools', 'qtsvg', 'qtlanguageserver', 'qttranslations', 'qtpositioning', 'qtlocation', 'qtwebsockets', 'qtmultimedia', 'qtimageformats'}

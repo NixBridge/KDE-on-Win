@@ -71,6 +71,6 @@ while queue:
         else:
             missing.append({'module': str(path), 'missing': name})
 report = {'modules_checked': len(seen), 'architecture': 'x64', 'missing': missing}
-Path(__file__).with_name('runtime-import-verification.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+(Path(__file__).resolve().parents[1] / 'manifests' / 'runtime-import-verification.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
 print(json.dumps(report, indent=2))
 raise SystemExit(1 if missing else 0)

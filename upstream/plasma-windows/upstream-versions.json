@@ -89,7 +89,8 @@
         "0004-windows-window-thumbnail.patch",
         "0005-windows-thumbnail-cache.patch",
         "0006-windows-dwm-live-thumbnail.patch",
-        "0007-windows-dwm-thumbnail-declarations.patch"
+        "0007-windows-dwm-thumbnail-declarations.patch",
+        "0008-windows-opaque-context-menus.patch"
       ]
     },
     "plasma-activities-stats": {
@@ -107,7 +108,8 @@
       "patches": [
         "0001-windows-minimal-scope.patch",
         "0002-windows-native-file-icons.patch",
-        "0003-windows-shortcut-launch-breeze-icons.patch"
+        "0003-windows-shortcut-launch-breeze-icons.patch",
+        "0004-windows-opaque-context-menu.patch"
       ]
     },
     "plasma-workspace": {

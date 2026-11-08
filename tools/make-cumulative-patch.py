@@ -13,8 +13,8 @@ parser.add_argument('--version', required=True)
 args = parser.parse_args()
 if not args.version.replace('-', '').isalnum():
     parser.error('version must contain only letters, digits and hyphens')
-root = Path(__file__).resolve().parent
-manifest = json.loads((root / 'cumulative-patch-files.json').read_text())
+root = Path(__file__).resolve().parents[1]
+manifest = json.loads((root / 'manifests' / 'cumulative-patch-files.json').read_text())
 out = root / 'dist' / args.version
 stage = out / 'patch'
 sources = {relative: args.runtime / relative for relative in manifest['runtime']}
@@ -32,6 +32,7 @@ for relative, source in sources.items():
     'Desktop and launcher use KDE Breeze icons. Windows shortcuts open through the Shell, preserving their arguments.\n'
     'Only the Plasma panel is kept above Explorer taskbars; the desktop wallpaper is not made topmost.\n'
     'Run apply-panel-opacity.cmd after startup if the existing panel is transparent.\n'
+    'Built-in Windows programs use equivalent Breeze icons; QWidget context menus use an opaque topmost Windows path.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

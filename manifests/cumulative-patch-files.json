@@ -2,8 +2,11 @@
   "runtime": [
     "bin/KF6BreezeIcons.dll",
     "bin/KF6IconThemes.dll",
+    "bin/PlasmaQuick.dll",
     "bin/QuickCharts.dll",
     "bin/QuickChartsControls.dll",
+    "bin/breeze-mapping-probe.exe",
+    "bin/context-menu-probe.exe",
     "bin/data/kio_desktop/directory.desktop",
     "bin/data/kio_desktop/directory.trash",
     "bin/data/plasma/layout-templates/org.kde.plasma.desktop.defaultPanel/contents/layout.js",
@@ -17,6 +20,7 @@
     "bin/qt.conf",
     "plugins/kf6/kded/desktopnotifier.dll",
     "plugins/kf6/kio/desktop.dll",
+    "qml/org/kde/plasma/extras/plasmaextracomponentsplugin.dll",
     "qml/org/kde/plasma/windowsmenu/startmenuplugin.dll",
     "qml/org/kde/private/desktopcontainment/folder/folderplugin.dll",
     "qml/org/kde/quickcharts/QuickCharts.qmltypes",
@@ -37,8 +41,11 @@
   "repository": {
     "plasma-common.cmd": "upstream/plasma-windows/tools/plasma-common.cmd",
     "build-startmenu-desktops.ps1": "upstream/plasma-windows/tools/build-startmenu-desktops.ps1",
-    "apply-panel-opacity.cmd": "apply-panel-opacity.cmd",
-    "run-qml-probe.cmd": "run-qml-probe.cmd",
-    "run-runtime-checks.cmd": "run-runtime-checks.cmd"
+    "apply-panel-opacity.cmd": "runtime/apply-panel-opacity.cmd",
+    "run-qml-probe.cmd": "runtime/run-qml-probe.cmd",
+    "run-runtime-checks.cmd": "runtime/run-runtime-checks.cmd",
+    "AI_NOTICE.md": "AI_NOTICE.md",
+    "LICENSE.project": "LICENSE",
+    "THIRD_PARTY.md": "THIRD_PARTY.md"
   }
 }

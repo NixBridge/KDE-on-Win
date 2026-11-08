@@ -7,7 +7,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-root = Path(__file__).resolve().parent
+root = Path(__file__).resolve().parents[1]
 port = root / 'upstream/plasma-windows'
 store = Path('D:/KDE/sources')
 store.mkdir(parents=True, exist_ok=True)
@@ -55,5 +55,5 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             result = {'name': name, 'error': str(exc)}
         results.append(result)
         print(json.dumps(result), flush=True)
-(root / 'source-verification.json').write_text(json.dumps(results, indent=2), encoding='utf-8')
+(root / 'manifests' / 'source-verification.json').write_text(json.dumps(results, indent=2), encoding='utf-8')
 raise SystemExit(1 if any('error' in result for result in results) else 0)
