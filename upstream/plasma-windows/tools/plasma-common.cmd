@@ -115,9 +115,9 @@ set "DBUS_CONF=%~dp0dbus-session-plasma.conf"
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
 if errorlevel 1 (
     if exist "%DBUS_CONF%" (
-        start "plasma-dbus" "%CRAFT_BIN%\dbus-daemon.exe" --config-file="%DBUS_CONF%" --nofork
+        call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --config-file="%DBUS_CONF%" --nofork
     ) else (
-        start "plasma-dbus" "%CRAFT_BIN%\dbus-daemon.exe" --session --nofork
+        call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --session --nofork
     )
     rem Wait until the bus is actually listening. A fixed sleep raced the
     rem daemon's TCP listener initialization at logon, so services started
@@ -133,26 +133,37 @@ rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
 if exist "%CRAFT_ROOT%\install-file-associations.ps1" (
-    start "plasma-file-associations" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\install-file-associations.ps1" -CraftRoot "%CRAFT_ROOT%" -IfNeeded
+    call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\install-file-associations.ps1" -CraftRoot "%CRAFT_ROOT%" -IfNeeded
 )
 if exist "%CRAFT_BIN%\plasma-personalization.exe" (
-    start "plasma-personalization" /min "%CRAFT_BIN%\plasma-personalization.exe"
+    call :pc_spawn "%CRAFT_BIN%\plasma-personalization.exe"
 )
 if exist "%CRAFT_BIN%\plasma-window-decorations.exe" (
-    start "plasma-window-decorations" "%CRAFT_BIN%\plasma-window-decorations.exe"
+    call :pc_spawn "%CRAFT_BIN%\plasma-window-decorations.exe"
 )
 if exist "%CRAFT_ROOT%\start-notifications.ps1" (
-    start "plasma-notifications" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\start-notifications.ps1"
+    call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\start-notifications.ps1"
 )
 if exist "%CRAFT_ROOT%\repair-taskbar-pins.ps1" (
-    start "plasma-taskbar-migration" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\repair-taskbar-pins.ps1" -CraftRoot "%CRAFT_ROOT%"
+    call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\repair-taskbar-pins.ps1" -CraftRoot "%CRAFT_ROOT%"
 )
-start "plasma-activitymanager" "%CRAFT_BIN%\kactivitymanagerd.exe"
-start "plasma-kded" "%CRAFT_BIN%\kded6.exe"
+call :pc_spawn "%CRAFT_BIN%\kactivitymanagerd.exe"
+call :pc_spawn "%CRAFT_BIN%\kded6.exe"
 rem Windows tray host (SNI bridge into the Plasma system tray); its log
 rem lands next to the exe (working dir), i.e. %CRAFT_BIN%\trayhost.log.
 if exist "%CRAFT_BIN%\trayhost.exe" (
-    start "plasma-trayhost" /D "%CRAFT_BIN%" "%CRAFT_BIN%\trayhost.exe"
+    pushd "%CRAFT_BIN%"
+    call :pc_spawn "%CRAFT_BIN%\trayhost.exe"
+    popd
 )
 timeout /t 3 /nobreak >nul
+exit /b 0
+
+rem Native background spawning: no console windows; stdout/stderr go to user logs.
+:pc_spawn
+if not exist "%CRAFT_BIN%\kde-session-host.exe" goto :pc_spawn_legacy
+"%CRAFT_BIN%\kde-session-host.exe" --spawn-hidden %*
+exit /b %errorlevel%
+:pc_spawn_legacy
+start "" %*
 exit /b 0

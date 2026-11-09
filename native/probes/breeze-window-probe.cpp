@@ -8,6 +8,13 @@
 #include <QThread>
 #include <QTextStream>
 #include <QFontDatabase>
+#include <QFileDialog>
+#include <QColorDialog>
+#include <QFontDialog>
+#include <QMessageBox>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QMouseEvent>
 #include "../style/captionicons.h"
 
 static bool readableCaptionIcon(const QIcon& icon, const QColor& background)
@@ -41,6 +48,38 @@ int main(int argc, char** argv)
     qputenv("QT_STYLE_OVERRIDE", "plasmawindows");
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
+    if (app.arguments().contains(QStringLiteral("--dialog-self-test"))) {
+        QTemporaryDir preferences;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, preferences.path());
+        QFileDialog files;
+        QColorDialog colors;
+        QFontDialog fonts;
+        QMessageBox message(
+            QMessageBox::Question, "KDE dialog", "Test-owned dialog", QMessageBox::Yes | QMessageBox::No);
+        bool ok = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        for (QDialog* dialog : { static_cast<QDialog*>(&files), static_cast<QDialog*>(&colors),
+                 static_cast<QDialog*>(&fonts), static_cast<QDialog*>(&message) }) {
+            dialog->ensurePolished();
+            app.processEvents();
+            auto* bar = dialog->findChild<QWidget*>("PlasmaBreezeTitleBar");
+            ok &= bar && dialog->windowFlags().testFlag(Qt::FramelessWindowHint);
+            if (bar) {
+                auto buttons = bar->findChildren<QToolButton*>();
+                ok &= buttons.size() == 3;
+                if (buttons.size() == 3)
+                    ok &= buttons[0]->isHidden() && buttons[1]->isHidden();
+                QMouseEvent doubleClick(QEvent::MouseButtonDblClick, QPointF(80, 12), QPointF(80, 12), Qt::LeftButton,
+                    Qt::LeftButton, Qt::NoModifier);
+                QCoreApplication::sendEvent(bar, &doubleClick);
+                ok &= !dialog->isMaximized();
+            }
+        }
+        QTextStream(stdout)
+            << (ok ? "PASS" : "FAIL")
+            << ": Qt file/color/font/message dialogs use KDE chrome and non-native dialog policy; no dialog shown\n";
+        return ok ? 0 : 1;
+    }
     if (app.arguments().contains(QStringLiteral("--caption-contrast-self-test"))) {
         bool ok = true;
         QPalette wrong = app.palette();

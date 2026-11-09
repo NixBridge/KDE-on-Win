@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <QApplication>
 #include <QMainWindow>
+#include <QDialog>
 #include <QStylePlugin>
 #include <QStyleFactory>
 #include <QProxyStyle>
@@ -38,10 +39,16 @@ class WindowChrome final : public QObject, public QAbstractNativeEventFilter {
     Q_OBJECT
 
 public:
-    explicit WindowChrome(QMainWindow* window)
+    explicit WindowChrome(QWidget* window)
         : QObject(window)
         , m_window(window)
     {
+        const bool dialog = qobject_cast<QDialog*>(window);
+        m_actions = WS_THICKFRAME | WS_SYSMENU;
+        if (!dialog || window->windowFlags().testFlag(Qt::WindowMinimizeButtonHint))
+            m_actions |= WS_MINIMIZEBOX;
+        if (!dialog || window->windowFlags().testFlag(Qt::WindowMaximizeButtonHint))
+            m_actions |= WS_MAXIMIZEBOX;
         m_bar = new QWidget(window);
         m_bar->setObjectName("PlasmaBreezeTitleBar");
         m_bar->setAutoFillBackground(true);
@@ -78,6 +85,8 @@ public:
         connect(m_maximize, &QToolButton::clicked, this, [this] { toggleMaximize(); });
         m_close = button("window-close", tr("Close"));
         connect(m_close, &QToolButton::clicked, window, &QWidget::close);
+        m_minimize->setVisible(m_actions & WS_MINIMIZEBOX);
+        m_maximize->setVisible(m_actions & WS_MAXIMIZEBOX);
         m_margins = window->contentsMargins();
         window->setContentsMargins(m_margins.left(), m_margins.top() + m_height, m_margins.right(), m_margins.bottom());
         const bool visible = window->isVisible();
@@ -90,8 +99,8 @@ public:
         qApp->installNativeEventFilter(this);
         if (IsWindow(handle)) {
             const auto nativeStyle = GetWindowLongPtrW(handle, GWL_STYLE);
-            SetWindowLongPtrW(handle, GWL_STYLE,
-                (nativeStyle | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX) & ~WS_CAPTION);
+            SetWindowLongPtrW(
+                handle, GWL_STYLE, ((nativeStyle & ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | m_actions) & ~WS_CAPTION);
             SetWindowPos(handle, nullptr, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         }
@@ -184,7 +193,7 @@ private:
         if (!IsWindow(m_handle) || m_window->isFullScreen())
             return;
         const auto style = GetWindowLongPtrW(m_handle, GWL_STYLE);
-        const auto wanted = (style | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX) & ~WS_CAPTION;
+        const auto wanted = ((style & ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | m_actions) & ~WS_CAPTION;
         if (style == wanted)
             return;
         SetWindowLongPtrW(m_handle, GWL_STYLE, wanted);
@@ -193,6 +202,8 @@ private:
     }
     void toggleMaximize()
     {
+        if (!(m_actions & WS_MAXIMIZEBOX))
+            return;
         const bool restore = m_window->isMaximized() || (IsWindow(m_handle) && IsZoomed(m_handle));
         if (restore) {
             m_window->showNormal();
@@ -236,7 +247,8 @@ private:
             m_iconsInitialized = true;
         }
     }
-    QMainWindow* m_window;
+    QWidget* m_window;
+    LONG_PTR m_actions = 0;
     QWidget* m_bar;
     QToolButton *m_maximize, *m_minimize, *m_close;
     int m_height;
@@ -262,6 +274,7 @@ public:
     }
     void polish(QApplication* application) override
     {
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
         QProxyStyle::polish(application);
         installProjectTranslations(application);
         auto update = [application] {
@@ -318,7 +331,9 @@ public:
     void polish(QWidget* widget) override
     {
         QProxyStyle::polish(widget);
-        auto* window = qobject_cast<QMainWindow*>(widget);
+        QWidget* window = qobject_cast<QMainWindow*>(widget);
+        if (!window && widget->isWindow())
+            window = qobject_cast<QDialog*>(widget);
         if (!window || window->property("plasmaBreezeChrome").toBool())
             return;
         const QString executable = QFileInfo(QCoreApplication::applicationFilePath()).fileName().toLower();

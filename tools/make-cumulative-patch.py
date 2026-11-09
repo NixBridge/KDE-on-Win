@@ -48,6 +48,7 @@ for relative, source in sources.items():
     'Fix15 recolors Breeze caption glyphs against each actual titlebar background, including inactive and disabled modes. See docs/FIX15.md.\n'
     'Fix16 routes all filesystem folder classes and open verbs to Dolphin, including desktop directory shortcuts and physical Shell folders. Windows-only virtual pages retain their native handlers. See docs/FIX16.md.\n'
     'Fix17 adds event-driven caption attachment and the KDE application chooser. Configure MAILTO through configure-kde-link-chooser.cmd if Windows has an existing protected default. Password logon replacement remains unimplemented. See docs/FIX17.md and docs/STYLE_SCOPE.md.\n'
+    'Fix18 adds opt-in classic-control painting (apply-client-style.cmd), KDE Qt dialogs and an experimental local-account login tile (install-kde-logon.cmd). Full LogonUI replacement is not implemented. See docs/FIX18.md and docs/LOCAL_LOGON.md before VM testing.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

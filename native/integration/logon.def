@@ -1,0 +1,5 @@
+LIBRARY kde-logon-provider
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
+    KDELogonSelfTest

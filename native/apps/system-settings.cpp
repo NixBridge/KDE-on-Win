@@ -133,6 +133,26 @@ int main(int argc, char** argv)
     auto* decoration = new QCheckBox(QObject::tr("Use Breeze titlebars on standard Windows windows"));
     decoration->setChecked(settings.value(QStringLiteral("decorateWindows"), true).toBool());
     appearance->addWidget(decoration);
+    auto* nativeControls = new QCheckBox(QObject::tr("Style classic Windows controls (experimental)"));
+    nativeControls->setChecked(settings.value("nativeControls", true).toBool());
+    appearance->addWidget(nativeControls);
+    QObject::connect(nativeControls, &QCheckBox::toggled, &window, [&](bool enabled) {
+        settings.setValue("nativeControls", enabled);
+        settings.sync();
+    });
+    auto* startControls = new QPushButton(QObject::tr("Start Windows control styling"));
+    auto* stopControls = new QPushButton(QObject::tr("Stop Windows control styling"));
+    appearance->addWidget(startControls);
+    appearance->addWidget(stopControls);
+    auto controlService = [](bool stop) {
+        for (const auto& name : { QStringLiteral("/kde-style-host.exe"), QStringLiteral("/x86/kde-style-host.exe") }) {
+            const auto path = QCoreApplication::applicationDirPath() + name;
+            if (QFileInfo::exists(path))
+                QProcess::startDetached(path, stop ? QStringList { "--stop" } : QStringList {});
+        }
+    };
+    QObject::connect(startControls, &QPushButton::clicked, &window, [=] { controlService(false); });
+    QObject::connect(stopControls, &QPushButton::clicked, &window, [=] { controlService(true); });
     auto* scope = new QLabel(
         QObject::tr("Custom titlebars are skipped. Application content keeps the style supported by its own toolkit."));
     scope->setWordWrap(true);

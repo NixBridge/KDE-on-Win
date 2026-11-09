@@ -1,0 +1,4 @@
+LIBRARY kde-controls
+EXPORTS
+    KDEControlHook
+    KDEControlSelfTest

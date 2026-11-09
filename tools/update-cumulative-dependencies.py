@@ -4,7 +4,7 @@ import argparse
 import json
 import zipfile
 from pathlib import Path
-from pe_imports import imports
+from pe_imports import imports, architecture
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--runtime',type=Path,default=Path('D:/KDE/CraftRoot'))
@@ -17,6 +17,7 @@ with zipfile.ZipFile(args.base_archive) as archive:
     original=set(archive.namelist())
 included=set(manifest['runtime'])|set(manifest['repository'])
 dlls={p.name.lower():p for p in (args.runtime/'bin').glob('*.dll')}
+x86_dlls={p.name.lower():p for p in (args.runtime/'bin/x86').glob('*.dll')}
 queue=[args.runtime/relative for relative in manifest['runtime'] if Path(relative).suffix.lower() in ['.exe','.dll']]
 seen=set()
 added=set()
@@ -24,8 +25,9 @@ while queue:
     module=queue.pop()
     if module in seen:continue
     seen.add(module)
+    candidates=x86_dlls if architecture(module)=='x86' else dlls
     for name in imports(module):
-        dependency=dlls.get(name.lower())
+        dependency=candidates.get(name.lower())
         if dependency is None:continue
         relative=dependency.relative_to(args.runtime).as_posix()
         if relative not in original and relative not in included:added.add(relative)

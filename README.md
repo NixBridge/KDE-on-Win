@@ -69,4 +69,4 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
-Latest cumulative integration: [Fix17](docs/FIX17.md) reacts to dialog creation without waiting for a sweep and adds a KDE application chooser. Includes all previous fixes. Password-logon replacement and global third-party client-area theming remain unimplemented; see [style coverage](docs/STYLE_SCOPE.md).
+Latest cumulative integration: [Fix18](docs/FIX18.md) unifies project dialogs, adds an opt-in 32/64-bit classic-control style module and an experimental local-account credential provider. Includes all previous fixes. Full LogonUI, WinUI/XAML and arbitrary client-area replacement remain outside the implemented coverage; see [style coverage](docs/STYLE_SCOPE.md).

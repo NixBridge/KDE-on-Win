@@ -1455,6 +1455,9 @@
         <translation>应用语言并重新打开系统设置</translation>
     </message>
 <message><source>Configure KDE link chooser…</source><translation>配置 KDE 链接应用选择器…</translation></message>
+<message><source>Style classic Windows controls (experimental)</source><translation>传统 Windows 控件换肤（实验性）</translation></message>
+<message><source>Start Windows control styling</source><translation>启动 Windows 控件换肤</translation></message>
+<message><source>Stop Windows control styling</source><translation>停止 Windows 控件换肤</translation></message>
 </context>
 <context>
     <name>WindowChrome</name>

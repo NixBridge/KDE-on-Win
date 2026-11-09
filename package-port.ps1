@@ -99,7 +99,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\apply-panel-opacity.cmd
 foreach ($name in 'repair-taskbar-pins.cmd', 'repair-taskbar-pins.ps1', 'taskbar-pins-migration.js') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }
-foreach ($name in 'start-konsole.cmd', 'start-process-monitor.cmd', 'start-dolphin.cmd', 'start-text-editor.cmd', 'start-system-settings.cmd', 'start-window-decorations.cmd', 'start-window-decorations-admin.cmd', 'start-window-decorations-admin.ps1', 'configure-kde-link-chooser.cmd') {
+foreach ($name in 'start-konsole.cmd', 'start-process-monitor.cmd', 'start-dolphin.cmd', 'start-text-editor.cmd', 'start-system-settings.cmd', 'start-window-decorations.cmd', 'start-window-decorations-admin.cmd', 'start-window-decorations-admin.ps1', 'configure-kde-link-chooser.cmd', 'apply-client-style.cmd', 'install-kde-logon.cmd', 'restore-kde-logon.cmd', 'install-kde-logon.ps1') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'third_party') -Destination $stage -Recurse

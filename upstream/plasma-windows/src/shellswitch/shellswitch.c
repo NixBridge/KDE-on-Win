@@ -245,14 +245,28 @@ static void startExplorer(void)
     ShellExecuteW(NULL, NULL, L"explorer.exe", NULL, NULL, SW_SHOWNORMAL);
 }
 
+static BOOL nativeSessionHost(WCHAR *path, DWORD count)
+{
+    if (!GetModuleFileNameW(NULL, path, count)) return FALSE;
+    WCHAR *slash = wcsrchr(path, L'\\');
+    if (!slash) return FALSE;
+    *(slash + 1) = 0;
+    if (FAILED(StringCchCatW(path, count, L"kde-session-host.exe"))) return FALSE;
+    return GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
+}
+
 static void startPlasmaSession(void)
 {
     if (g_dryRun) {
-        logMsg(L"[dry-run] would start: cmd.exe /c \"%s\"\n", g_sessionCmd);
+        WCHAR native[MAX_PATH * 2];
+        if (nativeSessionHost(native, MAX_PATH * 2)) logMsg(L"[dry-run] would start native session: %s\n", native);
+        else logMsg(L"[dry-run] would start: cmd.exe /c \"%s\"\n", g_sessionCmd);
         return;
     }
     WCHAR cmd[MAX_PATH * 2 + 16];
-    StringCchPrintfW(cmd, MAX_PATH * 2 + 16, L"cmd.exe /c \"%s\"", g_sessionCmd);
+    WCHAR native[MAX_PATH * 2];
+    if (nativeSessionHost(native, MAX_PATH * 2)) StringCchPrintfW(cmd, MAX_PATH * 2 + 16, L"\"%s\"", native);
+    else StringCchPrintfW(cmd, MAX_PATH * 2 + 16, L"cmd.exe /c \"%s\"", g_sessionCmd);
     STARTUPINFOW si = {sizeof(si)};
     PROCESS_INFORMATION pi = {0};
     if (CreateProcessW(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
@@ -267,7 +281,7 @@ static void startPlasmaSession(void)
 
 static BOOL isPlasmaValue(const WCHAR *value)
 {
-    return value && (wcsstr(value, L"session-shell.cmd") != NULL || wcsstr(value, L"plasmashell.exe") != NULL);
+    return value && (wcsstr(value, L"session-shell.cmd") != NULL || wcsstr(value, L"plasmashell.exe") != NULL || wcsstr(value, L"kde-session-host.exe") != NULL);
 }
 
 static void doSwitchToExplorer(void)
@@ -293,7 +307,9 @@ static void doSwitchToPlasma(void)
         return;
     }
     WCHAR regValue[MAX_PATH * 2 + 16];
-    StringCchPrintfW(regValue, MAX_PATH * 2 + 16, L"cmd.exe /c \"%s\"", g_sessionCmd);
+    WCHAR native[MAX_PATH * 2];
+    if (nativeSessionHost(native, MAX_PATH * 2)) StringCchPrintfW(regValue, MAX_PATH * 2 + 16, L"\"%s\"", native);
+    else StringCchPrintfW(regValue, MAX_PATH * 2 + 16, L"cmd.exe /c \"%s\"", g_sessionCmd);
     logMsg(L"Switching to plasma...\n");
     if (writeShellValue(regValue)) {
         runTaskkill(L"explorer.exe");

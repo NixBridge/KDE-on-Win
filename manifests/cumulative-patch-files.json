@@ -237,6 +237,11 @@
     "bin/desktop-protocol-probe.exe",
     "bin/desktop-stacking-probe.exe",
     "bin/icon-probe.exe",
+    "bin/kde-controls.dll",
+    "bin/kde-logon-probe.exe",
+    "bin/kde-logon-provider.dll",
+    "bin/kde-session-host.exe",
+    "bin/kde-style-host.exe",
     "bin/klookandfeel.dll",
     "bin/kmpris.dll",
     "bin/konsole-conpty-probe.exe",
@@ -268,6 +273,8 @@
     "bin/startmenu-model-probe.exe",
     "bin/taskbar-icon-probe.exe",
     "bin/taskmanager.dll",
+    "bin/x86/kde-controls.dll",
+    "bin/x86/kde-style-host.exe",
     "plugins/kf6/kded/desktopnotifier.dll",
     "plugins/kf6/kded/mprisservice.dll",
     "plugins/kf6/kded/statusnotifierwatcher.dll",
@@ -586,6 +593,12 @@
     "start-window-decorations-admin.ps1": "runtime/start-window-decorations-admin.ps1",
     "configure-kde-link-chooser.cmd": "runtime/configure-kde-link-chooser.cmd",
     "docs/FIX17.md": "docs/FIX17.md",
-    "docs/STYLE_SCOPE.md": "docs/STYLE_SCOPE.md"
+    "docs/STYLE_SCOPE.md": "docs/STYLE_SCOPE.md",
+    "apply-client-style.cmd": "runtime/apply-client-style.cmd",
+    "install-kde-logon.cmd": "runtime/install-kde-logon.cmd",
+    "restore-kde-logon.cmd": "runtime/restore-kde-logon.cmd",
+    "install-kde-logon.ps1": "runtime/install-kde-logon.ps1",
+    "docs/FIX18.md": "docs/FIX18.md",
+    "docs/LOCAL_LOGON.md": "docs/LOCAL_LOGON.md"
   }
 }
