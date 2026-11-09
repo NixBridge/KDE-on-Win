@@ -6,6 +6,10 @@
 #include <QPlainTextEdit>
 #include <QTextDocument>
 #include <QLineEdit>
+#include <QToolBar>
+#include <QCheckBox>
+#include <QAction>
+#include <QTextBlock>
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QFileDialog>
@@ -61,20 +65,53 @@ public:
         menu->addAction(tr("Copy"), QKeySequence::Copy, edit, &QPlainTextEdit::copy);
         menu->addAction(tr("Paste"), QKeySequence::Paste, edit, &QPlainTextEdit::paste);
         menu->addAction(tr("Select All"), QKeySequence::SelectAll, edit, &QPlainTextEdit::selectAll);
+        searchBar = addToolBar(tr("Find and Replace"));
+        searchBar->setMovable(false);
+        query = new QLineEdit(searchBar);
+        query->setPlaceholderText(tr("Find text"));
+        query->setClearButtonEnabled(true);
+        replacement = new QLineEdit(searchBar);
+        replacement->setPlaceholderText(tr("Replace with"));
+        matchCase = new QCheckBox(tr("Match case"), searchBar);
+        searchBar->addWidget(query);
+        searchBar->addWidget(replacement);
+        searchBar->addWidget(matchCase);
+        searchBar->addAction(tr("Previous"), this, [this] { findText(true); });
+        searchBar->addAction(tr("Next"), this, [this] { findText(false); });
+        searchBar->addAction(tr("Replace"), this, [this] { replaceOne(); });
+        searchBar->addAction(tr("Replace All"), this, [this] { replaceAll(); });
+        searchBar->hide();
         menu->addAction(tr("Find…"), QKeySequence::Find, this, [this] {
+            searchBar->show();
+            query->setFocus();
+            query->selectAll();
+        });
+        menu->addAction(tr("Find Next"), QKeySequence::FindNext, this, [this] { findText(false); });
+        menu->addAction(tr("Find Previous"), QKeySequence::FindPrevious, this, [this] { findText(true); });
+        menu->addAction(tr("Replace…"), QKeySequence::Replace, this, [this] {
+            searchBar->show();
+            replacement->setFocus();
+            replacement->selectAll();
+        });
+        menu->addAction(tr("Go to Line…"), QKeySequence(QStringLiteral("Ctrl+G")), this, [this] {
             bool accepted = false;
-            const QString query
-                = QInputDialog::getText(this, tr("Find"), tr("Text:"), QLineEdit::Normal, lastQuery, &accepted);
-            if (!accepted || query.isEmpty())
-                return;
-            lastQuery = query;
-            if (!edit->find(query)) {
-                auto cursor = edit->textCursor();
-                cursor.movePosition(QTextCursor::Start);
-                edit->setTextCursor(cursor);
-                edit->find(query);
+            int line = QInputDialog::getInt(this, tr("Go to Line"), tr("Line number:"),
+                edit->textCursor().blockNumber() + 1, 1, edit->document()->blockCount(), 1, &accepted);
+            if (accepted) {
+                edit->setTextCursor(QTextCursor(edit->document()->findBlockByNumber(line - 1)));
+                edit->setFocus();
             }
         });
+        auto* view = menuBar()->addMenu(tr("&View"));
+        auto* wrap = view->addAction(tr("Word Wrap"));
+        wrap->setCheckable(true);
+        wrap->setChecked(true);
+        connect(wrap, &QAction::toggled, this, [this](bool enabled) {
+            edit->setLineWrapMode(enabled ? QPlainTextEdit::WidgetWidth : QPlainTextEdit::NoWrap);
+        });
+        view->addAction(tr("Zoom In"), QKeySequence::ZoomIn, this, [this] { edit->zoomIn(); });
+        view->addAction(tr("Zoom Out"), QKeySequence::ZoomOut, this, [this] { edit->zoomOut(); });
+        connect(query, &QLineEdit::returnPressed, this, [this] { findText(false); });
         connect(edit->document(), &QTextDocument::modificationChanged, this, [this] { updateTitle(); });
         connect(edit, &QPlainTextEdit::cursorPositionChanged, this, [this] {
             const auto cursor = edit->textCursor();
@@ -108,10 +145,98 @@ public:
         return true;
     }
 
+    bool editingSelfTest()
+    {
+        edit->setPlainText(QStringLiteral("Alpha alpha\nalpha"));
+        query->setText(QStringLiteral("alpha"));
+        edit->moveCursor(QTextCursor::Start);
+        bool ok = findText(false) && edit->textCursor().selectionStart() == 0;
+        ok &= findText(true) && edit->textCursor().selectionStart() == 12;
+        const auto selected = edit->textCursor();
+        query->setText(QStringLiteral("missing"));
+        ok &= !findText(false) && edit->textCursor().anchor() == selected.anchor()
+            && edit->textCursor().position() == selected.position();
+        query->setText(QStringLiteral("alpha"));
+        matchCase->setChecked(true);
+        replacement->setText(QStringLiteral("alpha alpha"));
+        ok &= replaceAll() == 2 && edit->toPlainText() == QStringLiteral("Alpha alpha alpha\nalpha alpha");
+        edit->undo();
+        ok &= edit->toPlainText() == QStringLiteral("Alpha alpha\nalpha");
+        edit->moveCursor(QTextCursor::Start);
+        findText(false);
+        replacement->setText(QStringLiteral("X"));
+        replaceOne();
+        ok &= edit->toPlainText() == QStringLiteral("Alpha X\nalpha");
+        query->clear();
+        ok &= replaceAll() == 0 && !findText(false);
+        edit->document()->setModified(false);
+        return ok;
+    }
+
 protected:
     void closeEvent(QCloseEvent* event) override { confirmSave() ? event->accept() : event->ignore(); }
 
 private:
+    QTextDocument::FindFlags searchFlags(bool backwards = false) const
+    {
+        QTextDocument::FindFlags flags;
+        if (matchCase->isChecked())
+            flags |= QTextDocument::FindCaseSensitively;
+        if (backwards)
+            flags |= QTextDocument::FindBackward;
+        return flags;
+    }
+    bool findText(bool backwards)
+    {
+        if (query->text().isEmpty())
+            return false;
+        const auto flags = searchFlags(backwards);
+        auto found = edit->document()->find(query->text(), edit->textCursor(), flags);
+        if (found.isNull()) {
+            QTextCursor start(edit->document());
+            start.movePosition(backwards ? QTextCursor::End : QTextCursor::Start);
+            found = edit->document()->find(query->text(), start, flags);
+        }
+        if (found.isNull()) {
+            statusBar()->showMessage(tr("Text not found."));
+            return false;
+        }
+        edit->setTextCursor(found);
+        edit->ensureCursorVisible();
+        return true;
+    }
+    void replaceOne()
+    {
+        if (query->text().isEmpty())
+            return;
+        auto cursor = edit->textCursor();
+        if (!cursor.hasSelection()
+            || cursor.selectedText().compare(
+                   query->text(), matchCase->isChecked() ? Qt::CaseSensitive : Qt::CaseInsensitive)
+                != 0) {
+            findText(false);
+            return;
+        }
+        cursor.insertText(replacement->text());
+        edit->setTextCursor(cursor);
+        findText(false);
+    }
+    int replaceAll()
+    {
+        if (query->text().isEmpty())
+            return 0;
+        QTextCursor transaction(edit->document());
+        transaction.beginEditBlock();
+        QTextCursor cursor(edit->document());
+        int count = 0;
+        while (!(cursor = edit->document()->find(query->text(), cursor, searchFlags())).isNull()) {
+            cursor.insertText(replacement->text());
+            ++count;
+        }
+        transaction.endEditBlock();
+        statusBar()->showMessage(tr("Replaced %1 occurrence(s).").arg(count));
+        return count;
+    }
     bool confirmSave()
     {
         if (!edit->document()->isModified())
@@ -142,7 +267,11 @@ private:
             + (edit->document()->isModified() ? QStringLiteral(" *") : QString()) + tr(" — Text Editor"));
     }
     QPlainTextEdit* edit;
-    QString path, lastQuery;
+    QString path;
+    QToolBar* searchBar;
+    QLineEdit* query;
+    QLineEdit* replacement;
+    QCheckBox* matchCase;
     TextFormat format;
 };
 int main(int argc, char** argv)
@@ -188,6 +317,14 @@ int main(int argc, char** argv)
                                "and write failure\n";
         return ok ? 0 : 1;
     }
+    if (app.arguments().contains(QStringLiteral("--editing-self-test"))) {
+        Editor editor;
+        bool ok = editor.editingSelfTest();
+        QTextStream(stdout) << (ok ? "PASS" : "FAIL")
+                            << ": forward/backward wrap, failed-search cursor preservation, case-sensitive "
+                               "replacement, finite replace-all and grouped undo\n";
+        return ok ? 0 : 1;
+    }
     std::vector<std::unique_ptr<Editor>> editors;
     auto addEditor = [&] {
         editors.push_back(std::make_unique<Editor>());
@@ -199,8 +336,11 @@ int main(int argc, char** argv)
         QTimer::singleShot(500, editor, [editor, &app] {
             auto* text = editor->findChild<QPlainTextEdit*>();
             text->appendPlainText(QStringLiteral("test"));
-            const bool ok = text->document()->isModified() && editor->windowTitle().contains(QLatin1Char('*'))
-                && editor->menuBar()->actions().size() == 3
+            const bool translated = !app.arguments().contains(QStringLiteral("--expect-chinese"))
+                || (editor->windowTitle().contains(QStringLiteral("文本编辑器"))
+                    && editor->findChild<QToolBar*>()->windowTitle() == QStringLiteral("查找和替换"));
+            const bool ok = translated && text->document()->isModified()
+                && editor->windowTitle().contains(QLatin1Char('*')) && editor->menuBar()->actions().size() == 4
                 && editor->findChild<QWidget*>(QStringLiteral("PlasmaBreezeTitleBar"));
             editor->grab().save(QStringLiteral("text-editor-preview.png"));
             QTextStream(stdout) << (ok ? "PASS" : "FAIL")

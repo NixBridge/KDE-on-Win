@@ -69,4 +69,4 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
-Latest cumulative integration: [Fix19](docs/FIX19.md) hardens atomic login-module deployment, reentrant style restoration, service arguments and normal-session fallback. Includes [Fix18](docs/FIX18.md) and all earlier updates. Full LogonUI, WinUI/XAML and arbitrary client-area replacement remain outside the implemented coverage; see [style coverage](docs/STYLE_SCOPE.md).
+Latest cumulative integration: [Fix20](docs/FIX20.md) adds text search/replacement, line navigation, wrap/zoom and process-monitor pause/manual refresh, including Chinese UI. Includes [Fix19](docs/FIX19.md) and all earlier updates. Full LogonUI, WinUI/XAML and arbitrary client-area replacement remain outside the implemented coverage; see [style coverage](docs/STYLE_SCOPE.md).

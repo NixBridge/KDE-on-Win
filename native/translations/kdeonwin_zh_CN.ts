@@ -216,6 +216,86 @@
         <source> — Text Editor</source>
         <translation> — 文本编辑器</translation>
     </message>
+    <message>
+        <source>Find and Replace</source>
+        <translation>查找和替换</translation>
+    </message>
+    <message>
+        <source>Find text</source>
+        <translation>查找内容</translation>
+    </message>
+    <message>
+        <source>Replace with</source>
+        <translation>替换为</translation>
+    </message>
+    <message>
+        <source>Match case</source>
+        <translation>区分大小写</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>上一个</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>下一个</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>替换</translation>
+    </message>
+    <message>
+        <source>Replace All</source>
+        <translation>全部替换</translation>
+    </message>
+    <message>
+        <source>Find Next</source>
+        <translation>查找下一个</translation>
+    </message>
+    <message>
+        <source>Find Previous</source>
+        <translation>查找上一个</translation>
+    </message>
+    <message>
+        <source>Replace…</source>
+        <translation>替换…</translation>
+    </message>
+    <message>
+        <source>Go to Line…</source>
+        <translation>跳转到行…</translation>
+    </message>
+    <message>
+        <source>Go to Line</source>
+        <translation>跳转到行</translation>
+    </message>
+    <message>
+        <source>Line number:</source>
+        <translation>行号：</translation>
+    </message>
+    <message>
+        <source>&amp;View</source>
+        <translation>视图(&amp;V)</translation>
+    </message>
+    <message>
+        <source>Word Wrap</source>
+        <translation>自动换行</translation>
+    </message>
+    <message>
+        <source>Zoom In</source>
+        <translation>放大</translation>
+    </message>
+    <message>
+        <source>Zoom Out</source>
+        <translation>缩小</translation>
+    </message>
+    <message>
+        <source>Text not found.</source>
+        <translation>未找到文本。</translation>
+    </message>
+    <message>
+        <source>Replaced %1 occurrence(s).</source>
+        <translation>已替换 %1 处。</translation>
+    </message>
 </context>
 <context>
     <name>Processes</name>
@@ -1458,6 +1538,26 @@
 <message><source>Style classic Windows controls (experimental)</source><translation>传统 Windows 控件换肤（实验性）</translation></message>
 <message><source>Start Windows control styling</source><translation>启动 Windows 控件换肤</translation></message>
 <message><source>Stop Windows control styling</source><translation>停止 Windows 控件换肤</translation></message>
+    <message>
+        <source>Pause Updates</source>
+        <translation>暂停更新</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <source>Automatic updates paused. Press F5 to refresh.</source>
+        <translation>已暂停自动更新。按 F5 可手动刷新。</translation>
+    </message>
+    <message>
+        <source>Cannot refresh processes. Try again.</source>
+        <translation>无法刷新进程列表，请重试。</translation>
+    </message>
+    <message>
+        <source>%1 processes | Memory %2% | Automatic updates paused</source>
+        <translation>%1 个进程 | 内存 %2% | 已暂停自动更新</translation>
+    </message>
 </context>
 <context>
     <name>WindowChrome</name>

@@ -601,6 +601,7 @@
     "docs/FIX18.md": "docs/FIX18.md",
     "docs/LOCAL_LOGON.md": "docs/LOCAL_LOGON.md",
     "logon-deployment.ps1": "runtime/logon-deployment.ps1",
-    "docs/FIX19.md": "docs/FIX19.md"
+    "docs/FIX19.md": "docs/FIX19.md",
+    "docs/FIX20.md": "docs/FIX20.md"
   }
 }

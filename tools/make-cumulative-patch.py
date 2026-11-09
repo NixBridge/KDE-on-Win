@@ -50,6 +50,7 @@ for relative, source in sources.items():
     'Fix17 adds event-driven caption attachment and the KDE application chooser. Configure MAILTO through configure-kde-link-chooser.cmd if Windows has an existing protected default. Password logon replacement remains unimplemented. See docs/FIX17.md and docs/STYLE_SCOPE.md.\n'
     'Fix18 adds opt-in classic-control painting (apply-client-style.cmd), KDE Qt dialogs and an experimental local-account login tile (install-kde-logon.cmd). Full LogonUI replacement is not implemented. See docs/FIX18.md and docs/LOCAL_LOGON.md before VM testing.\n'
     'Fix19 hardens login DLL publication, style restoration, service arguments and normal-session recovery. See docs/FIX19.md.\n'
+    'Fix20 adds editor find/replace, line navigation, wrap/zoom and process-monitor pause/manual refresh. See docs/FIX20.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

@@ -256,6 +256,52 @@ int main(int argc, char** argv)
             end->setEnabled(index.isValid() && model.rows[index.row()].pid > 4
                 && model.rows[index.row()].pid != GetCurrentProcessId() && model.rows[index.row()].created != 0);
         });
+    bool updatesPaused = false;
+    auto refresh = [&] {
+        DWORD selected = 0;
+        quint64 identity = 0;
+        const auto current = proxy->mapToSource(view->currentIndex());
+        if (current.isValid()) {
+            selected = model.rows[current.row()].pid;
+            identity = model.rows[current.row()].created;
+        }
+        if (!model.refresh()) {
+            window.statusBar()->showMessage(QObject::tr("Cannot refresh processes. Try again."));
+            return;
+        }
+        if (selected)
+            for (int row = 0; row < proxy->rowCount(); ++row)
+                if (proxy->data(proxy->index(row, 1)).toUInt() == selected
+                    && model.rows[proxy->mapToSource(proxy->index(row, 0)).row()].created == identity) {
+                    view->selectionModel()->setCurrentIndex(
+                        proxy->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                    break;
+                }
+        MEMORYSTATUSEX memory {};
+        memory.dwLength = sizeof(memory);
+        GlobalMemoryStatusEx(&memory);
+        window.statusBar()->showMessage(
+            (updatesPaused ? QObject::tr("%1 processes | Memory %2% | Automatic updates paused")
+                           : QObject::tr("%1 processes | Memory %2% | Updated every 2 seconds"))
+                .arg(model.rows.size())
+                .arg(memory.dwMemoryLoad));
+    };
+    QTimer timer;
+    auto* pause = toolbar->addAction(QIcon::fromTheme("media-playback-pause"), QObject::tr("Pause Updates"));
+    pause->setCheckable(true);
+    auto* manual = toolbar->addAction(QIcon::fromTheme("view-refresh"), QObject::tr("Refresh"));
+    manual->setShortcut(QKeySequence::Refresh);
+    QObject::connect(manual, &QAction::triggered, &window, refresh);
+    QObject::connect(pause, &QAction::toggled, &window, [&](bool paused) {
+        updatesPaused = paused;
+        if (paused) {
+            timer.stop();
+            window.statusBar()->showMessage(QObject::tr("Automatic updates paused. Press F5 to refresh."));
+        } else {
+            refresh();
+            timer.start(2000);
+        }
+    });
     QObject::connect(end, &QAction::triggered, &window, [&] {
         const auto index = proxy->mapToSource(view->currentIndex());
         if (!index.isValid())
@@ -271,33 +317,9 @@ int main(int argc, char** argv)
         const QString error = stopProcess(process);
         if (!error.isEmpty())
             QMessageBox::warning(&window, QObject::tr("Cannot End Process"), error);
-        model.refresh();
+        refresh();
     });
-    auto refresh = [&] {
-        DWORD selected = 0;
-        quint64 identity = 0;
-        const auto current = proxy->mapToSource(view->currentIndex());
-        if (current.isValid()) {
-            selected = model.rows[current.row()].pid;
-            identity = model.rows[current.row()].created;
-        }
-        model.refresh();
-        if (selected)
-            for (int row = 0; row < proxy->rowCount(); ++row)
-                if (proxy->data(proxy->index(row, 1)).toUInt() == selected
-                    && model.rows[proxy->mapToSource(proxy->index(row, 0)).row()].created == identity) {
-                    view->selectionModel()->setCurrentIndex(
-                        proxy->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-                    break;
-                }
-        MEMORYSTATUSEX memory {};
-        memory.dwLength = sizeof(memory);
-        GlobalMemoryStatusEx(&memory);
-        window.statusBar()->showMessage(QObject::tr("%1 processes | Memory %2% | Updated every 2 seconds")
-                .arg(model.rows.size())
-                .arg(memory.dwMemoryLoad));
-    };
-    QTimer timer;
+
     QObject::connect(&timer, &QTimer::timeout, &window, refresh);
     timer.start(2000);
     refresh();
@@ -307,12 +329,20 @@ int main(int argc, char** argv)
             search->setText("no_such_process_for_filter_probe_7c12");
             const bool filtered = proxy->rowCount() == 0;
             search->clear();
-            const bool ok = model.rowCount() > 0 && proxy->rowCount() == model.rowCount() && filtered
-                && view->model()->columnCount() == 4 && window.findChild<QWidget*>("PlasmaBreezeTitleBar")
-                && toolbar->actions().contains(end) && !window.statusBar()->currentMessage().isEmpty();
+            pause->setChecked(true);
+            const bool paused = !timer.isActive();
+            manual->trigger();
+            const bool manualWhilePaused = !timer.isActive() && model.rowCount() > 0;
+            pause->setChecked(false);
+            const bool resumed = timer.isActive();
+            const bool ok = paused && manualWhilePaused && resumed && model.rowCount() > 0
+                && proxy->rowCount() == model.rowCount() && filtered && view->model()->columnCount() == 4
+                && window.findChild<QWidget*>("PlasmaBreezeTitleBar") && toolbar->actions().contains(end)
+                && !window.statusBar()->currentMessage().isEmpty();
             window.grab().save("process-monitor-preview.png");
-            QTextStream(stdout) << (ok ? "PASS" : "FAIL")
-                                << ": process table, filter/toolbar, status and Breeze main window\n";
+            QTextStream(stdout)
+                << (ok ? "PASS" : "FAIL")
+                << ": process table, filter, pause/manual/resume refresh, status and Breeze main window\n";
             app.exit(ok ? 0 : 1);
         });
     return app.exec();

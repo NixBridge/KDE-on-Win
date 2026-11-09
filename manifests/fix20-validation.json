@@ -1,0 +1,198 @@
+{
+  "version": "20261110-fix20",
+  "vm_acceptance": "pending",
+  "classic_controls": "implemented; opt-in; cross-process VM acceptance pending",
+  "password_logon": "experimental local-account V2 credential provider; actual sign-in unverified",
+  "full_logonui_replacement": false,
+  "global_modern_client_area_theming": false,
+  "native_session_host": "implemented; actual logon-session VM acceptance pending",
+  "archive": "plasma-windows-20261110-fix20.zip",
+  "archive_bytes": 29985180,
+  "archive_sha256": "eedc2a547401fe75fbe711eb84ff781389566032b9b35cf7be02f9843500e360",
+  "cumulative_files": 601,
+  "previous_overlay_entries_preserved": true,
+  "all_overlay_sources_byte_verified": true,
+  "host_global_hooks_installed": false,
+  "host_logon_registration_changed": false,
+  "runtime_imports": {
+    "modules_checked": 639,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "checks": [
+    {
+      "name": "kde-session-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "x86/kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-logon-probe ",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --dialog-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --invoke-self-test",
+      "exit": 0
+    },
+    {
+      "name": "konsole-conpty-probe ",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --editing-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe ",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe ",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe ",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe ",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe ",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_folder_routing.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_deployment.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_integration_binaries.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    }
+  ],
+  "control_reentrancy": "x86/x64 hidden fixture destroys a button during painting; callback state retained until return",
+  "chinese_translations": 318,
+  "new_features": [
+    "editor find/replace and single undo transaction",
+    "editor go-to-line, word wrap and zoom",
+    "process monitor pause, manual refresh and resume"
+  ]
+}
