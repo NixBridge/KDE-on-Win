@@ -66,3 +66,5 @@ Create a cumulative overlay with `python tools/make-cumulative-patch.py --versio
 ## AI authorship
 
 New integration work and modifications are AI-generated/AI-assisted using OpenAI Codex, with maintainer review and VM testing. See the notice in `LICENSE` and [AI_NOTICE.md](AI_NOTICE.md). This does not attribute upstream KDE/Qt code to AI or add conditions to their licenses.
+
+Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.

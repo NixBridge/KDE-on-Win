@@ -32,3 +32,5 @@ The taskbar maps the three executable identities to their own desktop launchers
 and rasterized Breeze icons. This avoids generic EXE icons and theme engines
 which exist but return empty pixmaps on Windows. `taskbar-icon-probe.exe` verifies
 the real launcher metadata path renders three distinct icons.
+
+Archive Manager is a project-owned Breeze application using KArchive, not Ark. See [FIX12.md](FIX12.md) for formats, extraction limits and per-user file associations.

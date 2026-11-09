@@ -1,0 +1,78 @@
+{
+  "version": "20261109-fix12",
+  "vm_acceptance": "pending",
+  "archive": "plasma-windows-20261109-fix12.zip",
+  "archive_bytes": 26112119,
+  "archive_sha256": "22d46eab77348c1c373be65ac90023b1b5951fc22a9c0b83d88008cf8ed1d55a",
+  "cumulative_files": 322,
+  "previous_overlay_entries_preserved": true,
+  "runtime_imports": {
+    "modules_checked": 629,
+    "architecture": "x64",
+    "missing": []
+  },
+  "checks": [
+    {
+      "name": "konsole-conpty-probe",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-mapping-probe",
+      "exit": 0
+    },
+    {
+      "name": "hidden-native-frame",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    }
+  ],
+  "upstream_patch_checks": {
+    "kwindowsystem": 2,
+    "plasma-workspace": 17,
+    "konsole": 1,
+    "karchive": 1
+  }
+}

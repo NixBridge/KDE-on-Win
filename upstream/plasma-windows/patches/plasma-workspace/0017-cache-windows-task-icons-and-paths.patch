@@ -1,0 +1,120 @@
+diff --git a/libtaskmanager/windowsdesktopapps.h b/libtaskmanager/windowsdesktopapps.h
+index c74a963..effc107 100644
+--- a/libtaskmanager/windowsdesktopapps.h
++++ b/libtaskmanager/windowsdesktopapps.h
+@@ -3,10 +3,13 @@
+ #include <KIconLoader>
+ #include <QFileInfo>
+ #include <QIcon>
++#include <QHash>
++#include <QGuiApplication>
+ 
+ namespace TaskManager {
+ struct WindowsDesktopApp { const char *exe; const char *desktop; const char *icon; };
+ inline constexpr WindowsDesktopApp windowsDesktopApps[] = {
++    {"plasma-archive-manager.exe", "org.nixbridge.archive.desktop", "utilities-file-archiver"},
+     {"konsole.exe", "org.kde.konsole.desktop", "utilities-terminal"},
+     {"dolphin.exe", "org.kde.dolphin.desktop", "system-file-manager"},
+     {"plasma-process-monitor.exe", "org.nixbridge.processmonitor.desktop", "utilities-system-monitor"},
+@@ -26,11 +29,20 @@ inline QIcon windowsRasterThemeIcon(const QString &name)
+ {
+     // On Windows a non-null theme engine may still produce no pixmap.
+     // Use KDE's resource-aware loader and keep raster sizes for task delegates.
++    static QHash<QString,QIcon> cache;
++    static const bool connected=[] {
++        QObject::connect(KIconLoader::global(),&KIconLoader::iconChanged,KIconLoader::global(),[] {cache.clear();});
++        if(qGuiApp)QObject::connect(qGuiApp,&QGuiApplication::paletteChanged,KIconLoader::global(),[] {cache.clear();});
++        return true;
++    }();
++    Q_UNUSED(connected)
++    if(cache.contains(name))return cache.value(name);
+     QIcon icon;
+     for (int size : {16, 22, 32, 48, 64}) {
+         const QPixmap image = KIconLoader::global()->loadIcon(name, KIconLoader::Desktop, size, 0, {}, nullptr, true);
+         if (!image.isNull()) icon.addPixmap(image);
+     }
++    cache.insert(name,icon);
+     return icon;
+ }
+ }
+diff --git a/libtaskmanager/windowswindowtasksmodel.cpp b/libtaskmanager/windowswindowtasksmodel.cpp
+index 4be2b4e..53b97bd 100644
+--- a/libtaskmanager/windowswindowtasksmodel.cpp
++++ b/libtaskmanager/windowswindowtasksmodel.cpp
+@@ -29,14 +29,21 @@ using namespace TaskManager;
+ 
+ namespace
+ {
++struct CachedIcon { DWORD pid=0; qint64 time=0; QIcon icon; };
++QHash<HWND,CachedIcon> iconCache;
+ QIcon iconForWindow(HWND hwnd)
+ {
++    DWORD windowPid=0;GetWindowThreadProcessId(hwnd,&windowPid);
++    const qint64 now=QDateTime::currentMSecsSinceEpoch();
++    auto cached=iconCache.constFind(hwnd);
++    if(cached!=iconCache.cend()&&cached->pid==windowPid&&now-cached->time<5000)return cached->icon;
++
+     HICON icon = nullptr;
+     // WM_GETICON / GCLP_HICON handles are owned by the window/class and must
+     // NOT be destroyed (DestroyIcon would invalidate the class icon for
+     // every other window). Only SHGetFileInfo hands us a fresh handle.
+     bool owned = false;
+-    SendMessageTimeoutW(hwnd, WM_GETICON, ICON_SMALL2, 0, SMTO_ABORTIFHUNG, 500, reinterpret_cast<DWORD_PTR *>(&icon));
++    SendMessageTimeoutW(hwnd, WM_GETICON, ICON_SMALL2, 0, SMTO_ABORTIFHUNG, 30, reinterpret_cast<DWORD_PTR *>(&icon));
+     if (!icon) {
+         icon = reinterpret_cast<HICON>(GetClassLongPtrW(hwnd, GCLP_HICON));
+     }
+@@ -66,9 +73,13 @@ QIcon iconForWindow(HWND hwnd)
+             DestroyIcon(icon);
+         }
+     }
++    if(iconCache.size()>2048)iconCache.clear();
++    iconCache.insert(hwnd,{windowPid,now,result});
+     return result;
+ }
+ 
++struct CachedPath { DWORD pid=0; QString path; };
++QHash<WId,CachedPath> pathCache;
+ QString exePathForWindow(WId id)
+ {
+     DWORD pid = 0;
+@@ -76,6 +87,8 @@ QString exePathForWindow(WId id)
+     if (!pid) {
+         return {};
+     }
++    auto cached=pathCache.constFind(id);
++    if(cached!=pathCache.cend()&&cached->pid==pid)return cached->path;
+     HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+     if (!process) {
+         return {};
+@@ -87,6 +100,8 @@ QString exePathForWindow(WId id)
+         result = QString::fromWCharArray(buf, size);
+     }
+     CloseHandle(process);
++    if(pathCache.size()>2048)pathCache.clear();
++    pathCache.insert(id,{pid,result});
+     return result;
+ }
+ }
+@@ -163,6 +178,8 @@ void WindowsWindowTasksModel::Private::removeWindow(WId id)
+     }
+     q->beginRemoveRows(QModelIndex(), idx, idx);
+     windows.removeAt(idx);
++    pathCache.remove(id);
++    iconCache.remove(reinterpret_cast<HWND>(id));
+     q->endRemoveRows();
+     if (id == activeWindow) {
+         activeWindow = 0;
+@@ -213,7 +230,11 @@ void WindowsWindowTasksModel::Private::initialLoad()
+ void WindowsWindowTasksModel::Private::refreshData()
+ {
+     if (q->rowCount() > 0) {
+-        q->dataChanged(q->index(0), q->index(q->rowCount() - 1));
++        q->dataChanged(q->index(0), q->index(q->rowCount() - 1),
++            {Qt::DisplayRole,Qt::DecorationRole,AbstractTasksModel::IsActive,
++             AbstractTasksModel::IsMinimized,AbstractTasksModel::IsMaximized,
++             AbstractTasksModel::IsFullScreen,AbstractTasksModel::Geometry,
++             AbstractTasksModel::ScreenGeometry,AbstractTasksModel::StackingOrder});
+     }
+ }
+ 

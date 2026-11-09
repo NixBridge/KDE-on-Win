@@ -62,7 +62,7 @@ bool sameUserAndIntegrity(DWORD pid)
     CloseHandle(process);
     return permitted;
 }
-bool standardCaption(HWND window, bool fixture = false)
+bool standardCaption(HWND window, bool fixture = false, bool checkIdentity = true)
 {
     if (!IsWindow(window) || (!fixture && (!IsWindowVisible(window) || IsIconic(window))))
         return false;
@@ -74,7 +74,7 @@ bool standardCaption(HWND window, bool fixture = false)
     GetWindowThreadProcessId(window, &pid);
     if (!fixture && pid == GetCurrentProcessId())
         return false;
-    if (!sameUserAndIntegrity(pid))
+    if (checkIdentity && !sameUserAndIntegrity(pid))
         return false;
     DWORD cloaked = 0;
     DwmGetWindowAttribute(window, DWMWA_CLOAKED, &cloaked, sizeof(cloaked));
@@ -164,7 +164,7 @@ public:
     }
     void updateCaption()
     {
-        if (!ownedTarget() || !standardCaption(target)) {
+        if (!ownedTarget() || !standardCaption(target, false, false)) {
             hide();
             return;
         }
@@ -189,21 +189,41 @@ public:
         setPalette(colors);
         const auto color = colors.color(QPalette::Window);
         const COLORREF border = RGB(color.red(), color.green(), color.blue());
-        if (oldBorderValid)
+        if (oldBorderValid && (!borderApplied || border != lastBorder)) {
             DwmSetWindowAttribute(target, DWMWA_BORDER_COLOR, &border, sizeof(border));
+            lastBorder = border;
+            borderApplied = true;
+        }
         const LONG_PTR style = GetWindowLongPtrW(target, GWL_STYLE);
         minimize->setVisible(style & WS_MINIMIZEBOX);
         maximize->setVisible(style & WS_MAXIMIZEBOX);
         closeButton->setVisible(style & WS_SYSMENU);
         const UINT closeState = GetMenuState(GetSystemMenu(target, FALSE), SC_CLOSE, MF_BYCOMMAND);
         closeButton->setEnabled(closeState != UINT(-1) && !(closeState & (MF_DISABLED | MF_GRAYED)));
-        maximize->setIcon(QIcon(KIconLoader::global()->loadIcon(
-            IsZoomed(target) ? QStringLiteral("window-restore") : QStringLiteral("window-maximize"),
-            KIconLoader::Toolbar, 16)));
-        if (!isVisible())
+        const bool zoomed = IsZoomed(target);
+        if (!iconInitialized || zoomed != lastZoomed)
+            maximize->setIcon(QIcon(KIconLoader::global()->loadIcon(
+                IsZoomed(target) ? QStringLiteral("window-restore") : QStringLiteral("window-maximize"),
+                KIconLoader::Toolbar, 16)));
+        lastZoomed = zoomed;
+        iconInitialized = true;
+        if (!isVisible()) {
+            lastRectangle = {};
             show();
-        SetWindowPos(reinterpret_cast<HWND>(winId()), nullptr, rect.x(), rect.y(), rect.width(), rect.height(),
-            SWP_NOACTIVATE | SWP_NOZORDER);
+        }
+        const HWND handle = reinterpret_cast<HWND>(winId());
+        if (GetWindow(handle, GW_OWNER) != target)
+            SetWindowLongPtrW(handle, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(target));
+        // Activation can raise the owner over its Qt tool window. Restore only
+        // the foreground owner's decoration; never raise background captions.
+        const bool raise = active && GetWindow(target, GW_HWNDPREV) != handle;
+        const bool moved = rect != lastRectangle;
+        if (raise || moved) {
+            const HWND order = (GetWindowLongPtrW(target, GWL_EXSTYLE) & WS_EX_TOPMOST) ? HWND_TOPMOST : HWND_TOP;
+            SetWindowPos(handle, order, rect.x(), rect.y(), rect.width(), rect.height(),
+                SWP_NOACTIVATE | SWP_NOOWNERZORDER | (raise ? 0 : SWP_NOZORDER));
+            lastRectangle = rect;
+        }
     }
     HWND target;
 
@@ -214,6 +234,7 @@ protected:
             POINT cursor {};
             GetCursorPos(&cursor);
             SetForegroundWindow(target);
+            updateCaption();
             ReleaseCapture();
             PostMessageW(target, WM_NCLBUTTONDOWN, HTCAPTION, MAKELPARAM(cursor.x, cursor.y));
         }
@@ -261,6 +282,9 @@ private:
     QToolButton *minimize, *maximize, *closeButton;
     COLORREF oldBorder = 0;
     bool oldBorderValid = false;
+    bool borderApplied = false, iconInitialized = false, lastZoomed = false;
+    COLORREF lastBorder = 0;
+    QRect lastRectangle;
     DWORD ownerPid = 0;
 };
 
@@ -274,7 +298,7 @@ public:
         foregroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr, event, 0, 0,
             WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
         connect(&timer, &QTimer::timeout, this, [this] { sweep(); });
-        timer.start(750);
+        timer.start(1500);
         sweep();
     }
     ~Decorations() override
@@ -322,14 +346,18 @@ private:
             if (auto* bar = instance->bars.value(target))
                 bar->updateCaption();
         } else if (type == EVENT_SYSTEM_FOREGROUND) {
-            for (auto* bar : instance->bars)
-                bar->updateCaption();
+            if (auto* previous = instance->bars.value(instance->lastForeground))
+                previous->updateCaption();
+            if (auto* current = instance->bars.value(target))
+                current->updateCaption();
+            instance->lastForeground = target;
         }
     }
     static inline Decorations* instance = nullptr;
     QHash<HWND, Caption*> bars;
     QTimer timer;
     HWINEVENTHOOK locationHook = nullptr, foregroundHook = nullptr;
+    HWND lastForeground = nullptr;
 };
 static LRESULT CALLBACK fixtureProcedure(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {

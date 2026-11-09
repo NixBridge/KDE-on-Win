@@ -11,4 +11,4 @@ panel.addWidget("org.kde.plasma.systemtray");
 panel.addWidget("org.kde.plasma.volumewin");
 panel.addWidget("org.kde.plasma.imewin");
 panel.addWidget("org.kde.plasma.digitalclock");
-panel.addWidget("org.kde.plasma.showdesktop");
+// KWin's Peek Desktop is not supported by the native Windows backend.

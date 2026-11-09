@@ -101,8 +101,10 @@ public:
     }
     bool eventFilter(QObject* object, QEvent* event) override
     {
-        if (object == m_window && event->type() == QEvent::WinIdChange)
+        if (object == m_window && event->type() == QEvent::WinIdChange) {
             m_handle = reinterpret_cast<HWND>(m_window->effectiveWinId());
+            QTimer::singleShot(0, this, [this] { repairFrame(); });
+        }
         if (object == m_bar && event->type() == QEvent::MouseButtonPress) {
             auto* mouse = static_cast<QMouseEvent*>(event);
             if (mouse->button() == Qt::LeftButton && m_window->windowHandle())
@@ -125,6 +127,8 @@ public:
         auto* msg = static_cast<MSG*>(message);
         if (!m_handle || msg->hwnd != m_handle)
             return false;
+        if (msg->message == WM_STYLECHANGED)
+            QTimer::singleShot(0, this, [this] { repairFrame(); });
         if (msg->message == WM_NCCALCSIZE && msg->wParam) {
             if (IsZoomed(msg->hwnd) && !m_window->isFullScreen()) {
                 MONITORINFO monitor {};
@@ -160,9 +164,22 @@ public:
     }
 
 private:
+    void repairFrame()
+    {
+        if (!IsWindow(m_handle) || m_window->isFullScreen())
+            return;
+        const auto style = GetWindowLongPtrW(m_handle, GWL_STYLE);
+        const auto wanted = (style | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX) & ~WS_CAPTION;
+        if (style == wanted)
+            return;
+        SetWindowLongPtrW(m_handle, GWL_STYLE, wanted);
+        SetWindowPos(
+            m_handle, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
     void toggleMaximize() { m_window->isMaximized() ? m_window->showNormal() : m_window->showMaximized(); }
     void update()
     {
+        repairFrame();
         const int height = qMax(32, m_window->fontMetrics().height() + 12);
         if (height != m_height) {
             m_height = height;
@@ -239,8 +256,8 @@ public:
         if (!window || window->property("plasmaBreezeChrome").toBool())
             return;
         const QString executable = QFileInfo(QCoreApplication::applicationFilePath()).fileName().toLower();
-        if (!QStringList { "konsole.exe", "dolphin.exe", "plasma-process-monitor.exe", "plasma-text-editor.exe",
-                "plasma-system-settings.exe", "breeze-window-probe.exe" }
+        if (!QStringList { "plasma-archive-manager.exe", "konsole.exe", "dolphin.exe", "plasma-process-monitor.exe",
+                "plasma-text-editor.exe", "plasma-system-settings.exe", "breeze-window-probe.exe" }
                 .contains(executable))
             return;
         window->setProperty("plasmaBreezeChrome", true);

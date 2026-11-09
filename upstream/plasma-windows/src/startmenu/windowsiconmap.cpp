@@ -8,6 +8,8 @@ QStringList windowsProgramIconCandidates(const QString& program)
 {
     const QString value = QDir::fromNativeSeparators(program).toLower();
     const QString name = QFileInfo(value).fileName();
+    if (value == QLatin1String("kde:archive"))
+        return { QStringLiteral("utilities-file-archiver") };
     if (value == QLatin1String("kde:konsole"))
         return { QStringLiteral("utilities-terminal") };
     if (value == QLatin1String("kde:process-monitor"))

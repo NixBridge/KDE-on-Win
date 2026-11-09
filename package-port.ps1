@@ -27,7 +27,7 @@ foreach ($relative in 'Next\metadata.json', 'Next\contents\images\5120x2880.png'
 }
 & python (Join-Path $PSScriptRoot 'tools\verify-runtime-imports.py') --root $CraftRoot
 if ($LASTEXITCODE) { throw 'Runtime import validation failed' }
-$required = 'plasmashell.exe', 'dbus-daemon.exe', 'kded6.exe', 'kactivitymanagerd.exe', 'kbuildsycoca6.exe', 'konsole.exe', 'plasma-process-monitor.exe', 'plasma-kde-launcher.exe', 'plasma-text-editor.exe', 'plasma-system-settings.exe', 'plasma-window-decorations.exe', 'plasma-notification-bridge.exe'
+$required = 'plasmashell.exe', 'dbus-daemon.exe', 'kded6.exe', 'kactivitymanagerd.exe', 'kbuildsycoca6.exe', 'konsole.exe', 'plasma-process-monitor.exe', 'plasma-kde-launcher.exe', 'plasma-text-editor.exe', 'plasma-system-settings.exe', 'plasma-window-decorations.exe', 'plasma-notification-bridge.exe', 'plasma-archive-manager.exe'
 foreach ($style in 'plasmawindowsstyle.dll', 'breeze6.dll') {
     if (-not (Test-Path -LiteralPath (Join-Path $CraftRoot "plugins\styles\$style"))) { throw "Missing desktop style: $style" }
 }
@@ -104,7 +104,7 @@ foreach ($name in 'start-konsole.cmd', 'start-process-monitor.cmd', 'start-dolph
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'third_party') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs') -Destination $stage -Recurse
-foreach ($name in 'install-notifications.cmd', 'install-notifications.ps1', 'start-notifications.ps1', 'notifications-settings.cmd') {
+foreach ($name in 'install-file-associations.cmd', 'install-file-associations.ps1', 'install-notifications.cmd', 'install-notifications.ps1', 'start-notifications.ps1', 'notifications-settings.cmd') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "runtime\$name") -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'native\notifications\package') -Destination (Join-Path $stage 'notifications-package') -Recurse

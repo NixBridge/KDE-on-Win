@@ -1,7 +1,9 @@
 {
   "runtime": [
+    "bin/KF6Archive.dll",
     "bin/KF6BreezeIcons.dll",
     "bin/KF6IconThemes.dll",
+    "bin/KF6WindowSystem.dll",
     "bin/Plasma.dll",
     "bin/PlasmaQuick.dll",
     "bin/QuickCharts.dll",
@@ -11,6 +13,7 @@
     "bin/breeze-window-probe.exe",
     "bin/context-menu-probe.exe",
     "bin/data/applications/org.kde.konsole.desktop",
+    "bin/data/applications/org.nixbridge.archive.desktop",
     "bin/data/applications/org.nixbridge.processmonitor.desktop",
     "bin/data/applications/org.nixbridge.systemsettings.desktop",
     "bin/data/applications/org.nixbridge.texteditor.desktop",
@@ -161,6 +164,7 @@
     "bin/klookandfeel.dll",
     "bin/kmpris.dll",
     "bin/konsole-conpty-probe.exe",
+    "bin/konsole-session-probe.exe",
     "bin/konsole.exe",
     "bin/konsoleapp.dll",
     "bin/konsoleprivate.dll",
@@ -172,6 +176,7 @@
     "bin/notificationmanager.dll",
     "bin/personalization-probe.exe",
     "bin/plasma-apply-wallpaperimage.exe",
+    "bin/plasma-archive-manager.exe",
     "bin/plasma-kde-launcher.exe",
     "bin/plasma-notification-bridge.exe",
     "bin/plasma-personalization.exe",
@@ -192,6 +197,7 @@
     "plugins/kf6/kfileitemaction/wallpaperfileitemaction.dll",
     "plugins/kf6/kio/desktop.dll",
     "plugins/kf6/kirigami/platform/KirigamiPlasmaStyle.dll",
+    "plugins/kf6/org.kde.kwindowsystem.platforms/KF6WindowSystemWindowsPlugin.dll",
     "plugins/kf6/packagestructure/plasma_applet.dll",
     "plugins/kf6/packagestructure/plasma_containmentactions.dll",
     "plugins/kf6/packagestructure/plasma_generic.dll",
@@ -225,6 +231,7 @@
     "plugins/styles/breeze6.dll",
     "plugins/styles/plasmawindowsstyle.dll",
     "qml/org/kde/breeze/components/components.dll",
+    "qml/org/kde/kwindowsystem/KWindowSystem.dll",
     "qml/org/kde/notificationmanager/notificationmanagerplugin.dll",
     "qml/org/kde/plasma/activityswitcher/activityswitcherextensionplugin.dll",
     "qml/org/kde/plasma/clock/clockplugin.dll",
@@ -310,6 +317,12 @@
     "notifications-package/Assets/Square150x150Logo.png": "native/notifications/package/Assets/Square150x150Logo.png",
     "docs/NOTIFICATIONS.md": "docs/NOTIFICATIONS.md",
     "docs/WINDOW_DECORATIONS.md": "docs/WINDOW_DECORATIONS.md",
-    "docs/PERSONALIZATION.md": "docs/PERSONALIZATION.md"
+    "docs/PERSONALIZATION.md": "docs/PERSONALIZATION.md",
+    "install-file-associations.cmd": "runtime/install-file-associations.cmd",
+    "install-file-associations.ps1": "runtime/install-file-associations.ps1",
+    "docs/FIX12.md": "docs/FIX12.md",
+    "docs/DESKTOP_TOOLS.md": "docs/DESKTOP_TOOLS.md",
+    "source-verification.json": "manifests/source-verification.json",
+    "runtime-import-verification.json": "manifests/runtime-import-verification.json"
   }
 }

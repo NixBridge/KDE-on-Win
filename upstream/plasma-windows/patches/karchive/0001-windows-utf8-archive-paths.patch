@@ -1,0 +1,124 @@
+diff --git a/src/k7zip.cpp b/src/k7zip.cpp
+index b1de7db..b741945 100644
+--- a/src/k7zip.cpp
++++ b/src/k7zip.cpp
+@@ -2945,6 +2945,14 @@ bool K7Zip::openArchive(QIODevice::OpenMode mode)
+ 
+         KArchiveEntry *e;
+         QString entryName;
++#ifdef Q_OS_WIN
++        const QString &archivePath = fileInfo->path;
++        if (archivePath.startsWith(QLatin1Char('/')) || archivePath.contains(QChar(92))
++            || archivePath.contains(QLatin1Char(':')) || archivePath.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
++            setErrorString(tr("Unsafe archive path: %1").arg(archivePath));
++            return false;
++        }
++#endif
+         const qsizetype index = fileInfo->path.lastIndexOf(QLatin1Char('/'));
+         if (index == -1) {
+             entryName = fileInfo->path;
+diff --git a/src/ktar.cpp b/src/ktar.cpp
+index 9fedf22..12dc7d4 100644
+--- a/src/ktar.cpp
++++ b/src/ktar.cpp
+@@ -279,6 +279,16 @@ bool KTar::KTarPrivate::readLonglink(char *buffer, QByteArray &longlink)
+     return true;
+ }
+ 
++// Archive paths are portable bytes, not Windows local filesystem names.
++// Prefer valid UTF-8; retain the native-codepage fallback for old archives.
++static QString decodeTarName(const QByteArray &name)
++{
++#ifdef Q_OS_WIN
++    if (name.isValidUtf8()) return QString::fromUtf8(name);
++#endif
++    return QFile::decodeName(name);
++}
++
+ qint64 KTar::KTarPrivate::readHeader(char *buffer, QString &name, QString &symlink)
+ {
+     name.truncate(0);
+@@ -296,10 +306,10 @@ qint64 KTar::KTarPrivate::readHeader(char *buffer, QString &name, QString &symli
+             if (readLonglink(buffer, longlink)) {
+                 switch (typeflag) {
+                 case 'L':
+-                    name = QFile::decodeName(longlink.constData());
++                    name = decodeTarName(longlink);
+                     break;
+                 case 'K':
+-                    symlink = QFile::decodeName(longlink.constData());
++                    symlink = decodeTarName(longlink);
+                     break;
+                 } /*end switch*/
+             }
+@@ -313,11 +323,11 @@ qint64 KTar::KTarPrivate::readHeader(char *buffer, QString &name, QString &symli
+     // there are names that are exactly 100 bytes long
+     // and neither longlink nor \0 terminated (bug:101472)
+     {
+-        name = QFile::decodeName(QByteArray::fromRawData(buffer, qstrnlen(buffer, 100)));
++        name = decodeTarName(QByteArray::fromRawData(buffer, qstrnlen(buffer, 100)));
+     }
+     if (symlink.isEmpty()) {
+         char *symlinkBuffer = buffer + 0x9d /*?*/;
+-        symlink = QFile::decodeName(QByteArray::fromRawData(symlinkBuffer, qstrnlen(symlinkBuffer, 100)));
++        symlink = decodeTarName(QByteArray::fromRawData(symlinkBuffer, qstrnlen(symlinkBuffer, 100)));
+     }
+ 
+     return 0x200;
+@@ -425,6 +435,14 @@ bool KTar::openArchive(QIODevice::OpenMode mode)
+                 name = (QString::fromLatin1(prefix.constData()) + QLatin1Char('/') + name);
+             }
+ 
++
++#ifdef Q_OS_WIN
++            if (name.startsWith(QLatin1Char('/')) || name.contains(QLatin1Char('\\'))
++                || name.contains(QLatin1Char(':')) || name.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
++                setErrorString(tr("Unsafe archive path: %1").arg(name));
++                return false;
++            }
++#endif
+             const int pos = name.lastIndexOf(QLatin1Char('/'));
+             const QString nm = (pos == -1) ? name : name.mid(pos + 1);
+ 
+@@ -474,6 +492,11 @@ bool KTar::openArchive(QIODevice::OpenMode mode)
+             // == '2' );
+ 
+             if (typeflag == 'x' || typeflag == 'g') { // pax extended header, or pax global extended header
++#ifdef Q_OS_WIN
++                // Ignoring a PAX path silently extracts a different filename.
++                setErrorString(tr("PAX extended TAR headers are not supported by this Windows archive backend."));
++                return false;
++#endif
+                 // Skip it for now. TODO: implement reading of extended header, as per https://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html
+                 (void)dev->read(buffer, 0x200);
+                 continue;
+diff --git a/src/kzip.cpp b/src/kzip.cpp
+index ffd9bf1..7b141c4 100644
+--- a/src/kzip.cpp
++++ b/src/kzip.cpp
+@@ -662,7 +662,7 @@ bool KZip::openArchive(QIODevice::OpenMode mode)
+             const int commlen = parseUi16(buffer + 32);
+             // compression method of this file
+             const int cmethod = parseUi16(buffer + 10);
+-            // int gpf =  parseUi16(buffer + 8);
++            const int gpf = parseUi16(buffer + 8);
+             // qCDebug(KArchiveLog) << "general purpose flag=" << gpf;
+             // length of the fileName (well, pathname indeed)
+             const int namelen = parseUi16(buffer + 28);
+@@ -687,7 +687,15 @@ bool KZip::openArchive(QIODevice::OpenMode mode)
+ 
+             ParseFileInfo pfi = pfi_map.value(bufferName, ParseFileInfo());
+ 
+-            QString name(QFile::decodeName(bufferName));
++            QString name((gpf & (1 << 11)) ? QString::fromUtf8(bufferName) : QFile::decodeName(bufferName));
++#ifdef Q_OS_WIN
++            if (name.startsWith(QLatin1Char('/')) || name.contains(QLatin1Char('\\'))
++                || name.contains(QLatin1Char(':')) || name.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
++                setErrorString(tr("Unsafe archive path: %1").arg(name));
++                return false;
++            }
++#endif
++
+ 
+             // qCDebug(KArchiveLog) << "name: " << name;
+ 

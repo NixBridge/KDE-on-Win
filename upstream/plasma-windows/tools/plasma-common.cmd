@@ -132,6 +132,9 @@ rem :pc_start_services - kactivitymanagerd + kded6 + trayhost in the background
 rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
+if exist "%CRAFT_ROOT%\install-file-associations.ps1" (
+    start "plasma-file-associations" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\install-file-associations.ps1" -CraftRoot "%CRAFT_ROOT%" -IfNeeded
+)
 if exist "%CRAFT_BIN%\plasma-personalization.exe" (
     start "plasma-personalization" /min "%CRAFT_BIN%\plasma-personalization.exe"
 )

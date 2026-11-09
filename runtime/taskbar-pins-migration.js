@@ -7,6 +7,11 @@ function repairUnavailableTaskbarPins(panelList, desktopToolsAvailable, desktopE
         var widgets = panelList[p].widgets();
         for (var i = 0; i < widgets.length; ++i) {
             var widget = widgets[i];
+            if (widget.type === "org.kde.plasma.showdesktop") {
+                widget.remove();
+                ++changed;
+                continue;
+            }
             if (widget.type !== "org.kde.plasma.icontasks" && widget.type !== "org.kde.plasma.taskmanager") continue;
             ++taskManagers;
             var previousGroup = widget.currentConfigGroup;

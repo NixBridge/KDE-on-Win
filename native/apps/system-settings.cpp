@@ -33,6 +33,7 @@
 #include <KIconTheme>
 #include <KIconLoader>
 #include "appearance.h"
+#include "system-controls.h"
 
 int main(int argc, char** argv)
 {
@@ -58,7 +59,7 @@ int main(int argc, char** argv)
     categories->setMaximumWidth(220);
     layout->addWidget(categories);
     auto* pages = new QStackedWidget(central);
-    auto *pageScroll = new QScrollArea(central);
+    auto* pageScroll = new QScrollArea(central);
     pageScroll->setWidgetResizable(true);
     pageScroll->setFrameShape(QFrame::NoFrame);
     pageScroll->setWidget(pages);
@@ -152,8 +153,8 @@ int main(int argc, char** argv)
     panel->addStretch();
     bool waitingForApply = false;
     auto applyPending = [&] {
-        settings.setValue(QStringLiteral("personalizationRevision"),
-            QUuid::createUuid().toString(QUuid::WithoutBraces));
+        settings.setValue(
+            QStringLiteral("personalizationRevision"), QUuid::createUuid().toString(QUuid::WithoutBraces));
         settings.setValue(QStringLiteral("pendingPersonalization"), true);
         settings.sync();
         const bool started = QProcess::startDetached(
@@ -291,39 +292,28 @@ int main(int argc, char** argv)
         }
     });
     statusTimer.start(1000);
-    struct Category {
-        const char* name;
-        const char* icon;
-        const char* uri;
-        const char* description;
-    };
-    const Category links[] = {
-        { "Display", "preferences-desktop-display", "ms-settings:display",
-            "Resolution, scaling, orientation and monitors" },
-        { "Sound", "preferences-desktop-sound", "ms-settings:sound", "Windows audio devices and volume" },
-        { "Network", "preferences-system-network", "ms-settings:network-status", "Windows network connections" },
-        { "Bluetooth", "preferences-system-bluetooth", "ms-settings:bluetooth", "Pair and manage Windows devices" },
-        { "Language & Input", "preferences-desktop-locale", "ms-settings:regionlanguage",
-            "Languages, keyboards and input methods" },
-        { "Notifications", "preferences-desktop-notification", "ms-settings:notifications",
-            "Windows notification and banner preferences" },
-        { "Accounts", "preferences-system-users", "ms-settings:yourinfo", "Windows user account settings" },
-        { "Power", "preferences-system-power-management", "ms-settings:powersleep",
-            "Power, sleep and battery settings" },
-        { "Updates", "system-software-update", "ms-settings:windowsupdate", "Windows Update settings" },
-    };
-    for (const auto& entry : links) {
-        auto* contents = page(QObject::tr(entry.name), QLatin1String(entry.icon));
-        auto* label = new QLabel(QObject::tr(entry.description));
-        label->setWordWrap(true);
-        contents->addWidget(label);
-        auto* button = new QPushButton(QObject::tr("Open Windows Settings"));
-        contents->addWidget(button);
-        const QUrl uri(QLatin1String(entry.uri));
-        QObject::connect(button, &QPushButton::clicked, &window, [uri] { QDesktopServices::openUrl(uri); });
-        contents->addStretch();
-    }
+    const char* names[] = { "Display", "Sound", "Network", "Bluetooth", "Language & Input", "Notifications", "Accounts",
+        "Power", "Updates" };
+    const char* icons[] = { "preferences-desktop-display", "preferences-desktop-sound", "preferences-system-network",
+        "preferences-system-bluetooth", "preferences-desktop-locale", "preferences-desktop-notification",
+        "preferences-system-users", "preferences-system-power-management", "system-software-update" };
+    for (int i = 0; i < 9; ++i)
+        addDirectSystemControls(page(QObject::tr(names[i]), QLatin1String(icons[i])), i);
     auto* support = page(QObject::tr("About & Diagnostics"), QStringLiteral("help-about"));
+    auto* associations = new QPushButton(QObject::tr("Use Dolphin for folders and KDE for archives"));
+    support->addWidget(associations);
+    QObject::connect(associations, &QPushButton::clicked, &window, [] {
+        QProcess::startDetached(QStringLiteral("cmd.exe"),
+            { "/c",
+                QDir::toNativeSeparators(
+                    QCoreApplication::applicationDirPath() + "/../install-file-associations.cmd") });
+    });
+    auto* archiveDefault = new QPushButton(QObject::tr("Choose protected archive default (Open With)…"));
+    support->addWidget(archiveDefault);
+    QObject::connect(archiveDefault, &QPushButton::clicked, &window, [] {
+        QProcess::startDetached(
+            QCoreApplication::applicationDirPath() + "/plasma-archive-manager.exe", { "--choose-default" });
+    });
     auto* about = new QLabel(QObject::tr("KDE-on-Win native desktop integration. Qt %1. Settings and editor "
                                          "replacements are project-owned applications.")
             .arg(QString::fromLatin1(qVersion())));
@@ -353,6 +343,8 @@ int main(int argc, char** argv)
     support->addStretch();
     QObject::connect(categories, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
     categories->setCurrentRow(0);
+    if (app.arguments().contains(QStringLiteral("--page=network")))
+        categories->setCurrentRow(6);
     window.show();
     if (app.arguments().contains(QStringLiteral("--ui-smoke-test")))
         QTimer::singleShot(500, &window, [&] {

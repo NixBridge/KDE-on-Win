@@ -1,0 +1,58 @@
+diff --git a/src/platforms/windows/windowslist.cpp b/src/platforms/windows/windowslist.cpp
+index a061e2c..2cb2422 100644
+--- a/src/platforms/windows/windowslist.cpp
++++ b/src/platforms/windows/windowslist.cpp
+@@ -160,49 +160,14 @@ void WindowList::handleStackingOrderChanged()
+ #include "moc_windowslist.cpp"
+ 
+ namespace WindowListPrivate {
+-bool s_showingDesktop = false;
+-QSet<WId> s_minimizedByUs;
+-
++// KWin Peek Desktop cannot be emulated by minimizing every native window.
++// Individual task activation/minimization still uses its own HWND.
+ bool showingDesktop()
+ {
+-    return s_showingDesktop;
++    return false;
+ }
+ 
+-void setShowingDesktop(bool showing)
++void setShowingDesktop(bool)
+ {
+-    if (s_showingDesktop == showing) {
+-        return;
+-    }
+-    s_showingDesktop = showing;
+-    if (showing) {
+-        // minimize every taskbar window; remember them for restore
+-        QList<WId> windows;
+-        EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windows));
+-        s_minimizedByUs.clear();
+-        const DWORD shellPid = GetCurrentProcessId();
+-        for (const WId id : windows) {
+-            const HWND hwnd = reinterpret_cast<HWND>(id);
+-            if (IsIconic(hwnd)) {
+-                continue;
+-            }
+-            // Never minimize our own shell windows (plasma desktop/panel):
+-            // "show desktop" must reveal the desktop, not hide it.
+-            DWORD pid = 0;
+-            GetWindowThreadProcessId(hwnd, &pid);
+-            if (pid == shellPid) {
+-                continue;
+-            }
+-            ShowWindow(hwnd, SW_MINIMIZE);
+-            s_minimizedByUs.insert(id);
+-        }
+-    } else {
+-        for (const WId id : s_minimizedByUs) {
+-            const HWND hwnd = reinterpret_cast<HWND>(id);
+-            if (IsIconic(hwnd)) {
+-                ShowWindow(hwnd, SW_RESTORE);
+-            }
+-        }
+-        s_minimizedByUs.clear();
+-    }
+ }
+ }

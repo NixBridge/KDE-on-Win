@@ -25,7 +25,8 @@
       "tarball": "kwindowsystem-6.28.0.tar.xz",
       "sha256": "5adbdf9c82b1ecbb92bda6498ea1b8f88c08f9ec57dbff70d582e2453bf16b12",
       "patches": [
-        "0001-windows-backend.patch"
+        "0001-windows-backend.patch",
+        "0002-disable-windows-kwin-peek.patch"
       ]
     },
     "kauth": {
@@ -132,7 +133,8 @@
         "0013-windows-panel-above-explorer.patch",
         "0014-windows-taskbar-icons-and-identities.patch",
         "0015-windows-notifications-no-pulseaudio.patch",
-        "0016-windows-settings-editor-taskbar-identities.patch"
+        "0016-windows-settings-editor-taskbar-identities.patch",
+        "0017-cache-windows-task-icons-and-paths.patch"
       ]
     },
     "plasma5support": {
@@ -158,7 +160,17 @@
       "version": "26.04.3",
       "tarball": "konsole-26.04.3.tar.xz",
       "sha256": "fe54d0297c24a52b2ec8ebf45bf75b22736f65301663846b8f3539044943e1ac",
-      "patches": []
+      "patches": [
+        "0001-windows-conpty-session-shutdown.patch"
+      ]
+    },
+    "karchive": {
+      "version": "6.28.0",
+      "tarball": "karchive-6.28.0.tar.xz",
+      "sha256": "ff36137e6b171906b4bde4006558739c5d7771dc30b9a037b65e62b2674a1b13",
+      "patches": [
+        "0001-windows-utf8-archive-paths.patch"
+      ]
     }
   },
   "git_components": {

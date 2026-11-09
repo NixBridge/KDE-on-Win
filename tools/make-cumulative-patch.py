@@ -40,6 +40,9 @@ for relative, source in sources.items():
     'For modern Windows notification forwarding, run install-notifications.cmd in the VM and grant notification access.\n'
     'Legacy tray balloons are forwarded by trayhost. Native Windows toast banners can still appear; Windows Do Not Disturb suppresses those.\n'
     'System Settings now includes Panel, Desktop, Start Menu and Diagnostics pages. See docs/PERSONALIZATION.md.\n'
+    'Fix12 includes native system controls, ConPTY close fixes, safe native taskbar behavior and KDE Archive Manager.\n'
+    'The VM session registers Dolphin folder defaults and archive fallbacks once. Existing protected ZIP defaults need Open With > Always.\n'
+    'See docs/FIX12.md for supported controls, association restore, archive limits and VM acceptance steps.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

@@ -39,3 +39,5 @@ run([widget(untouched, 'org.kde.plasma.systemtray')], true, true);
 assert.deepEqual(untouched.launchers, ['applications:systemsettings.desktop']);
 assert.equal(run([])[0], 'WAITING_TASKBAR=0');
 console.log('PASS: old defaults repaired, custom pins preserved, tools/extras added once, user unpinning preserved, groups restored, missing widgets retried.');
+
+let removed=false;run([{type:"org.kde.plasma.showdesktop",remove(){removed=true;}}]);assert.equal(removed,true);

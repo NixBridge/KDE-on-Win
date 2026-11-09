@@ -1,0 +1,298 @@
+diff --git a/src/Pty.cpp b/src/Pty.cpp
+index a5d494c..4311df1 100644
+--- a/src/Pty.cpp
++++ b/src/Pty.cpp
+@@ -504,13 +504,12 @@ int Pty::start(const QString &program, const QStringList &arguments, const QStri
+         return -1;
+     } else {
+         auto n = m_proc->notifier();
++        disconnect(n, nullptr, this, nullptr);
++        disconnect(m_proc.get(), nullptr, this, nullptr);
+         connect(n, &QIODevice::readyRead, this, &Pty::dataReceived);
+         connect(m_proc.get(), &IPtyProcess::exited, this, [this] {
+             Q_EMIT finished(exitCode(), QProcess::NormalExit);
+         });
+-        connect(n, &QIODevice::aboutToClose, this, [this] {
+-            Q_EMIT finished(exitCode(), QProcess::NormalExit);
+-        });
+     }
+     return 0;
+ }
+@@ -521,9 +520,7 @@ void Pty::setWriteable(bool)
+ 
+ void Pty::closePty()
+ {
+-    if (m_proc) {
+-        m_proc->kill();
+-    }
++    kill();
+ }
+ 
+ int Pty::foregroundProcessGroup() const
+diff --git a/src/Pty.h b/src/Pty.h
+index ca9649a..02fbbdb 100644
+--- a/src/Pty.h
++++ b/src/Pty.h
+@@ -178,8 +178,9 @@ public:
+ 
+     bool kill()
+     {
+-        if (m_proc) {
+-            return m_proc->kill();
++        if (m_proc && m_proc->kill()) {
++            Q_EMIT finished(0, QProcess::NormalExit);
++            return true;
+         }
+         return false;
+     }
+diff --git a/src/ptyqt/conptyprocess.cpp b/src/ptyqt/conptyprocess.cpp
+index c94efe7..0fab4e9 100644
+--- a/src/ptyqt/conptyprocess.cpp
++++ b/src/ptyqt/conptyprocess.cpp
+@@ -7,8 +7,11 @@
+ #include <QDebug>
+ #include <QFile>
+ #include <QFileInfo>
++#include <QProcessEnvironment>
+ #include <QMutexLocker>
+ #include <sstream>
++#include <thread>
++#include <system_error>
+ 
+ #define READ_INTERVAL_MSEC 500
+ 
+@@ -108,12 +111,25 @@ bool ConPtyProcess::startProcess(const QString &shellPath,
+         return false;
+     }
+ 
++    ++m_generation;
++    {QMutexLocker locker(&m_bufferMutex);m_buffer.m_readBuffer.clear();}
++    m_aboutToDestruct.store(false);
++    m_readerThreadId.store(0);
++    m_exitCode = 0;
+     m_shellPath = shellPath;
+     m_size = QPair<qint16, qint16>(cols, rows);
+ 
+-    // env
+-    std::wstringstream envBlock;
++    // A profile specifies overrides, not a complete Windows environment.
++    // Preserve PATH/SystemRoot and apply explicit session variables on top.
++    QProcessEnvironment merged = QProcessEnvironment::systemEnvironment();
+     for (const QString &line : std::as_const(environment)) {
++        const int separator = line.indexOf(QLatin1Char('='));
++        if (separator > 0) merged.insert(line.left(separator), line.mid(separator + 1));
++    }
++    QStringList entries = merged.toStringList();
++    entries.sort(Qt::CaseInsensitive);
++    std::wstringstream envBlock;
++    for (const QString &line : std::as_const(entries)) {
+         envBlock << line.toStdWString() << '\0';
+     }
+     envBlock << '\0';
+@@ -167,13 +183,15 @@ bool ConPtyProcess::startProcess(const QString &shellPath,
+         m_shellProcessInformation.hProcess,
+         [](PVOID data, BOOLEAN) {
+             auto self = static_cast<ConPtyProcess *>(data);
+-            DWORD exitCode = 0;
+-            GetExitCodeProcess(self->m_shellProcessInformation.hProcess, &exitCode);
+-            self->m_exitCode = exitCode;
+-            // Do not respawn if the object is about to be destructed
+-            if (!self->m_aboutToDestruct)
+-                Q_EMIT self->notifier()->aboutToClose();
+-            Q_EMIT self->exited();
++            if (self->m_aboutToDestruct.load()) return;
++            const quint64 generation=self->m_generation.load();
++            DWORD code = 0;
++            if (!GetExitCodeProcess(self->m_shellProcessInformation.hProcess, &code)) return;
++            QMetaObject::invokeMethod(self, [self, code, generation] {
++                if (self->m_aboutToDestruct.load()||self->m_generation.load()!=generation) return;
++                self->m_exitCode = int(code);
++                Q_EMIT self->exited();
++            }, Qt::QueuedConnection);
+         },
+         this,
+         INFINITE,
+@@ -181,27 +199,25 @@ bool ConPtyProcess::startProcess(const QString &shellPath,
+ 
+     // this code runned in separate thread
+     m_readThread = QThread::create([this]() {
+-        // buffers
+-        const DWORD BUFF_SIZE{1024};
+-        char szBuffer[BUFF_SIZE]{};
+-
+-        while (true) {
+-            DWORD dwBytesRead{};
+-
+-            // Read from the pipe
+-            BOOL result = ReadFile(m_hPipeIn, szBuffer, BUFF_SIZE, &dwBytesRead, NULL);
+-
+-            const bool needMoreData = !result && GetLastError() == ERROR_MORE_DATA;
+-            if (result || needMoreData) {
++        m_readerThreadId.store(GetCurrentThreadId());
++        char buffer[16384];
++        while (!QThread::currentThread()->isInterruptionRequested()) {
++            DWORD available = 0;
++            if (!PeekNamedPipe(m_hPipeIn, nullptr, 0, nullptr, &available, nullptr)) break;
++            if (!available) { QThread::msleep(10); continue; }
++            DWORD count = 0;
++            const BOOL read = ReadFile(m_hPipeIn, buffer, qMin<DWORD>(available, sizeof(buffer)), &count, nullptr);
++            if (!read && GetLastError() != ERROR_MORE_DATA) break;
++            if (!count) continue;
++            bool notify = false;
++            {
+                 QMutexLocker locker(&m_bufferMutex);
+-                m_buffer.m_readBuffer.append(szBuffer, dwBytesRead);
+-                m_buffer.emitReadyRead();
++                notify = m_buffer.m_readBuffer.isEmpty();
++                m_buffer.m_readBuffer.append(buffer, count);
+             }
+-
+-            const bool brokenPipe = !result && GetLastError() == ERROR_BROKEN_PIPE;
+-            if (QThread::currentThread()->isInterruptionRequested() || brokenPipe)
+-                break;
++            if (notify && !m_aboutToDestruct.load()) m_buffer.emitReadyRead();
+         }
++        m_readerThreadId.store(0);
+     });
+ 
+     // start read thread
+@@ -227,45 +243,48 @@ bool ConPtyProcess::resize(qint16 cols, qint16 rows)
+ 
+ bool ConPtyProcess::kill()
+ {
+-    bool exitCode = false;
+-
+-    if (m_ptyHandler != INVALID_HANDLE_VALUE) {
+-        m_aboutToDestruct = true;
+-
+-        // Close ConPTY - this will terminate client process if running
+-        m_winContext.closePseudoConsole(m_ptyHandler);
+-
+-        // Clean-up the pipes
+-        if (INVALID_HANDLE_VALUE != m_hPipeOut)
+-            CloseHandle(m_hPipeOut);
+-        if (INVALID_HANDLE_VALUE != m_hPipeIn)
+-            CloseHandle(m_hPipeIn);
+-
++    if (!m_ptyHandler || m_ptyHandler == INVALID_HANDLE_VALUE) return false;
++    m_aboutToDestruct.store(true);
++    ++m_generation;
++    // The wait callback must be gone before its QObject and process handles.
++    if (m_shellCloseWaitHandle && m_shellCloseWaitHandle != INVALID_HANDLE_VALUE) {
++        UnregisterWaitEx(m_shellCloseWaitHandle, INVALID_HANDLE_VALUE);
++        m_shellCloseWaitHandle = INVALID_HANDLE_VALUE;
++    }
++    if (m_readThread) {
+         m_readThread->requestInterruption();
+-        if (!m_readThread->wait(1000))
+-            m_readThread->terminate();
+-        m_readThread->deleteLater();
+-        m_readThread = nullptr;
+-
+-        m_pid = 0;
+-        m_ptyHandler = INVALID_HANDLE_VALUE;
+-        m_hPipeIn = INVALID_HANDLE_VALUE;
+-        m_hPipeOut = INVALID_HANDLE_VALUE;
+-
+-        CloseHandle(m_shellProcessInformation.hThread);
+-        CloseHandle(m_shellProcessInformation.hProcess);
+-        UnregisterWait(m_shellCloseWaitHandle);
+-
+-        // Cleanup attribute list
+-        if (m_shellStartupInfo.lpAttributeList) {
+-            DeleteProcThreadAttributeList(m_shellStartupInfo.lpAttributeList);
+-            HeapFree(GetProcessHeap(), 0, m_shellStartupInfo.lpAttributeList);
++        // Repeat cancellation to cover a reader entering ReadFile concurrently.
++        for (int attempt = 0; attempt < 100 && !m_readThread->wait(10); ++attempt) {
++            const DWORD id = m_readerThreadId.load();
++            HANDLE thread = id ? OpenThread(THREAD_TERMINATE, FALSE, id) : nullptr;
++            if (thread) { CancelSynchronousIo(thread); CloseHandle(thread); }
+         }
+-
+-        exitCode = true;
++        // Never destroy the QObject or its buffer while the reader owns them.
++        // Reads are bounded by PeekNamedPipe, so interruption also works idle.
++        m_readThread->wait();
++        delete m_readThread;
++        m_readThread = nullptr;
+     }
+-
+-    return exitCode;
++    // Closing the output pipe before ClosePseudoConsole avoids its drain
++    // deadlock on older Windows. Shutdown owns no QObject or read buffer.
++    if (m_hPipeIn != INVALID_HANDLE_VALUE) CloseHandle(m_hPipeIn);
++    if (m_hPipeOut != INVALID_HANDLE_VALUE) CloseHandle(m_hPipeOut);
++    m_hPipeIn = m_hPipeOut = INVALID_HANDLE_VALUE;
++    const HPCON console = m_ptyHandler;
++    const auto close = m_winContext.closePseudoConsole;
++    m_ptyHandler = INVALID_HANDLE_VALUE;
++    m_pid = 0;
++    try { std::thread([console, close] { close(console); }).detach(); }
++    catch (const std::system_error &) { close(console); }
++    if (m_shellProcessInformation.hThread) CloseHandle(m_shellProcessInformation.hThread);
++    if (m_shellProcessInformation.hProcess) CloseHandle(m_shellProcessInformation.hProcess);
++    m_shellProcessInformation = {};
++    if (m_shellStartupInfo.lpAttributeList) {
++        DeleteProcThreadAttributeList(m_shellStartupInfo.lpAttributeList);
++        HeapFree(GetProcessHeap(), 0, m_shellStartupInfo.lpAttributeList);
++        m_shellStartupInfo.lpAttributeList = nullptr;
++    }
++    return true;
+ }
+ 
+ IPtyProcess::PtyType ConPtyProcess::type()
+diff --git a/src/ptyqt/conptyprocess.h b/src/ptyqt/conptyprocess.h
+index 1f06808..67bad4f 100644
+--- a/src/ptyqt/conptyprocess.h
++++ b/src/ptyqt/conptyprocess.h
+@@ -10,6 +10,7 @@
+ #include <QMutex>
+ #include <QThread>
+ #include <QTimer>
++#include <atomic>
+ #include <process.h>
+ #include <stdio.h>
+ #include <windows.h>
+@@ -60,7 +61,7 @@ public:
+ 
+         // try to load symbols from library
+         // if it fails -> we can't use ConPty API
+-        HANDLE kernel32Handle = LoadLibraryExW(L"kernel32.dll", 0, 0);
++        HANDLE kernel32Handle = GetModuleHandleW(L"kernel32.dll");
+ 
+         if (kernel32Handle != nullptr) {
+             createPseudoConsole = (CreatePseudoConsolePtr)GetProcAddress((HMODULE)kernel32Handle, "CreatePseudoConsole");
+@@ -173,7 +174,9 @@ private:
+     QMutex m_bufferMutex;
+     PtyBuffer m_buffer;
+ 
+-    bool m_aboutToDestruct{false};
++    std::atomic<bool> m_aboutToDestruct{false};
++    std::atomic<DWORD> m_readerThreadId{0};
++    std::atomic<quint64> m_generation{0};
+     PROCESS_INFORMATION m_shellProcessInformation{};
+     HANDLE m_shellCloseWaitHandle{INVALID_HANDLE_VALUE};
+     STARTUPINFOEX m_shellStartupInfo{};
+diff --git a/src/session/Session.cpp b/src/session/Session.cpp
+index c67c5ef..de011db 100644
+--- a/src/session/Session.cpp
++++ b/src/session/Session.cpp
+@@ -1027,12 +1027,16 @@ void Session::close()
+ 
+ bool Session::closeInNormalWay()
+ {
++    _autoClose = true;
++    _closePerUserRequest = true;
+ #ifdef Q_OS_WIN
++    if (!isRunning()) {
++        Q_EMIT finished(this);
++        return true;
++    }
+     _shellProcess->closePty();
+     return true;
+ #else
+-    _autoClose = true;
+-    _closePerUserRequest = true;
+ 
+     // for the possible case where following events happen in sequence:
+     //

@@ -1,4 +1,4 @@
-﻿/*
+/*
     SPDX-FileCopyrightText: 2026 Plasma Windows contributors
     SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
 */
@@ -222,6 +222,7 @@ void StartMenuModel::scan()
         for (const auto& tool : { Tool { "konsole", "konsole.exe", "org.kde.konsole.desktop" },
                  Tool { "process-monitor", "plasma-process-monitor.exe", "org.nixbridge.processmonitor.desktop" },
                  Tool { "dolphin", "dolphin.exe", "org.kde.dolphin.desktop" },
+                 Tool { "archive", "plasma-archive-manager.exe", "org.nixbridge.archive.desktop" },
                  Tool { "text-editor", "plasma-text-editor.exe", "org.nixbridge.texteditor.desktop" },
                  Tool { "system-settings", "plasma-system-settings.exe", "org.nixbridge.systemsettings.desktop" } }) {
             const QString executable

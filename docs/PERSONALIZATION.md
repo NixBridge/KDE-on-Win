@@ -46,3 +46,5 @@ applications are never moved to create these categories.
 Panel auto-hide, transparency/floating visuals, mixed DPI, keyboard navigation and
 live wallpaper changes still need VM acceptance testing. Windows service modules
 and every KDE widget/theme extension are not implied by these controls.
+
+System pages now contain direct controls. See [FIX12.md](FIX12.md) for supported system operations, Dolphin/archive defaults, restore instructions and limits.
