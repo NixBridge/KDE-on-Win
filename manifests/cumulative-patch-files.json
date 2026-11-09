@@ -578,6 +578,7 @@
     "source-verification.json": "manifests/source-verification.json",
     "runtime-import-verification.json": "manifests/runtime-import-verification.json",
     "docs/FIX13.md": "docs/FIX13.md",
-    "docs/FIX14.md": "docs/FIX14.md"
+    "docs/FIX14.md": "docs/FIX14.md",
+    "docs/FIX15.md": "docs/FIX15.md"
   }
 }

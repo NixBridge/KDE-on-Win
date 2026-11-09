@@ -19,6 +19,7 @@
 #include <KSharedConfig>
 #include <KConfigGroup>
 #include "../apps/appearance.h"
+#include "captionicons.h"
 #include "../apps/localization.h"
 #include <windows.h>
 #include <windowsx.h>
@@ -63,7 +64,7 @@ public:
             [icon](const QIcon& value) { icon->setPixmap(value.pixmap(20, 20)); });
         auto button = [&](const QString& name, const QString& tooltip) {
             auto* b = new QToolButton(m_bar);
-            b->setIcon(KIconLoader::global()->loadIcon(name, KIconLoader::Toolbar, 16));
+            b->setIcon(captionButtonIcon(name, m_bar->palette()));
             b->setToolTip(tooltip);
             b->setAutoRaise(true);
             b->setFocusPolicy(Qt::NoFocus);
@@ -108,6 +109,11 @@ public:
     }
     bool eventFilter(QObject* object, QEvent* event) override
     {
+        // Parent PaletteChange can arrive before the titlebar inherits it.
+        // Refresh again when the actual painted widget has its new palette.
+        if (object == m_bar
+            && (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange))
+            update();
         if (object == m_window && event->type() == QEvent::WinIdChange) {
             m_handle = reinterpret_cast<HWND>(m_window->effectiveWinId());
             QTimer::singleShot(0, this, [this] { repairFrame(); });
@@ -126,7 +132,8 @@ public:
         if (object == m_window
             && (event->type() == QEvent::Resize || event->type() == QEvent::WindowStateChange
                 || event->type() == QEvent::FontChange || event->type() == QEvent::PaletteChange
-                || event->type() == QEvent::ApplicationPaletteChange))
+                || event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::WindowActivate
+                || event->type() == QEvent::WindowDeactivate))
             update();
         return false;
     }
@@ -216,12 +223,18 @@ private:
         m_bar->setGeometry(0, 0, m_window->width(), m_height);
         m_bar->show();
         m_bar->raise();
-        m_minimize->setIcon(KIconLoader::global()->loadIcon("window-minimize", KIconLoader::Toolbar, 16));
-        m_close->setIcon(KIconLoader::global()->loadIcon("window-close", KIconLoader::Toolbar, 16));
-        m_maximize->setIcon(KIconLoader::global()->loadIcon(
-            (m_window->isMaximized() || (IsWindow(m_handle) && IsZoomed(m_handle))) ? "window-restore"
-                                                                                    : "window-maximize",
-            KIconLoader::Toolbar, 16));
+        auto colors = m_bar->palette();
+        colors.setCurrentColorGroup(m_window->isActiveWindow() ? QPalette::Active : QPalette::Inactive);
+        const bool maximized = m_window->isMaximized() || (IsWindow(m_handle) && IsZoomed(m_handle));
+        if (!m_iconsInitialized || colors != m_iconPalette || maximized != m_iconMaximized
+            || colors.currentColorGroup() != m_iconPalette.currentColorGroup()) {
+            m_minimize->setIcon(captionButtonIcon("window-minimize", colors));
+            m_close->setIcon(captionButtonIcon("window-close", colors));
+            m_maximize->setIcon(captionButtonIcon(maximized ? "window-restore" : "window-maximize", colors));
+            m_iconPalette = colors;
+            m_iconMaximized = maximized;
+            m_iconsInitialized = true;
+        }
     }
     QMainWindow* m_window;
     QWidget* m_bar;
@@ -229,6 +242,8 @@ private:
     int m_height;
     QMargins m_margins;
     HWND m_handle = nullptr;
+    QPalette m_iconPalette;
+    bool m_iconsInitialized = false, m_iconMaximized = false;
 };
 
 class PlasmaWindowsStyle final : public QProxyStyle {

@@ -1,0 +1,125 @@
+{
+  "version": "20261109-fix15",
+  "vm_acceptance": "pending",
+  "archive": "plasma-windows-20261109-fix15.zip",
+  "archive_bytes": 29422898,
+  "archive_sha256": "a0973257b28f1086254e85834fd80ffde683831d30685f202c4f6a97685e6af1",
+  "cumulative_files": 578,
+  "previous_overlay_entries_preserved": true,
+  "all_overlay_sources_byte_verified": true,
+  "runtime_imports": {
+    "modules_checked": 631,
+    "architecture": "x64",
+    "missing": []
+  },
+  "checks": [
+    {
+      "name": "konsole-conpty-probe ",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe ",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe ",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe ",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe ",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe ",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    }
+  ]
+}

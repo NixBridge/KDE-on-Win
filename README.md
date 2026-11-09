@@ -69,4 +69,4 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
-Latest cumulative integration: [Fix14](docs/FIX14.md) constrains native desktop stacking before a raise can cover applications, and suppresses owner-only DWM transitions that reveal native captions. Includes all [Fix13](docs/FIX13.md) Chinese UI, appearance synchronization and system controls.
+Latest cumulative integration: [Fix15](docs/FIX15.md) keeps Breeze caption buttons readable against each window's actual background. Includes [Fix14](docs/FIX14.md) desktop stacking and minimize animation fixes, plus all earlier updates.

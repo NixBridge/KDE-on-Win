@@ -24,6 +24,7 @@
 #include <oleacc.h>
 #include <vector>
 #include "appearance.h"
+#include "../style/captionicons.h"
 
 namespace {
 struct PhysicalCoordinates {
@@ -176,7 +177,7 @@ public:
             widget->setFocusPolicy(Qt::NoFocus);
             widget->setToolTip(tip);
             widget->setFixedWidth(36);
-            widget->setIcon(QIcon(KIconLoader::global()->loadIcon(name, KIconLoader::Toolbar, 16)));
+            widget->setIcon(captionButtonIcon(name, palette()));
             layout->addWidget(widget);
             connect(widget, &QToolButton::clicked, this, [this, command] { act(command); });
             return widget;
@@ -185,8 +186,6 @@ public:
         maximize = button(QStringLiteral("window-maximize"), tr("Maximize / Restore"), SC_MAXIMIZE);
         closeButton = button(QStringLiteral("window-close"), tr("Close"), SC_CLOSE);
         connect(qGuiApp, &QGuiApplication::paletteChanged, this, [this] {
-            minimize->setIcon(KIconLoader::global()->loadIcon("window-minimize", KIconLoader::Toolbar, 16));
-            closeButton->setIcon(KIconLoader::global()->loadIcon("window-close", KIconLoader::Toolbar, 16));
             iconInitialized = false;
             updateCaption();
         });
@@ -250,10 +249,14 @@ public:
         const UINT closeState = GetMenuState(GetSystemMenu(target, FALSE), SC_CLOSE, MF_BYCOMMAND);
         closeButton->setEnabled(closeState != UINT(-1) && !(closeState & (MF_DISABLED | MF_GRAYED)));
         const bool zoomed = IsZoomed(target);
-        if (!iconInitialized || zoomed != lastZoomed)
-            maximize->setIcon(QIcon(KIconLoader::global()->loadIcon(
-                IsZoomed(target) ? QStringLiteral("window-restore") : QStringLiteral("window-maximize"),
-                KIconLoader::Toolbar, 16)));
+        if (!iconInitialized || zoomed != lastZoomed || colors != iconPalette
+            || colors.currentColorGroup() != iconPalette.currentColorGroup()) {
+            minimize->setIcon(captionButtonIcon(QStringLiteral("window-minimize"), colors));
+            closeButton->setIcon(captionButtonIcon(QStringLiteral("window-close"), colors));
+            maximize->setIcon(captionButtonIcon(
+                zoomed ? QStringLiteral("window-restore") : QStringLiteral("window-maximize"), colors));
+            iconPalette = colors;
+        }
         lastZoomed = zoomed;
         iconInitialized = true;
         if (!isVisible()) {
@@ -354,6 +357,7 @@ private:
     COLORREF oldBorder = 0;
     bool oldBorderValid = false;
     bool transitionsDisabled = false;
+    QPalette iconPalette;
     bool borderApplied = false, iconInitialized = false, lastZoomed = false;
     COLORREF lastBorder = 0;
     QRect lastRectangle;

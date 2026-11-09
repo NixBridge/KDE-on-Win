@@ -8,6 +8,32 @@
 #include <QThread>
 #include <QTextStream>
 #include <QFontDatabase>
+#include "../style/captionicons.h"
+
+static bool readableCaptionIcon(const QIcon& icon, const QColor& background)
+{
+    for (auto mode : { QIcon::Normal, QIcon::Active, QIcon::Disabled, QIcon::Selected }) {
+        const auto image = icon.pixmap(32, 32, mode).toImage();
+        int solid = 0;
+        for (int y = 0; y < image.height(); ++y)
+            for (int x = 0; x < image.width(); ++x) {
+                const auto pixel = image.pixelColor(x, y);
+                if (pixel.alpha() >= 240) {
+                    ++solid;
+                    if (captionContrast(pixel, background) < 4.49) {
+                        QTextStream(stderr) << "Unreadable mode=" << mode << " foreground=" << pixel.name()
+                                            << " background=" << background.name() << '\n';
+                        return false;
+                    }
+                }
+            }
+        if (!solid) {
+            QTextStream(stderr) << "Empty caption glyph mode=" << mode << '\n';
+            return false;
+        }
+    }
+    return true;
+}
 #define NOMINMAX
 #include <windows.h>
 int main(int argc, char** argv)
@@ -15,6 +41,39 @@ int main(int argc, char** argv)
     qputenv("QT_STYLE_OVERRIDE", "plasmawindows");
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
+    if (app.arguments().contains(QStringLiteral("--caption-contrast-self-test"))) {
+        bool ok = true;
+        QPalette wrong = app.palette();
+        wrong.setColor(QPalette::WindowText, Qt::white);
+        wrong.setColor(QPalette::ButtonText, Qt::white);
+        KIconLoader::global()->setCustomPalette(wrong);
+        QMainWindow window;
+        window.ensurePolished();
+        app.processEvents();
+        for (QColor background : { QColor("#eff0f1"), QColor("#232629"), QColor("#808080") }) {
+            QPalette palette = app.palette();
+            palette.setColor(QPalette::Window, background);
+            // Deliberately invalid text/background pairing must be repaired.
+            palette.setColor(QPalette::WindowText, background);
+            palette.setColor(QPalette::Inactive, QPalette::Window, background.darker(110));
+            for (auto group : { QPalette::Active, QPalette::Inactive }) {
+                palette.setCurrentColorGroup(group);
+                for (const auto* name : { "window-minimize", "window-maximize", "window-restore", "window-close" })
+                    ok &= readableCaptionIcon(captionButtonIcon(name, palette), palette.color(QPalette::Window));
+            }
+            window.setPalette(palette);
+            app.processEvents();
+            auto* bar = window.findChild<QWidget*>("PlasmaBreezeTitleBar");
+            const auto buttons = bar ? bar->findChildren<QToolButton*>() : QList<QToolButton*>();
+            ok &= buttons.size() == 3;
+            for (auto* button : buttons)
+                ok &= readableCaptionIcon(button->icon(), palette.color(QPalette::Inactive, QPalette::Window));
+        }
+        QTextStream(stdout) << (ok ? "PASS" : "FAIL")
+                            << ": caption glyph contrast in all icon modes, active/inactive palettes, wrong loader "
+                               "colors and live window palettes\n";
+        return ok ? 0 : 1;
+    }
     if (app.arguments().contains(QStringLiteral("--native-frame-self-test"))) {
         QMainWindow hidden;
         hidden.ensurePolished();
