@@ -27,6 +27,12 @@ int main(int argc, char** argv)
     ok &= engine.globalObject().property("p").property("height").toInt() == 77;
     ok &= engine.globalObject().property("d").property("image").toString() == QUrl::fromLocalFile(wallpaper).toString();
     ok &= engine.globalObject().property("result").toString() == QStringLiteral("PERSONALIZATION_APPLIED");
+    settings.setValue("pendingAppearance", true);
+    settings.setValue("pendingWallpaper", false);
+    engine.evaluate("p.height=73");
+    ok &= !engine.evaluate(personalizationScript(settings)).isError();
+    ok &= engine.globalObject().property("theme").toString() == "default"
+        && engine.globalObject().property("p").property("height").toInt() == 73;
     QTextStream(stdout) << (ok ? "PASS" : "FAIL")
                         << ": real personalization scripts execute; bounds, option validation, quoted Unicode paths, "
                            "wallpaper-only preserves panels\n";

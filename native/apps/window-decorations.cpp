@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "localization.h"
 #include <QApplication>
 #include <QWidget>
 #include <QLabel>
@@ -25,6 +26,14 @@
 #include "appearance.h"
 
 namespace {
+struct PhysicalCoordinates {
+    DPI_AWARENESS_CONTEXT previous = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    ~PhysicalCoordinates()
+    {
+        if (previous)
+            SetThreadDpiAwarenessContext(previous);
+    }
+};
 bool sameUserAndIntegrity(DWORD pid)
 {
     HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
@@ -100,16 +109,38 @@ bool standardCaption(HWND window, bool fixture = false, bool checkIdentity = tru
 }
 QRect captionRectangle(HWND target)
 {
+    PhysicalCoordinates coordinates;
+    RECT bounds {};
+    if (!GetWindowRect(target, &bounds))
+        return {};
+    RECT visible = bounds, extended {};
+    if (SUCCEEDED(DwmGetWindowAttribute(target, DWMWA_EXTENDED_FRAME_BOUNDS, &extended, sizeof(extended)))
+        && extended.right > extended.left && extended.bottom > extended.top)
+        visible = extended;
     TITLEBARINFO info {};
     info.cbSize = sizeof(info);
-    if (!GetTitleBarInfo(target, &info) || (info.rgstate[0] & STATE_SYSTEM_INVISIBLE))
-        return {};
-    const RECT& rect = info.rcTitleBar;
-    return QRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+    const UINT dpi = GetDpiForWindow(target);
+    const LONG fallbackBottom = bounds.top + GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
+        + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi) + GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
+    if (!GetTitleBarInfo(target, &info) || info.rcTitleBar.bottom <= visible.top)
+        info.rcTitleBar.bottom = fallbackBottom;
+    // rcTitleBar can exclude the native system icon. Cover the entire visible
+    // width, including that icon, while leaving menu/client content untouched.
+    if (IsZoomed(target)) {
+        MONITORINFO monitor { sizeof(monitor) };
+        if (GetMonitorInfoW(MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST), &monitor)) {
+            visible.left = qMax(visible.left, monitor.rcWork.left);
+            visible.right = qMin(visible.right, monitor.rcWork.right);
+            visible.top = qMax(visible.top, monitor.rcWork.top);
+        }
+    }
+    return QRect(visible.left, visible.top, visible.right - visible.left, info.rcTitleBar.bottom - visible.top);
 }
 }
 
 class Caption final : public QWidget {
+    Q_OBJECT
+
 public:
     explicit Caption(HWND target)
         : QWidget(
@@ -153,6 +184,12 @@ public:
         minimize = button(QStringLiteral("window-minimize"), tr("Minimize"), SC_MINIMIZE);
         maximize = button(QStringLiteral("window-maximize"), tr("Maximize / Restore"), SC_MAXIMIZE);
         closeButton = button(QStringLiteral("window-close"), tr("Close"), SC_CLOSE);
+        connect(qGuiApp, &QGuiApplication::paletteChanged, this, [this] {
+            minimize->setIcon(KIconLoader::global()->loadIcon("window-minimize", KIconLoader::Toolbar, 16));
+            closeButton->setIcon(KIconLoader::global()->loadIcon("window-close", KIconLoader::Toolbar, 16));
+            iconInitialized = false;
+            updateCaption();
+        });
         SetWindowLongPtrW(reinterpret_cast<HWND>(winId()), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(target));
         oldBorderValid = SUCCEEDED(DwmGetWindowAttribute(target, DWMWA_BORDER_COLOR, &oldBorder, sizeof(oldBorder)));
         updateCaption();
@@ -164,6 +201,7 @@ public:
     }
     void updateCaption()
     {
+        PhysicalCoordinates coordinates;
         if (!ownedTarget() || !standardCaption(target, false, false)) {
             hide();
             return;
@@ -174,7 +212,8 @@ public:
             return;
         }
         QFont captionFont = qApp->font();
-        const int available = qMax(10, int(rect.height() / (qMax(96u, GetDpiForWindow(target)) / 96.0)) - 6);
+        const int available
+            = qMax(10, int(rect.height() / (qMax(96u, GetDpiForWindow(reinterpret_cast<HWND>(winId()))) / 96.0)) - 6);
         if (QFontMetrics(captionFont).height() > available)
             captionFont.setPixelSize(qMax(9, available - 4));
         title->setFont(captionFont);
@@ -232,11 +271,24 @@ protected:
     {
         if (event->button() == Qt::LeftButton && ownedTarget()) {
             POINT cursor {};
-            GetCursorPos(&cursor);
+            GetPhysicalCursorPos(&cursor);
+            int hit = HTCAPTION;
+            if (!IsZoomed(target) && (GetWindowLongPtrW(target, GWL_STYLE) & WS_THICKFRAME)) {
+                const int edge = qMax(4, int(GetDpiForWindow(reinterpret_cast<HWND>(winId())) / 24));
+                const bool left = cursor.x<lastRectangle.left() + edge, right = cursor.x> lastRectangle.right() - edge,
+                           top = cursor.y < lastRectangle.top() + edge;
+                if (top)
+                    hit = left ? HTTOPLEFT : (right ? HTTOPRIGHT : HTTOP);
+                else if (left)
+                    hit = HTLEFT;
+                else if (right)
+                    hit = HTRIGHT;
+            }
+            PhysicalToLogicalPointForPerMonitorDPI(target, &cursor);
             SetForegroundWindow(target);
             updateCaption();
             ReleaseCapture();
-            PostMessageW(target, WM_NCLBUTTONDOWN, HTCAPTION, MAKELPARAM(cursor.x, cursor.y));
+            PostMessageW(target, WM_NCLBUTTONDOWN, hit, MAKELPARAM(cursor.x, cursor.y));
         }
     }
     void mouseDoubleClickEvent(QMouseEvent* event) override
@@ -272,6 +324,10 @@ private:
             return;
         if (command == SC_MAXIMIZE && IsZoomed(target))
             command = SC_RESTORE;
+        if (command == SC_RESTORE) {
+            ShowWindowAsync(target, SW_RESTORE);
+            return;
+        }
         const UINT state = GetMenuState(GetSystemMenu(target, FALSE), command, MF_BYCOMMAND);
         if (state == UINT(-1) || (state & (MF_DISABLED | MF_GRAYED)))
             return;
@@ -372,8 +428,10 @@ int main(int argc, char** argv)
     qputenv("QT_STYLE_OVERRIDE", "plasmawindows");
     KIconTheme::initTheme();
     QApplication app(argc, argv);
+    installProjectTranslations(&app);
     app.setQuitOnLastWindowClosed(false);
     if (app.arguments().contains(QStringLiteral("--self-test"))) {
+        PhysicalCoordinates coordinates;
         const HINSTANCE module = GetModuleHandleW(nullptr);
         WNDCLASSW klass {};
         klass.hInstance = module;
@@ -384,15 +442,39 @@ int main(int argc, char** argv)
             nullptr, module, nullptr);
         HWND custom = CreateWindowExW(0, klass.lpszClassName, L"Custom fixture", WS_OVERLAPPEDWINDOW, 100, 100, 400,
             300, nullptr, nullptr, module, nullptr);
-        const bool ok = native && custom && standardCaption(native, true) && !standardCaption(custom, true);
+        bool ok = native && custom && standardCaption(native, true) && !standardCaption(custom, true);
+        if (native) {
+            RECT visible {};
+            GetWindowRect(native, &visible);
+            DwmGetWindowAttribute(native, DWMWA_EXTENDED_FRAME_BOUNDS, &visible, sizeof(visible));
+            const auto rectangle = captionRectangle(native);
+            ok &= !rectangle.isEmpty() && rectangle.left() <= visible.left && rectangle.right() + 1 >= visible.right;
+            HWND child = CreateWindowExW(0, L"STATIC", L"Restore fixture",
+                WS_CHILD | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MAXIMIZE, 0, 0, 100, 80, native, nullptr, module, nullptr);
+            if (child) {
+                Caption bar(child);
+                auto buttons = bar.findChildren<QToolButton*>();
+                ShowWindow(child, SW_MAXIMIZE);
+                ok &= buttons.size() == 3 && IsZoomed(child);
+                if (buttons.size() == 3)
+                    buttons[1]->click();
+                for (int i = 0; i < 10; ++i) {
+                    QCoreApplication::processEvents();
+                    Sleep(5);
+                }
+                ok &= !IsZoomed(child) && !IsWindowVisible(child) && !IsWindowVisible(native);
+                DestroyWindow(child);
+            } else
+                ok = false;
+        }
         if (native)
             DestroyWindow(native);
         if (custom)
             DestroyWindow(custom);
         UnregisterClassW(klass.lpszClassName, module);
-        QTextStream(stdout)
-            << (ok ? "PASS" : "FAIL")
-            << ": real hidden native caption accepted; client-drawn caption rejected; no host windows decorated\n";
+        QTextStream(stdout) << (ok ? "PASS" : "FAIL")
+                            << ": physical full-caption bounds, restore button and custom-caption exclusion on hidden "
+                               "test-owned windows\n";
         return ok ? 0 : 1;
     }
     auto bus = QDBusConnection::sessionBus();
@@ -401,3 +483,5 @@ int main(int argc, char** argv)
     Decorations decorations;
     return app.exec();
 }
+
+#include "window-decorations.moc"

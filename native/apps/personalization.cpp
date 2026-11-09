@@ -10,6 +10,9 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include "personalization.h"
+#include "appearance-config.h"
+#include "localization.h"
+#include <QStandardPaths>
 int main(int argc, char** argv)
 {
     if (qEnvironmentVariableIsEmpty("DBUS_SESSION_BUS_ADDRESS"))
@@ -33,7 +36,7 @@ int main(int argc, char** argv)
                 (QDateTime::currentDateTime().toString(Qt::ISODate) + QLatin1Char(' ') + message + QLatin1Char('\n'))
                     .toUtf8());
     };
-    QString lastError;
+    QString lastError, appearanceRevision;
     timer.setInterval(1500);
     int attempts = 0;
     bool busy = false;
@@ -41,6 +44,9 @@ int main(int argc, char** argv)
         if (busy)
             return;
         if (++attempts > 80) {
+            settings.setValue(
+                "personalizationError", QStringLiteral("Plasma did not become ready; preferences remain pending"));
+            settings.sync();
             log(QStringLiteral("Plasma did not become ready; preferences remain pending"));
             QTextStream(stderr) << "Plasma did not become ready; preferences remain pending.\n";
             app.exit(1);
@@ -48,6 +54,24 @@ int main(int argc, char** argv)
         }
         settings.sync();
         const auto revision = settings.value(QStringLiteral("personalizationRevision")).toString();
+        if (settings.value("pendingAppearance", false).toBool() && appearanceRevision != revision) {
+            const QString scheme = app.applicationDirPath() + "/data/color-schemes/"
+                + (settings.value("dark", false).toBool() ? "BreezeDark.colors" : "BreezeLight.colors");
+            const QString config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+            if (!writeAppearanceConfig(scheme, config + "/kdeglobals", config + "/plasmarc",
+                    QFont(settings.value("fontFamily", defaultProjectFontFamily()).toString(),
+                        qBound(8, settings.value("fontSize", 10).toInt(), 20)),
+                    QColor(settings.value("accentColor").toString()),
+                    QFileInfo(settings.fileName()).absolutePath() + "/current.colors")) {
+                settings.setValue(
+                    "personalizationError", QStringLiteral("Cannot save global appearance configuration"));
+                settings.sync();
+                log(QStringLiteral("Cannot save global appearance configuration"));
+                return;
+            }
+            appearanceRevision = revision;
+        }
+
         auto request = QDBusMessage::createMethodCall(QStringLiteral("org.kde.plasmashell"),
             QStringLiteral("/PlasmaShell"), QStringLiteral("org.kde.PlasmaShell"), QStringLiteral("evaluateScript"));
         request.setAutoStartService(false);
@@ -66,9 +90,11 @@ int main(int argc, char** argv)
                 settings.sync();
                 if (settings.value(QStringLiteral("personalizationRevision")).toString() != revision)
                     return;
+                settings.remove("personalizationError");
                 settings.setValue(QStringLiteral("pendingPersonalization"), false);
                 settings.setValue(QStringLiteral("pendingPanel"), false);
                 settings.setValue(QStringLiteral("pendingWallpaper"), false);
+                settings.setValue(QStringLiteral("pendingAppearance"), false);
                 settings.sync();
                 QTextStream(stdout) << reply.value();
                 log(QStringLiteral("Personalization applied"));

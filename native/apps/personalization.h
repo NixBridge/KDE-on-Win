@@ -27,6 +27,8 @@ inline QString personalizationScript(QSettings& settings)
         "var ps=panels();var ds=desktops();if((%1&&!ps.length)||(%2&&!ds.length)){print('WAITING_PLASMA');}else{")
                          .arg(panel ? QStringLiteral("true") : QStringLiteral("false"),
                              desktop ? QStringLiteral("true") : QStringLiteral("false"));
+    if (settings.value("pendingAppearance", false).toBool())
+        script += QStringLiteral("theme=\"default\"; ");
     if (panel)
         script += QStringLiteral("for(var "
                                  "i=0;i<ps.length;i++){ps[i].height=%1;ps[i].location=%2;ps[i].hiding=%3;ps[i].opacity="

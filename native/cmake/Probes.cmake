@@ -73,3 +73,10 @@ add_executable(kwindowsystem-probe "${SOURCE_ROOT}/../probe/kwindowsystem-probe/
 target_compile_options(kwindowsystem-probe PRIVATE /utf-8)
 target_link_libraries(kwindowsystem-probe PRIVATE Qt6::Gui KF6::WindowSystem user32)
 install(TARGETS kwindowsystem-probe RUNTIME DESTINATION bin)
+
+if(BUILD_DESKTOP_APPS)
+    find_package(Plasma REQUIRED)
+    add_executable(appearance-sync-probe "${PROJECT_SOURCE_DIR}/probes/appearance-sync-probe.cpp")
+    target_link_libraries(appearance-sync-probe PRIVATE Qt6::Widgets Qt6::Qml Plasma::Plasma KF6::ConfigCore KF6::IconThemes)
+    install(TARGETS appearance-sync-probe RUNTIME DESTINATION bin)
+endif()

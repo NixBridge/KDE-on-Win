@@ -55,3 +55,5 @@ Files over 64 MiB are rejected. Windows default file associations are unchanged.
 Direct entry points: `start-system-settings.cmd`, `start-text-editor.cmd` and
 `start-window-decorations.cmd`. Existing panels gain settings/editor pins once,
 preserving later user unpinning.
+
+Fix13 covers the full physical caption width, handles native/Qt maximize-state differences and converts drag coordinates for the target DPI context. See [FIX13.md](FIX13.md) for validation and remaining VM acceptance.

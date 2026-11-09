@@ -38,6 +38,30 @@ int main(int argc, char** argv)
         handle = reinterpret_cast<HWND>(hidden.winId());
         pump();
         ok &= IsWindow(handle) && !IsWindowVisible(handle) && (GetWindowLongPtrW(handle, GWL_STYLE) & WS_CAPTION) == 0;
+        // Reproduce a native maximization while Qt still reports a normal
+        // child widget. The hidden ancestor keeps this test off the desktop.
+        QWidget holder;
+        holder.winId();
+        QMainWindow child;
+        child.setParent(&holder, Qt::Widget);
+        child.ensurePolished();
+        child.winId();
+        pump();
+        const HWND embedded = reinterpret_cast<HWND>(child.winId());
+        const bool childWindow = GetWindowLongPtrW(embedded, GWL_STYLE) & WS_CHILD;
+        ok &= childWindow;
+        if (childWindow) {
+            ShowWindow(embedded, SW_MAXIMIZE);
+            pump();
+            auto* bar = child.findChild<QWidget*>("PlasmaBreezeTitleBar");
+            const auto buttons = bar ? bar->findChildren<QToolButton*>() : QList<QToolButton*>();
+            ok &= IsZoomed(embedded) && buttons.size() == 3;
+            if (buttons.size() == 3)
+                buttons[1]->click();
+            pump();
+            ok &= !IsZoomed(embedded) && !IsWindowVisible(embedded)
+                && !IsWindowVisible(reinterpret_cast<HWND>(holder.winId()));
+        }
         QTextStream(stdout) << (ok ? "PASS" : "FAIL")
                             << ": native caption style repair and HWND recreation on a hidden test-owned window\n";
         return ok ? 0 : 1;

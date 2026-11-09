@@ -11,12 +11,15 @@
 #include <QWindow>
 #include <QTimer>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QFile>
 #include <QAbstractNativeEventFilter>
 #include <KIconLoader>
 #include <KColorScheme>
 #include <KSharedConfig>
+#include <KConfigGroup>
 #include "../apps/appearance.h"
+#include "../apps/localization.h"
 #include <windows.h>
 #include <windowsx.h>
 
@@ -31,6 +34,8 @@ static void traceAppearance(const QString& message)
 }
 
 class WindowChrome final : public QObject, public QAbstractNativeEventFilter {
+    Q_OBJECT
+
 public:
     explicit WindowChrome(QMainWindow* window)
         : QObject(window)
@@ -66,10 +71,12 @@ public:
             layout->addWidget(b);
             return b;
         };
-        connect(button("window-minimize", tr("Minimize")), &QToolButton::clicked, window, &QWidget::showMinimized);
+        m_minimize = button("window-minimize", tr("Minimize"));
+        connect(m_minimize, &QToolButton::clicked, window, &QWidget::showMinimized);
         m_maximize = button("window-maximize", tr("Maximize / Restore"));
         connect(m_maximize, &QToolButton::clicked, this, [this] { toggleMaximize(); });
-        connect(button("window-close", tr("Close")), &QToolButton::clicked, window, &QWidget::close);
+        m_close = button("window-close", tr("Close"));
+        connect(m_close, &QToolButton::clicked, window, &QWidget::close);
         m_margins = window->contentsMargins();
         window->setContentsMargins(m_margins.left(), m_margins.top() + m_height, m_margins.right(), m_margins.bottom());
         const bool visible = window->isVisible();
@@ -118,7 +125,8 @@ public:
         }
         if (object == m_window
             && (event->type() == QEvent::Resize || event->type() == QEvent::WindowStateChange
-                || event->type() == QEvent::FontChange))
+                || event->type() == QEvent::FontChange || event->type() == QEvent::PaletteChange
+                || event->type() == QEvent::ApplicationPaletteChange))
             update();
         return false;
     }
@@ -176,7 +184,17 @@ private:
         SetWindowPos(
             m_handle, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     }
-    void toggleMaximize() { m_window->isMaximized() ? m_window->showNormal() : m_window->showMaximized(); }
+    void toggleMaximize()
+    {
+        const bool restore = m_window->isMaximized() || (IsWindow(m_handle) && IsZoomed(m_handle));
+        if (restore) {
+            m_window->showNormal();
+            // Native maximization (snap/system menu) can precede Qt's state.
+            if (IsWindow(m_handle) && IsZoomed(m_handle))
+                ShowWindowAsync(m_handle, SW_RESTORE);
+        } else
+            m_window->showMaximized();
+    }
     void update()
     {
         repairFrame();
@@ -198,12 +216,16 @@ private:
         m_bar->setGeometry(0, 0, m_window->width(), m_height);
         m_bar->show();
         m_bar->raise();
+        m_minimize->setIcon(KIconLoader::global()->loadIcon("window-minimize", KIconLoader::Toolbar, 16));
+        m_close->setIcon(KIconLoader::global()->loadIcon("window-close", KIconLoader::Toolbar, 16));
         m_maximize->setIcon(KIconLoader::global()->loadIcon(
-            m_window->isMaximized() ? "window-restore" : "window-maximize", KIconLoader::Toolbar, 16));
+            (m_window->isMaximized() || (IsWindow(m_handle) && IsZoomed(m_handle))) ? "window-restore"
+                                                                                    : "window-maximize",
+            KIconLoader::Toolbar, 16));
     }
     QMainWindow* m_window;
     QWidget* m_bar;
-    QToolButton* m_maximize;
+    QToolButton *m_maximize, *m_minimize, *m_close;
     int m_height;
     QMargins m_margins;
     HWND m_handle = nullptr;
@@ -226,22 +248,51 @@ public:
     void polish(QApplication* application) override
     {
         QProxyStyle::polish(application);
+        installProjectTranslations(application);
         auto update = [application] {
             QSettings settings(appearanceSettingsPath(), QSettings::IniFormat);
             const bool dark = settings.value(QStringLiteral("dark"), false).toBool();
             const int fontSize = qBound(8, settings.value(QStringLiteral("fontSize"), 10).toInt(), 20);
-            const QString state = QString::number(dark) + QLatin1Char(':') + QString::number(fontSize);
+            const QString accentValue = settings.value("accentColor").toString();
+            const QString family = settings.value("fontFamily", defaultProjectFontFamily()).toString();
+            const QString localFile = QFileInfo(appearanceSettingsPath()).absolutePath() + "/current.colors";
+            const QString expected = dark ? QStringLiteral("BreezeDark") : QStringLiteral("BreezeLight");
+            QString path = application->applicationDirPath() + "/data/color-schemes/" + expected + ".colors";
+            if (QFileInfo::exists(localFile)) {
+                auto local = KSharedConfig::openConfig(localFile);
+                local->reparseConfiguration();
+                if (local->group("General").readEntry("ColorScheme", QString()) == expected)
+                    path = localFile;
+            }
+            const QString state = QString::number(dark) + ':' + QString::number(fontSize) + accentValue + family + path
+                + QString::number(QFileInfo(path).lastModified().toMSecsSinceEpoch());
             if (application->property("plasmaAppearanceState").toString() == state)
                 return;
-            const QString path = application->applicationDirPath() + QStringLiteral("/data/color-schemes/")
-                + (dark ? QStringLiteral("BreezeDark.colors") : QStringLiteral("BreezeLight.colors"));
-            if (QFileInfo::exists(path))
-                application->setPalette(
-                    KColorScheme::createApplicationPalette(KSharedConfig::openConfig(path, KConfig::SimpleConfig)));
+            if (QFileInfo::exists(path)) {
+                auto configuration = KSharedConfig::openConfig(path);
+                configuration->reparseConfiguration();
+                application->setProperty("KDE_COLOR_SCHEME_PATH", path);
+                QPalette palette = KColorScheme::createApplicationPalette(configuration);
+                palette.setColor(QPalette::Accent, palette.color(QPalette::Highlight));
+                QColor accent(accentValue);
+                if (accent.isValid()) {
+                    palette.setColor(QPalette::Highlight, accent);
+                    palette.setColor(QPalette::Accent, accent);
+                    palette.setColor(QPalette::Link, accent);
+                    palette.setColor(QPalette::HighlightedText, accent.lightnessF() > 0.6 ? Qt::black : Qt::white);
+                }
+                KIconLoader::global()->setCustomPalette(palette);
+                application->setPalette(palette);
+                // Color-scheme paths can change without changing QPalette.
+                QEvent colorsChanged(QEvent::ApplicationPaletteChange);
+                QCoreApplication::sendEvent(application, &colorsChanged);
+            }
             application->setProperty("plasmaAppearanceDark", dark);
             application->setProperty("plasmaAppearanceState", state);
             QFont font = application->font();
             font.setPointSize(fontSize);
+            if (!family.isEmpty())
+                font.setFamily(family);
             application->setFont(font);
         };
         auto* timer = new QTimer(application);

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "../apps/localization.h"
+#include <QDesktopServices>
+#include <QUrl>
 #include <QApplication>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -47,6 +50,9 @@ public:
         status->setWordWrap(true); layout->addWidget(status);
         auto *enable = new QPushButton(tr("Enable notification access"), this); layout->addWidget(enable);
         auto *test = new QPushButton(tr("Send Windows test notification"), this); layout->addWidget(test);
+        auto *repository=new QPushButton(QObject::tr("Project repository"),this);layout->addWidget(repository);
+        connect(repository,&QPushButton::clicked,this,[]{QDesktopServices::openUrl(QUrl("https://github.com/NixBridge/KDE-on-Win"));});
+
         connect(test, &QPushButton::clicked, this, [this] {
             try {
                 auto xml = ToastNotificationManager::GetTemplateContent(ToastTemplateType::ToastText02);
@@ -157,7 +163,7 @@ int main(int argc, char **argv)
     if (qEnvironmentVariableIsEmpty("DBUS_SESSION_BUS_ADDRESS")) qputenv("DBUS_SESSION_BUS_ADDRESS", "tcp:host=127.0.0.1,port=12443");
     winrt::init_apartment(winrt::apartment_type::single_threaded);
     KIconTheme::initTheme();
-    QApplication app(argc, argv); app.setQuitOnLastWindowClosed(false);
+    QApplication app(argc, argv); installProjectTranslations(&app); app.setQuitOnLastWindowClosed(false);
     if (app.arguments().contains(QStringLiteral("--check-platform"))) {
         const bool available = winrt::Windows::Foundation::Metadata::ApiInformation::IsTypePresent(L"Windows.UI.Notifications.Management.UserNotificationListener");
         UINT32 length = 0; const LONG package = GetCurrentPackageFullName(&length, nullptr);

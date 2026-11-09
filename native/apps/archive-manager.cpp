@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "project-about.h"
+#include "localization.h"
 #include <QApplication>
 #include <QMainWindow>
 #include <QTableWidget>
@@ -196,6 +198,7 @@ int main(int argc, char** argv)
     qputenv("QT_STYLE_OVERRIDE", "plasmawindows");
     KIconTheme::initTheme();
     QApplication app(argc, argv);
+    installProjectTranslations(&app);
     if (app.arguments().contains("--choose-default")) {
         const QString file
             = QFileDialog::getOpenFileName(nullptr, QObject::tr("Choose an archive to set its default application"), {},
@@ -211,6 +214,7 @@ int main(int argc, char** argv)
     }
     app.setDesktopFileName("org.nixbridge.archive");
     QMainWindow window;
+    addProjectAbout(&window);
     window.setWindowTitle(QObject::tr("Archive Manager"));
     window.setWindowIcon(QIcon(KIconLoader::global()->loadIcon("utilities-file-archiver", KIconLoader::Desktop, 48)));
     window.resize(850, 550);

@@ -134,7 +134,8 @@
         "0014-windows-taskbar-icons-and-identities.patch",
         "0015-windows-notifications-no-pulseaudio.patch",
         "0016-windows-settings-editor-taskbar-identities.patch",
-        "0017-cache-windows-task-icons-and-paths.patch"
+        "0017-cache-windows-task-icons-and-paths.patch",
+        "0018-windows-live-desktop-appearance.patch"
       ]
     },
     "plasma5support": {
@@ -170,6 +171,14 @@
       "sha256": "ff36137e6b171906b4bde4006558739c5d7771dc30b9a037b65e62b2674a1b13",
       "patches": [
         "0001-windows-utf8-archive-paths.patch"
+      ]
+    },
+    "kirigami": {
+      "version": "6.28.0",
+      "tarball": "kirigami-6.28.0.tar.xz",
+      "sha256": "30fc6bd928a7124ace334944c8b45748603d37e45464db874903d7eb91f41d36",
+      "patches": [
+        "0001-windows-live-application-font.patch"
       ]
     }
   },

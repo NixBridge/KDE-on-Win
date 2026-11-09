@@ -1,0 +1,51 @@
+diff --git a/src/platform/basictheme.cpp b/src/platform/basictheme.cpp
+index 0a907c1..9e20e44 100644
+--- a/src/platform/basictheme.cpp
++++ b/src/platform/basictheme.cpp
+@@ -23,10 +23,32 @@ BasicThemeDefinition::BasicThemeDefinition(QObject *parent)
+     : QObject(parent)
+ {
+     defaultFont = qGuiApp->font();
++#ifdef Q_OS_WIN
++    qGuiApp->installEventFilter(this);
++#endif
+ 
+     smallFont = QFontDatabase::systemFont(QFontDatabase::SmallestReadableFont);
+ }
+ 
++bool BasicThemeDefinition::eventFilter(QObject *watched, QEvent *event)
++{
++#ifdef Q_OS_WIN
++    // The Windows platform does not provide KDE's desktop font watcher.
++    // Refresh existing attached themes when the application font changes.
++    if (watched == qGuiApp && event->type() == QEvent::ApplicationFontChange) {
++        const QFont font = qGuiApp->font();
++        if (defaultFont != font) {
++            defaultFont = font;
++            smallFont = font;
++            if (font.pointSizeF() > 0) smallFont.setPointSizeF(qMax(6.0, font.pointSizeF() - 2));
++            else smallFont.setPixelSize(qMax(6, font.pixelSize() - 2));
++            Q_EMIT changed();
++        }
++    }
++#endif
++    return QObject::eventFilter(watched, event);
++}
++
+ void BasicThemeDefinition::syncToQml(PlatformTheme *object)
+ {
+     auto item = qobject_cast<QQuickItem *>(object->parent());
+diff --git a/src/platform/basictheme_p.h b/src/platform/basictheme_p.h
+index b334b03..e45f63c 100644
+--- a/src/platform/basictheme_p.h
++++ b/src/platform/basictheme_p.h
+@@ -155,6 +155,9 @@ public:
+ 
+     Q_SIGNAL void changed();
+     Q_SIGNAL void sync(QQuickItem *object);
++
++protected:
++    bool eventFilter(QObject *watched, QEvent *event) override;
+ };
+ 
+ class BasicThemeInstance : public QObject
