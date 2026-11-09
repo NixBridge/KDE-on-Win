@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
+#include <shlwapi.h>
 #include <string>
 #include <vector>
 #include <cstdio>
@@ -97,6 +98,8 @@ static bool launch(
 }
 static void explorerFallback()
 {
+    if (GetShellWindow())
+        return;
     wchar_t windows[32768] {};
     GetWindowsDirectoryW(windows, 32768);
     const auto explorer = std::wstring(windows) + L"\\explorer.exe";
@@ -108,6 +111,19 @@ static void explorerFallback()
         CloseHandle(process.hThread);
         CloseHandle(process.hProcess);
     }
+}
+static bool fallbackRequired(DWORD code, bool configured, bool desktop)
+{
+    return !desktop && (configured || code != 0);
+}
+static bool configuredShell()
+{
+    wchar_t value[32768] {};
+    DWORD size = sizeof(value), type = 0;
+    return SHGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", L"Shell", &type,
+               value, &size)
+        == ERROR_SUCCESS
+        && type == REG_SZ && StrStrIW(value, L"kde-session-host.exe");
 }
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
@@ -138,6 +154,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
         int n = 0;
         auto parsed = CommandLineToArgvW(command.c_str(), &n);
         ok = ok && parsed && n == 2 && value == parsed[1];
+        ok = ok && fallbackRequired(0, true, false) && !fallbackRequired(0, true, true)
+            && !fallbackRequired(0, false, false) && fallbackRequired(1, false, false);
         LocalFree(parsed);
         std::puts(ok ? "PASS: hidden synthetic child, redirected service logs and Windows argument quoting; no desktop "
                        "session launched"
@@ -193,7 +211,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
     DWORD code = 1;
     GetExitCodeProcess(process.hProcess, &code);
     CloseHandle(process.hProcess);
-    if (code != 0)
+    if (fallbackRequired(code, configuredShell(), GetShellWindow() != nullptr))
         explorerFallback();
     return static_cast<int>(code);
 }

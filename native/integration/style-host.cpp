@@ -3,6 +3,21 @@
 #include <cstdio>
 #include <cwchar>
 #include <string>
+#include <vector>
+#include <shellapi.h>
+enum class Mode { Start, Stop, Test, Invalid };
+static Mode parseMode(const std::vector<std::wstring>& args)
+{
+    if (args.empty())
+        return Mode::Start;
+    if (args.size() != 1)
+        return Mode::Invalid;
+    if (args[0] == L"--stop")
+        return Mode::Stop;
+    if (args[0] == L"--self-test")
+        return Mode::Test;
+    return Mode::Invalid;
+}
 static HHOOK hook = nullptr;
 static FILETIME lastWrite {};
 static std::wstring settingsPath;
@@ -33,8 +48,31 @@ static LRESULT CALLBACK procedure(HWND window, UINT message, WPARAM wp, LPARAM l
     }
     return DefWindowProcW(window, message, wp, lp);
 }
-int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR args, int)
+int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
 {
+    int count = 0;
+    auto values = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (!values)
+        return 2;
+    std::vector<std::wstring> arguments;
+    for (int i = 1; i < count; ++i)
+        arguments.emplace_back(values[i]);
+    LocalFree(values);
+    const auto mode = parseMode(arguments);
+    if (mode == Mode::Invalid)
+        return 2;
+    const wchar_t* name = sizeof(void*) == 8 ? L"KDEStyleHost64" : L"KDEStyleHost32";
+    HWND existing = mode == Mode::Test ? nullptr : FindWindowW(name, nullptr);
+    if (mode == Mode::Stop) {
+        if (existing) {
+            if (!PostMessageW(existing, WM_CLOSE, 0, 0))
+                return 5;
+        } else
+            PostMessageW(HWND_BROADCAST, restoreMessage(), 0, 0);
+        return 0;
+    }
+    if (existing)
+        return 0;
     wchar_t path[32768] {};
     GetModuleFileNameW(nullptr, path, 32768);
     auto* last = wcsrchr(path, L'\\');
@@ -44,26 +82,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR args, int)
     HMODULE library = LoadLibraryExW(path, nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (!library)
         return 3;
-    if (wcsstr(args, L"--self-test")) {
+    if (mode == Mode::Test) {
         auto test = reinterpret_cast<BOOL(__stdcall*)()>(GetProcAddress(library, "KDEControlSelfTest"));
-        bool ok = test && test();
+        bool ok = test && test() && parseMode({ L"--stop-extra" }) == Mode::Invalid
+            && parseMode({ L"--self-test-extra" }) == Mode::Invalid
+            && parseMode({ L"--stop", L"unexpected" }) == Mode::Invalid;
         std::puts(ok
                 ? "PASS: hidden native control paint, checkbox state and subclass restoration; no global hook installed"
                 : "FAIL: control style fixture");
         return ok ? 0 : 1;
     }
-    const wchar_t* name = sizeof(void*) == 8 ? L"KDEStyleHost64" : L"KDEStyleHost32";
-    HWND existing = FindWindowW(name, nullptr);
-    if (wcsstr(args, L"--stop")) {
-        if (existing)
-            PostMessageW(existing, WM_CLOSE, 0, 0);
-        else
-            // Recover pinned window callbacks even if their host was terminated.
-            PostMessageW(HWND_BROADCAST, restoreMessage(), 0, 0);
-        return 0;
-    }
-    if (existing)
-        return 0;
     WNDCLASSW klass {};
     klass.hInstance = instance;
     klass.lpszClassName = name;

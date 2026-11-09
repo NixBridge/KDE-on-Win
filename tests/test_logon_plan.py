@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import subprocess
+import os
 root = Path(__file__).resolve().parents[1]
 plans = []
 for action in ['Install', 'Restore']:
@@ -16,4 +17,8 @@ for action in ['Install', 'Restore']:
     assert not plan['ProtectedTarget'].startswith(str(root))
     plans.append(plan)
 assert plans[0]['Provider'] == plans[1]['Provider']
+x86=Path(os.environ['SystemRoot'])/'SysWOW64/WindowsPowerShell/v1.0/powershell.exe'
+if x86.exists():
+    result=subprocess.run([str(x86),'-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'runtime/install-kde-logon.ps1'),'-Plan'],capture_output=True,check=True)
+    assert json.loads(result.stdout.decode('utf-8-sig'))['ProtectedTarget']==plans[0]['ProtectedTarget']
 print('PASS: install/restore plans use a dedicated protected DLL path and provider CLSID, without filtering or replacing system providers; no registration performed.')

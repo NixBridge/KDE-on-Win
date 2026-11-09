@@ -21,6 +21,6 @@ with tempfile.TemporaryDirectory(prefix='settings-parser-',dir=root/'work') as f
     for index,command in enumerate(session_commands):
         source=folder/f'session-{index}.ps1';source.write_text(command,encoding='utf-8')
         subprocess.run(['powershell.exe','-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(driver),'-Source',str(source)],capture_output=True,check=True)
-    for source in [root/'runtime/start-window-decorations-admin.ps1', root/'runtime/install-file-associations.ps1', root/'runtime/install-kde-logon.ps1']:
+    for source in [root/'runtime/start-window-decorations-admin.ps1', root/'runtime/install-file-associations.ps1', root/'runtime/install-kde-logon.ps1', root/'runtime/logon-deployment.ps1']:
         subprocess.run(['powershell.exe','-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(driver),'-Source',str(source)],capture_output=True,check=True)
 print('PASS: update, elevated-decoration and association script syntax; no APIs or installation scripts executed.')

@@ -69,10 +69,28 @@ bool excluded(HWND window)
     return name.rfind(L"Qt", 0) == 0 || name.rfind(L"Chrome_", 0) == 0 || name.rfind(L"Windows.UI", 0) == 0
         || name.rfind(L"Xaml", 0) == 0;
 }
+thread_local int liveStates = 0;
 struct State {
+    int references = 1;
+    State() { ++liveStates; }
+    ~State() { --liveStates; }
+    void release()
+    {
+        if (!--references)
+            delete this;
+    }
     bool button = false, dialog = false, hot = false, restoring = false;
     COLORREF back = CLR_NONE, text = CLR_NONE, textBack = CLR_NONE;
     int list = 0;
+};
+struct StateGuard {
+    State* state;
+    explicit StateGuard(State* value)
+        : state(value)
+    {
+        ++state->references;
+    }
+    ~StateGuard() { state->release(); }
 };
 void restore(HWND window, State* state)
 {
@@ -100,7 +118,12 @@ void paintButton(HWND window, HDC dc, State* state)
     bool radio = type == BS_RADIOBUTTON || type == BS_AUTORADIOBUTTON;
     bool group = type == BS_GROUPBOX;
     bool enabled = IsWindowEnabled(window) != FALSE;
-    LRESULT status = SendMessageW(window, BM_GETSTATE, 0, 0), checked = SendMessageW(window, BM_GETCHECK, 0, 0);
+    LRESULT status = SendMessageW(window, BM_GETSTATE, 0, 0);
+    if (state->restoring)
+        return;
+    LRESULT checked = SendMessageW(window, BM_GETCHECK, 0, 0);
+    if (state->restoring)
+        return;
     int unit = MulDiv(16, GetDpiForWindow(window), 96), pad = MulDiv(6, GetDpiForWindow(window), 96);
     HPEN pen = CreatePen(PS_SOLID, (status & BST_FOCUS) ? 2 : 1,
         (state->hot || (status & BST_FOCUS) || type == BS_DEFPUSHBUTTON) ? colors.accent : colors.border);
@@ -150,6 +173,8 @@ void paintButton(HWND window, HDC dc, State* state)
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, enabled ? colors.text : colors.border);
     auto font = reinterpret_cast<HFONT>(SendMessageW(window, WM_GETFONT, 0, 0));
+    if (state->restoring)
+        return;
     auto oldFont = SelectObject(dc, font ? font : GetStockObject(DEFAULT_GUI_FONT));
     wchar_t label[2048] {};
     GetWindowTextW(window, label, 2048);
@@ -161,15 +186,18 @@ void paintButton(HWND window, HDC dc, State* state)
     }
     if (SendMessageW(window, WM_QUERYUISTATE, 0, 0) & UISF_HIDEACCEL)
         flags |= DT_HIDEPREFIX;
-    DrawTextW(dc, label, -1, &text, flags);
+    if (!state->restoring)
+        DrawTextW(dc, label, -1, &text, flags);
     SelectObject(dc, oldFont);
 }
 LRESULT CALLBACK procedure(HWND window, UINT message, WPARAM wp, LPARAM lp, UINT_PTR, DWORD_PTR data)
 {
     auto* state = reinterpret_cast<State*>(data);
+    StateGuard guard(state);
     if (state->restoring)
         return DefSubclassProc(window, message, wp, lp);
     if (message == restoreMessage() || message == WM_NCDESTROY) {
+        state->restoring = true;
         if (message == WM_NCDESTROY)
             SetPropW(window, L"KDE-on-Win.Destroying", reinterpret_cast<HANDLE>(1));
         if (message != WM_NCDESTROY) {
@@ -183,12 +211,13 @@ LRESULT CALLBACK procedure(HWND window, UINT message, WPARAM wp, LPARAM lp, UINT
             restore(window, state);
         }
         RemoveWindowSubclass(window, procedure, 0x4b4445);
-        delete state;
+        state->release();
         InvalidateRect(window, nullptr, TRUE);
         return DefSubclassProc(window, message, wp, lp);
     }
     refresh(message == WM_THEMECHANGED);
     if (!colors.enabled) {
+        state->restoring = true;
         if (!(GetWindowLongPtrW(window, GWL_STYLE) & WS_CHILD))
             EnumChildWindows(
                 window,
@@ -199,7 +228,7 @@ LRESULT CALLBACK procedure(HWND window, UINT message, WPARAM wp, LPARAM lp, UINT
                 0);
         restore(window, state);
         RemoveWindowSubclass(window, procedure, 0x4b4445);
-        delete state;
+        state->release();
         InvalidateRect(window, nullptr, TRUE);
         return DefSubclassProc(window, message, wp, lp);
     }
@@ -378,6 +407,27 @@ extern "C" BOOL __stdcall KDEControlSelfTest()
     SendMessageW(button, WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), PRF_CLIENT);
     ok = ok && customDraws > 0 && GetPixel(dc, 190, 20) == RGB(0, 255, 0);
     RemoveWindowSubclass(parent, custom, 0x1234);
+    const int baseline = liveStates;
+    HWND doomed = CreateWindowExW(
+        0, L"BUTTON", L"Reentrant destruction", WS_CHILD, 0, 0, 200, 40, parent, nullptr, module, nullptr);
+    attach(doomed);
+    struct DestructionProbe {
+        int expected;
+        bool retained = false;
+    } probe { liveStates };
+    SUBCLASSPROC destroyDuringPaint
+        = [](HWND window, UINT message, WPARAM wp, LPARAM lp, UINT_PTR, DWORD_PTR data) -> LRESULT {
+        if (message == BM_GETSTATE) {
+            auto* probe = reinterpret_cast<DestructionProbe*>(data);
+            DestroyWindow(window);
+            probe->retained = liveStates == probe->expected;
+            return 0;
+        }
+        return DefSubclassProc(window, message, wp, lp);
+    };
+    SetWindowSubclass(doomed, destroyDuringPaint, 0x5678, reinterpret_cast<DWORD_PTR>(&probe));
+    SendMessageW(doomed, WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), PRF_CLIENT);
+    ok = ok && probe.retained && !IsWindow(doomed) && liveStates == baseline;
     SendMessageW(parent, restoreMessage(), 0, 0);
     DWORD_PTR value = 0;
     ok = ok && !GetWindowSubclass(button, procedure, 0x4b4445, &value);

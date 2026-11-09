@@ -2,9 +2,10 @@
 [CmdletBinding()]
 param([ValidateSet('Install','Restore')][string]$Action='Install',[switch]$Plan)
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'logon-deployment.ps1')
 $id='{2B2E39BE-4E8A-47AA-9FC1-E388F34F2601}'
 $source=Join-Path $PSScriptRoot 'bin\kde-logon-provider.dll'
-$protectedRoot=Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'KDE-on-Win'
+$protectedRoot=Join-Path (Get-KdeProgramFiles64) 'KDE-on-Win'
 $target=Join-Path $protectedRoot 'Logon\kde-logon-provider.dll'
 $class='Software\Classes\CLSID\'+$id
 $provider='Software\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\'+$id
@@ -26,9 +27,9 @@ try{
     if(-not [Environment]::Is64BitOperatingSystem){throw 'The experimental provider requires x64 Windows.'}
     if(-not (Test-Path -LiteralPath $source -PathType Leaf)){throw "Missing provider: $source"}
     $directory=Split-Path -Parent $target
-    [IO.Directory]::CreateDirectory($protectedRoot)|Out-Null
-    [IO.Directory]::CreateDirectory($directory)|Out-Null
-    foreach($path in @($protectedRoot,$directory,$target)){if((Test-Path -LiteralPath $path) -and ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Refusing reparse point: $path"}}
+    foreach($path in @($protectedRoot,$directory,$target)){$null=Assert-KdePlainPath $path}
+    $existing=$registry.OpenSubKey($class+'\InprocServer32')
+    if($existing){try{if($existing.GetValue('') -ine $target){throw 'Provider CLSID is registered to a different DLL; refusing to overwrite.'}}finally{$existing.Dispose()}}
     # LogonUI runs as SYSTEM. Never register a DLL from user-writable CraftRoot.
     $acl=[Security.AccessControl.DirectorySecurity]::new()
     $acl.SetOwner([Security.Principal.SecurityIdentifier]::new('S-1-5-32-544'))
@@ -38,9 +39,12 @@ try{
         $rule=[Security.AccessControl.FileSystemAccessRule]::new($sid,[Security.AccessControl.FileSystemRights]$entry[1],[Security.AccessControl.InheritanceFlags]'ContainerInherit,ObjectInherit',[Security.AccessControl.PropagationFlags]::None,[Security.AccessControl.AccessControlType]::Allow)
         $acl.AddAccessRule($rule)
     }
-    Set-Acl -LiteralPath $protectedRoot -AclObject $acl
-    Set-Acl -LiteralPath $directory -AclObject $acl
-    Copy-Item -LiteralPath $source -Destination $target -Force
+    [IO.Directory]::CreateDirectory($protectedRoot)|Out-Null
+    $null=Assert-KdePlainPath $protectedRoot
+    [IO.Directory]::SetAccessControl($protectedRoot,$acl)
+    [IO.Directory]::CreateDirectory($directory)|Out-Null
+    $null=Assert-KdePlainPath $directory
+    [IO.Directory]::SetAccessControl($directory,$acl)
     $fileAcl=[Security.AccessControl.FileSecurity]::new()
     $fileAcl.SetOwner([Security.Principal.SecurityIdentifier]::new('S-1-5-32-544'))
     $fileAcl.SetAccessRuleProtection($true,$false)
@@ -48,7 +52,7 @@ try{
         $rule=[Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($entry[0]),[Security.AccessControl.FileSystemRights]$entry[1],[Security.AccessControl.AccessControlType]::Allow)
         $fileAcl.AddAccessRule($rule)
     }
-    Set-Acl -LiteralPath $target -AclObject $fileAcl
+    Publish-KdeBinary -Source $source -Target $target -PrepareFile {param($pending) [IO.File]::SetAccessControl($pending,$fileAcl)}
     $key=$registry.CreateSubKey($class+'\InprocServer32')
     try{$key.SetValue('',$target);$key.SetValue('ThreadingModel','Apartment')}finally{$key.Dispose()}
     $key=$registry.CreateSubKey($provider)
