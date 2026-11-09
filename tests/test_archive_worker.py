@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix='archive-regression-',dir=workspace/'wor
         code,data=run('--extract',seven,destination)
         assert code==0,data
         assert (Path(data['destination'])/'\u6d4b\u8bd5.txt').read_bytes()==content
-    link=root/'link.tar' 
+    link=root/'link.tar'
     with tarfile.open(link,'w') as tar:
         info=tarfile.TarInfo('link');info.type=tarfile.SYMTYPE;info.linkname='../outside';tar.addfile(info)
     code,data=run('--extract',link,destination)
