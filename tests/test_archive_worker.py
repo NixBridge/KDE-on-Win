@@ -7,10 +7,11 @@ import subprocess
 import tarfile
 import tempfile
 import zipfile
+import os
 from pathlib import Path
 
 parser=argparse.ArgumentParser()
-parser.add_argument('--exe',type=Path,default=Path('D:/KDE/CraftRoot/bin/plasma-archive-manager.exe'))
+parser.add_argument('--exe',type=Path,default=Path(os.environ.get('KDE_CRAFT_ROOT', 'D:/KDE/CraftRoot')) / 'bin/plasma-archive-manager.exe')
 args=parser.parse_args()
 workspace=Path(__file__).resolve().parents[1]
 
@@ -44,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix='archive-regression-',dir=workspace/'wor
         assert code!=0 and data['error'],(name,data)
         assert not (root/'outside.txt').exists()
     seven=root/'normal.7z'
-    sevenzip=Path('D:/KDE/CraftRoot/dev-utils/bin/7za.exe')
+    sevenzip=Path(os.environ.get('KDE_CRAFT_ROOT', 'D:/KDE/CraftRoot')) / 'dev-utils/bin/7za.exe'
     if sevenzip.exists():
         source=root/'seven-source';source.mkdir();(source/'\u6d4b\u8bd5.txt').write_bytes(content)
         subprocess.run([str(sevenzip),'a',str(seven),'\u6d4b\u8bd5.txt'],cwd=source,check=True,capture_output=True)

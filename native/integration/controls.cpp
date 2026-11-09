@@ -15,7 +15,6 @@ struct Palette {
 };
 thread_local Palette colors { RGB(239, 240, 241), RGB(35, 38, 41), RGB(252, 252, 252), RGB(166, 174, 181),
     RGB(61, 174, 233), true };
-thread_local HBRUSH background = nullptr;
 thread_local HBRUSH lightBrush = nullptr, darkBrush = nullptr;
 UINT restoreMessage()
 {
@@ -51,12 +50,23 @@ void refresh(bool force = false)
         colors.accent = RGB((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255);
     }
     HeapFree(GetProcessHeap(), 0, path);
-    // Keep one immutable brush per scheme and UI thread.
-    auto& brush = dark ? darkBrush : lightBrush;
+}
+HBRUSH backgroundBrush()
+{
+    auto& brush = colors.background == RGB(35, 38, 41) ? darkBrush : lightBrush;
     if (!brush)
         brush = CreateSolidBrush(colors.background);
-    background = brush;
+    return brush;
 }
+void releaseBrushes()
+{
+    if (lightBrush)
+        DeleteObject(lightBrush);
+    if (darkBrush)
+        DeleteObject(darkBrush);
+    lightBrush = darkBrush = nullptr;
+}
+
 std::wstring className(HWND window)
 {
     wchar_t name[128] {};
@@ -73,7 +83,12 @@ thread_local int liveStates = 0;
 struct State {
     int references = 1;
     State() { ++liveStates; }
-    ~State() { --liveStates; }
+    ~State()
+    {
+        // Release on the UI thread after its final callback, not in DLL detach.
+        if (!--liveStates)
+            releaseBrushes();
+    }
     void release()
     {
         if (!--references)
@@ -236,16 +251,12 @@ LRESULT CALLBACK procedure(HWND window, UINT message, WPARAM wp, LPARAM lp, UINT
         HDC dc = reinterpret_cast<HDC>(wp);
         SetTextColor(dc, colors.text);
         SetBkColor(dc, colors.background);
-        if (!background)
-            background = CreateSolidBrush(colors.background);
-        return reinterpret_cast<LRESULT>(background);
+        return reinterpret_cast<LRESULT>(backgroundBrush());
     }
     if (state->dialog && message == WM_ERASEBKGND) {
         RECT rect {};
         GetClientRect(window, &rect);
-        if (!background)
-            background = CreateSolidBrush(colors.background);
-        FillRect(reinterpret_cast<HDC>(wp), &rect, background);
+        FillRect(reinterpret_cast<HDC>(wp), &rect, backgroundBrush());
         return 1;
     }
     if (state->button && message == WM_MOUSEMOVE) {
@@ -428,7 +439,15 @@ extern "C" BOOL __stdcall KDEControlSelfTest()
     SetWindowSubclass(doomed, destroyDuringPaint, 0x5678, reinterpret_cast<DWORD_PTR>(&probe));
     SendMessageW(doomed, WM_PRINTCLIENT, reinterpret_cast<WPARAM>(dc), PRF_CLIENT);
     ok = ok && probe.retained && !IsWindow(doomed) && liveStates == baseline;
+    const auto originalBackground = colors.background;
+    colors.background = RGB(239, 240, 241);
+    const HBRUSH light = backgroundBrush();
+    colors.background = RGB(35, 38, 41);
+    const HBRUSH dark = backgroundBrush();
+    colors.background = originalBackground;
+    ok &= light && dark;
     SendMessageW(parent, restoreMessage(), 0, 0);
+    ok &= liveStates == 0 && !lightBrush && !darkBrush;
     DWORD_PTR value = 0;
     ok = ok && !GetWindowSubclass(button, procedure, 0x4b4445, &value);
     SelectObject(dc, old);

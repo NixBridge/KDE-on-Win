@@ -18,7 +18,9 @@ static const IID IID_IAudioEndpointVolume = {0x5CDF2C82, 0x841E, 0x4546, {0x97, 
 VolumeController::VolumeController(QObject *parent)
     : QObject(parent)
 {
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    m_comInitialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    connect(this, &VolumeController::volumeChanged, this, &VolumeController::iconNameChanged);
+    connect(this, &VolumeController::mutedChanged, this, &VolumeController::iconNameChanged);
     connect(&m_timer, &QTimer::timeout, this, &VolumeController::refresh);
     m_timer.start(500);
     refresh();
@@ -29,7 +31,7 @@ VolumeController::~VolumeController()
     if (m_endpoint) {
         static_cast<IAudioEndpointVolume *>(m_endpoint)->Release();
     }
-    CoUninitialize();
+    if (m_comInitialized) CoUninitialize();
 }
 
 bool VolumeController::ensureDevice()

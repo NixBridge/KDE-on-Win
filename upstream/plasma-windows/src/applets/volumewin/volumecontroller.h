@@ -13,7 +13,7 @@ class VolumeController : public QObject
     Q_OBJECT
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
-    Q_PROPERTY(QString iconName READ iconName NOTIFY volumeChanged)
+    Q_PROPERTY(QString iconName READ iconName NOTIFY iconNameChanged)
 
 public:
     explicit VolumeController(QObject *parent = nullptr);
@@ -30,6 +30,7 @@ public:
 Q_SIGNALS:
     void volumeChanged();
     void mutedChanged();
+    void iconNameChanged();
 
 private:
     void refresh();
@@ -37,6 +38,7 @@ private:
     void applyMuted();
     bool ensureDevice();
 
+    bool m_comInitialized = false;
     QTimer m_timer;
     void *m_endpoint = nullptr; // IAudioEndpointVolume*
     qreal m_volume = 1.0;

@@ -84,3 +84,16 @@ if(BUILD_DESKTOP_APPS)
     target_link_libraries(appearance-sync-probe PRIVATE Qt6::Widgets Qt6::Qml Plasma::Plasma KF6::ConfigCore KF6::IconThemes)
     install(TARGETS appearance-sync-probe RUNTIME DESTINATION bin)
 endif()
+
+add_executable(volume-lifecycle-probe "${PROJECT_SOURCE_DIR}/probes/volume-lifecycle-probe.cpp"
+    "${SOURCE_ROOT}/applets/volumewin/volumecontroller.cpp" "${SOURCE_ROOT}/applets/volumewin/volumecontroller.h")
+target_include_directories(volume-lifecycle-probe PRIVATE "${SOURCE_ROOT}/applets/volumewin")
+target_compile_definitions(volume-lifecycle-probe PRIVATE UNICODE _UNICODE)
+target_compile_options(volume-lifecycle-probe PRIVATE /utf-8)
+target_link_libraries(volume-lifecycle-probe PRIVATE Qt6::Core Qt6::Qml ole32)
+install(TARGETS volume-lifecycle-probe RUNTIME DESTINATION bin)
+
+add_executable(notification-callback-probe "${PROJECT_SOURCE_DIR}/probes/notification-callback-probe.cpp")
+target_compile_options(notification-callback-probe PRIVATE /utf-8)
+target_link_libraries(notification-callback-probe PRIVATE Qt6::Core)
+install(TARGETS notification-callback-probe RUNTIME DESTINATION bin)

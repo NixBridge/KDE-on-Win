@@ -18,6 +18,7 @@ add_executable(trayhost
     "${SOURCE_ROOT}/trayhost/snibridge.h")
 target_compile_definitions(trayhost PRIVATE UNICODE _UNICODE WIN32 WIN64 NOMINMAX)
 target_compile_options(trayhost PRIVATE /utf-8 /permissive- /Zc:__cplusplus)
+target_include_directories(trayhost PRIVATE "${SOURCE_ROOT}/shared")
 target_link_libraries(trayhost PRIVATE notificationrelay Qt6::Core Qt6::DBus user32 shell32 gdi32)
 install(TARGETS trayhost RUNTIME DESTINATION bin)
 add_executable(titlebar "${SOURCE_ROOT}/titlebar/titlebar.c")

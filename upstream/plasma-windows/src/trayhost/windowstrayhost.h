@@ -30,6 +30,7 @@ public:
     explicit WindowsTrayHost(QObject *parent = nullptr);
     ~WindowsTrayHost() override;
 
+    static bool selfTest();
     bool start();
     void stop();
 

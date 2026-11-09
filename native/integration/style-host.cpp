@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <windows.h>
+#include "windowsinstancelock.h"
 #include <cstdio>
 #include <cwchar>
 #include <string>
@@ -71,7 +72,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
             PostMessageW(HWND_BROADCAST, restoreMessage(), 0, 0);
         return 0;
     }
-    if (existing)
+    WindowsInstanceLock instanceLock(mode == Mode::Start ? name : nullptr);
+    if (mode == Mode::Start && !instanceLock.valid())
+        return 5;
+    if (existing || instanceLock.duplicate())
         return 0;
     wchar_t path[32768] {};
     GetModuleFileNameW(nullptr, path, 32768);
@@ -99,11 +103,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     RegisterClassW(&klass);
     HWND window = CreateWindowExW(
         WS_EX_TOOLWINDOW, name, L"KDE control style", WS_POPUP, 0, 0, 0, 0, nullptr, nullptr, instance, nullptr);
+    if (!window) {
+        FreeLibrary(library);
+        return 4;
+    }
     auto callback = reinterpret_cast<HOOKPROC>(GetProcAddress(library, "KDEControlHook"));
     hook = callback ? SetWindowsHookExW(WH_CALLWNDPROC, callback, library, 0) : nullptr;
-    if (!window || !hook) {
-        if (window)
-            DestroyWindow(window);
+    if (!hook) {
+        DestroyWindow(window);
+        FreeLibrary(library);
         return 4;
     }
     wchar_t local[32768] {};
@@ -111,9 +119,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     settingsPath = std::wstring(local) + L"\\plasma-win-session\\appearance.ini";
     SetTimer(window, 1, 1000, nullptr);
     MSG message {};
-    while (GetMessageW(&message, nullptr, 0, 0) > 0) {
+    BOOL result;
+    while ((result = GetMessageW(&message, nullptr, 0, 0)) > 0) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
-    return 0;
+    // Also restore on a message-loop error or an external WM_QUIT.
+    if (IsWindow(window))
+        SendMessageW(window, WM_CLOSE, 0, 0);
+    FreeLibrary(library);
+    return result < 0 ? 1 : 0;
 }

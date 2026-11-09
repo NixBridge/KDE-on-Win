@@ -253,6 +253,7 @@
     "bin/ksplashqml.exe",
     "bin/kworkspace6.dll",
     "bin/native-file-icon-probe.exe",
+    "bin/notification-callback-probe.exe",
     "bin/notification-relay-probe.exe",
     "bin/notificationmanager.dll",
     "bin/personalization-probe.exe",
@@ -273,6 +274,7 @@
     "bin/startmenu-model-probe.exe",
     "bin/taskbar-icon-probe.exe",
     "bin/taskmanager.dll",
+    "bin/volume-lifecycle-probe.exe",
     "bin/x86/kde-controls.dll",
     "bin/x86/kde-style-host.exe",
     "plugins/kf6/kded/desktopnotifier.dll",
@@ -602,6 +604,9 @@
     "docs/LOCAL_LOGON.md": "docs/LOCAL_LOGON.md",
     "logon-deployment.ps1": "runtime/logon-deployment.ps1",
     "docs/FIX19.md": "docs/FIX19.md",
-    "docs/FIX20.md": "docs/FIX20.md"
+    "docs/FIX20.md": "docs/FIX20.md",
+    "deploy-vm.cmd": "upstream/plasma-windows/tools/deploy-vm.cmd",
+    "session-shell.cmd": "upstream/plasma-windows/tools/session-shell.cmd",
+    "docs/FIX21.md": "docs/FIX21.md"
   }
 }

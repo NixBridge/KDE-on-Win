@@ -12,6 +12,11 @@
 #include <QFile>
 #include <QHash>
 #include <QTextStream>
+#include <QPointer>
+#include <QEventLoop>
+#include <cstring>
+#include <algorithm>
+#include <iterator>
 
 #include <shellapi.h>
 #include <tlhelp32.h>
@@ -116,6 +121,11 @@ QString nidFlagsToString(DWORD flags)
 WindowsTrayHost::WindowsTrayHost(QObject *parent)
     : QObject(parent)
 {
+    connect(&m_zOrderTimer, &QTimer::timeout, this, [this] {
+        HWND top = FindWindowW(L"Shell_TrayWnd", nullptr);
+        if (top != m_trayWnd && m_trayWnd)
+            SetWindowPos(m_trayWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    });
     m_notifications = new NotificationRelay(this);
     connect(m_notifications, &NotificationRelay::delivered, this, [this](const QString &key) { balloonCallback(key, NIN_BALLOONSHOW); });
     connect(m_notifications, &NotificationRelay::activated, this, [this](const QString &key) { balloonCallback(key, NIN_BALLOONUSERCLICK); });
@@ -147,6 +157,8 @@ WindowsTrayHost::~WindowsTrayHost()
 
 bool WindowsTrayHost::start()
 {
+    if (m_trayWnd) return true;
+    if (s_self && s_self != this) return false;
     const QString logPath = QStringLiteral("trayhost.log");
     s_logFile.setFileName(logPath);
     if (s_logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
@@ -164,6 +176,7 @@ bool WindowsTrayHost::start()
         const DWORD err = GetLastError();
         logLine(QStringLiteral("RegisterClass Shell_TrayWnd failed: %1").arg(err));
         if (err != ERROR_CLASS_ALREADY_EXISTS) {
+            stop();
             return false;
         }
     }
@@ -174,6 +187,7 @@ bool WindowsTrayHost::start()
                                 GetModuleHandleW(nullptr), nullptr);
     if (!m_trayWnd) {
         logLine(QStringLiteral("CreateWindowEx Shell_TrayWnd failed: %1").arg(GetLastError()));
+        stop();
         return false;
     }
     logLine(QStringLiteral("Shell_TrayWnd: %1").arg(reinterpret_cast<quintptr>(m_trayWnd), 0, 16));
@@ -206,14 +220,6 @@ bool WindowsTrayHost::start()
     // both exist (explorer co-existence phase). When explorer is gone
     // (plasma is the shell) there is nothing to fight - skip the timer.
     if (isProcessRunning(L"explorer.exe")) {
-        connect(&m_zOrderTimer, &QTimer::timeout, this, [this]() {
-            HWND top = FindWindowW(L"Shell_TrayWnd", nullptr);
-            if (top != m_trayWnd && m_trayWnd) {
-                logLine(QStringLiteral("z-order: FindWindow -> other (0x%1), raising ours")
-                            .arg(reinterpret_cast<quintptr>(top), 0, 16));
-                SetWindowPos(m_trayWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-            }
-        });
         m_zOrderTimer.start(100);
     }
 
@@ -223,18 +229,28 @@ bool WindowsTrayHost::start()
 
 void WindowsTrayHost::stop()
 {
+    m_zOrderTimer.stop();
+    delete m_watcherWatcher;
+    m_watcherWatcher = nullptr;
+    // Remove services before forgetting their entries. Repeated stop is safe.
+    for (quint64 key : m_bridges.keys()) unregisterBridge(key);
+    for (quint64 key : m_icons.keys())
+        m_notifications->withdraw(QStringLiteral("tray:%1").arg(key, 0, 16));
+    m_icons.clear();
+    m_guidMap.clear();
     if (m_trayWnd) {
         DestroyWindow(m_trayWnd);
         m_trayWnd = nullptr;
     }
-    m_zOrderTimer.stop();
-    m_icons.clear();
-    m_guidMap.clear();
-    if (s_logFile.isOpen()) {
-        logLine(QStringLiteral("=== WindowsTrayHost stop ==="));
-        s_logFile.close();
+    m_notifyWnd = nullptr; // Destroyed with its parent.
+    if (s_self == this) {
+        s_self = nullptr;
+        if (s_logFile.isOpen()) {
+            logLine(QStringLiteral("=== WindowsTrayHost stop ==="));
+            s_log.setDevice(nullptr);
+            s_logFile.close();
+        }
     }
-    s_self = nullptr;
 }
 
 int WindowsTrayHost::iconCount() const
@@ -249,6 +265,7 @@ void WindowsTrayHost::cleanupDeadIcons()
 
 void WindowsTrayHost::handleCopyData(WPARAM fromWnd, const COPYDATASTRUCT *cds)
 {
+    if (!cds || !cds->lpData) return;
     logLine(QStringLiteral("WM_COPYDATA dwData=%1 cbData=%2 from=0x%3")
                 .arg(static_cast<int>(cds->dwData))
                 .arg(cds->cbData)
@@ -261,9 +278,11 @@ void WindowsTrayHost::handleCopyData(WPARAM fromWnd, const COPYDATASTRUCT *cds)
         // smaller struct and were rejected by sizeof(NOTIFYICONDATAW).
         if (cds->cbData >= sizeof(int) + sizeof(UINT) + sizeof(NidLayout)) {
             const char *data = static_cast<const char *>(cds->lpData);
-            const UINT message = *reinterpret_cast<const UINT *>(data + 4);
-            const NidLayout *nid = reinterpret_cast<const NidLayout *>(data + 8);
-            handleTrayMessage(message, nid);
+            UINT message = 0;
+            NidLayout nid {};
+            std::memcpy(&message, data + 4, sizeof(message));
+            std::memcpy(&nid, data + 8, sizeof(nid));
+            handleTrayMessage(message, &nid);
         }
         break;
     case 3: // WINNOTIFYICONIDENTIFIER (Shell_NotifyIconGetRect)
@@ -276,6 +295,8 @@ void WindowsTrayHost::handleCopyData(WPARAM fromWnd, const COPYDATASTRUCT *cds)
 
 void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
 {
+    if (!nidPtr || (message != NIM_ADD && message != NIM_MODIFY && message != NIM_DELETE
+        && message != NIM_SETFOCUS && message != NIM_SETVERSION)) return;
     const NidLayout *nid = static_cast<const NidLayout *>(nidPtr);
     const QString action = message == NIM_ADD ? QStringLiteral("NIM_ADD")
         : message == NIM_MODIFY ? QStringLiteral("NIM_MODIFY")
@@ -285,7 +306,8 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
                                                                                                                 : QStringLiteral("NIM_%1").arg(message);
 
     const quint64 key = (quint64(nid->hWnd) << 32) | nid->uID;
-    const bool hasGuid = (nid->uFlags & NIF_GUID) && nid->guidItem.Data1 != 0;
+    const GUID emptyGuid {};
+    const bool hasGuid = (nid->uFlags & NIF_GUID) && !IsEqualGUID(nid->guidItem, emptyGuid);
     const QByteArray guidKey(reinterpret_cast<const char *>(&nid->guidItem), sizeof(GUID));
 
     // Windows system tray icons (Volume, Network, Security/Defender, ...)
@@ -305,13 +327,14 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
         return;
     }
 
+    const quint64 resolvedKey = hasGuid ? m_guidMap.value(guidKey, key) : key;
     if (message == NIM_SETVERSION) {
-        auto it = m_icons.find(key);
+        auto it = m_icons.find(resolvedKey);
         if (it != m_icons.end()) {
             it->version = nid->uVersion;
             // Guard against stale e.bridge pointers left behind by DELETE
             // messages whose (drifted) key never matched the entry.
-            if (it->bridge && m_bridges.value(key) == it->bridge) {
+            if (it->bridge && m_bridges.value(resolvedKey) == it->bridge) {
                 it->bridge->setCallback(it->hwnd, it->uID, it->callbackMessage, it->version);
             }
             logLine(QStringLiteral("  SETVERSION key=0x%1 version=%2").arg(key, 0, 16).arg(nid->uVersion));
@@ -397,6 +420,7 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
 
     auto it = m_icons.find(primaryKey);
     if (it == m_icons.end()) {
+        if (message != NIM_ADD) return;
         it = m_icons.insert(primaryKey, IconEntry{});
     }
     IconEntry &e = it.value();
@@ -416,9 +440,9 @@ void WindowsTrayHost::handleTrayMessage(UINT message, const void *nidPtr)
         e.hIcon = nid->hIcon;
     }
     if (nid->uFlags & NIF_TIP) {
-        e.tip = QString::fromWCharArray(nid->szTip);
+        e.tip = QString::fromWCharArray(nid->szTip, int(wcsnlen(nid->szTip, 128)));
     }
-    if (nid->uFlags & NIF_STATE) {
+    if ((nid->uFlags & NIF_STATE) && (nid->dwStateMask & NIS_HIDDEN)) {
         e.hidden = (nid->dwState & NIS_HIDDEN) != 0;
     }
     if (nid->uFlags & NIF_INFO) {
@@ -502,8 +526,8 @@ void WindowsTrayHost::unregisterBridge(quint64 key)
         conn.unregisterObject(QStringLiteral("/StatusNotifierItem"));
         conn.unregisterService(serviceName);
     }
-    QTimer::singleShot(3000, this, [bridge]() { delete bridge; });
-    QTimer::singleShot(100, this, [serviceName]() {
+    QTimer::singleShot(3000, bridge, [bridge]() { bridge->deleteLater(); });
+    QTimer::singleShot(100, QCoreApplication::instance(), [serviceName]() {
         QDBusConnection::disconnectFromBus(serviceName);
     });
     logLine(QStringLiteral("  SNI unregistered: %1").arg(bridgeId));
@@ -526,6 +550,7 @@ Snibridge *WindowsTrayHost::registerBridge(quint64 key, const IconEntry &e)
     bridge->setConnection(conn);
     if (!conn.isConnected() || !conn.registerService(service)) {
         logLine(QStringLiteral("  SNI registerService failed for %1").arg(service));
+        QDBusConnection::disconnectFromBus(service);
         delete bridge;
         return nullptr;
     }
@@ -534,6 +559,7 @@ Snibridge *WindowsTrayHost::registerBridge(quint64 key, const IconEntry &e)
                                    | QDBusConnection::ExportAllInvokables | QDBusConnection::ExportAllSignals)) {
         logLine(QStringLiteral("  SNI registerObject failed for %1").arg(service));
         conn.unregisterService(service);
+        QDBusConnection::disconnectFromBus(service);
         delete bridge;
         return nullptr;
     }
@@ -591,6 +617,52 @@ void WindowsTrayHost::logIcons()
             ++it;
         }
     }
+}
+
+bool WindowsTrayHost::selfTest()
+{
+    WindowsTrayHost host;
+    host.handleCopyData(0, nullptr);
+    COPYDATASTRUCT empty { 1, 4096, nullptr };
+    host.handleCopyData(0, &empty);
+    NidLayout nid {};
+    nid.hWnd = 1;
+    nid.uID = 7;
+    host.handleTrayMessage(0xffff, &nid);
+    host.handleTrayMessage(NIM_MODIFY, &nid);
+    bool ok = host.m_icons.isEmpty();
+    const quint64 key = (quint64(nid.hWnd) << 32) | nid.uID;
+    auto* bridge = new Snibridge(&host);
+    bridge->setConnection(QDBusConnection(QStringLiteral("KDETrayDisconnectedFixture")));
+    QPointer<Snibridge> retained(bridge);
+    host.m_bridges.insert(key, bridge);
+    IconEntry entry;
+    entry.bridge = bridge;
+    entry.hidden = true;
+    host.m_icons.insert(key, entry);
+    nid.uFlags = NIF_TIP | NIF_STATE;
+    std::fill(std::begin(nid.szTip), std::end(nid.szTip), L'x');
+    host.handleTrayMessage(NIM_MODIFY, &nid);
+    ok &= host.m_icons.value(key).tip.size() == 128 && host.m_icons.value(key).hidden;
+    nid.dwStateMask = NIS_HIDDEN;
+    host.handleTrayMessage(NIM_MODIFY, &nid);
+    ok &= !host.m_icons.value(key).hidden;
+    nid.uFlags = NIF_GUID;
+    nid.guidItem.Data2 = 1; // Data1 may legally be zero in a non-null GUID.
+    const QByteArray guid(reinterpret_cast<const char*>(&nid.guidItem), sizeof(GUID));
+    host.m_guidMap.insert(guid, key);
+    nid.hWnd = 2; // Simulate shell32's rewritten identity.
+    nid.uVersion = NOTIFYICON_VERSION_4;
+    host.handleTrayMessage(NIM_SETVERSION, &nid);
+    ok &= host.m_icons.value(key).version == NOTIFYICON_VERSION_4;
+    host.stop();
+    host.stop();
+    ok &= host.m_icons.isEmpty() && host.m_bridges.isEmpty() && host.m_guidMap.isEmpty()
+        && !host.m_watcherWatcher && !host.m_zOrderTimer.isActive();
+    QEventLoop loop;
+    QTimer::singleShot(3200, &loop, &QEventLoop::quit);
+    loop.exec();
+    return ok && retained.isNull();
 }
 
 LRESULT CALLBACK WindowsTrayHost::trayWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)

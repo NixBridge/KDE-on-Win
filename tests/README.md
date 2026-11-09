@@ -18,3 +18,9 @@ For compiler integration, use an x64 VS Developer Prompt and configure
 Build it, inspect `ninja -C <build> -t deps CMakeFiles/probe.dir/main.cpp.obj`,
 then modify only `依赖.hpp`. `ninja -C <build> -n` must schedule the object again.
 The fixture creates no visible windows or OS settings.
+
+
+Fix21 isolated regression suite: `python tests/run_regressions.py --runtime D:/KDE/CraftRoot`.
+This runs 49 checks, using private settings, offscreen Qt rendering and test-owned hidden HWNDs.
+It never starts a real desktop session, installs global hooks or changes login/association registration.
+The tray and callback probes avoid the live system tray and notification permissions; notification relay uses a private temporary D-Bus daemon.

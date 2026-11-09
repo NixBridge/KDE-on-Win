@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <QTimer>
 #include <QSettings>
+#include <QScopeGuard>
 
 #include <shlobj.h>
 #include <shlwapi.h>
@@ -210,8 +211,9 @@ void StartMenuModel::scan()
     beginResetModel();
     m_entries.clear();
 
-    // Ensure COM is usable on this thread for IShellLink (idempotent).
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    // S_FALSE also increments COM's per-thread initialization count.
+    const HRESULT initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    const auto apartment = qScopeGuard([initialized] { if (SUCCEEDED(initialized)) CoUninitialize(); });
 
     if (m_isRoot) {
         struct Tool {
@@ -565,7 +567,8 @@ void StartMenuModel::launch(int row) const
 
 void StartMenuModel::launchUwp(const QString& aumid) const
 {
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    const HRESULT initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    const auto apartment = qScopeGuard([initialized] { if (SUCCEEDED(initialized)) CoUninitialize(); });
     IApplicationActivationManager* manager = nullptr;
     if (SUCCEEDED(CoCreateInstance(CLSID_ApplicationActivationManager, nullptr, CLSCTX_INPROC_SERVER,
             IID_IApplicationActivationManager, reinterpret_cast<void**>(&manager)))) {

@@ -16,19 +16,19 @@ rem ===========================================================================
 
 call "%~dp0plasma-common.cmd" :pc_resolve_root
 
-rem Make the craft-compiled hard-coded prefix (D:/Projects/CraftRoot) work when
-rem the package was extracted elsewhere: if it sits in <root>\Projects\CraftRoot,
-rem map D: to <root> (virtual drive via subst, nothing on any disk root).
-if not exist "D:\Projects\CraftRoot\bin\plasmashell.exe" (
-    for %%P in ("%CRAFT_ROOT%\..\..") do set "SUBST_SRC=%%~fP"
-    if exist "%SUBST_SRC%\Projects\CraftRoot\bin\plasmashell.exe" (
-        subst D: "%SUBST_SRC%" >nul 2>&1
+rem Resolve the compiled prefix without delayed expansion of user paths.
+if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
+    for %%P in ("%CRAFT_ROOT%\..\..") do (
+        if exist "%%~fP\KDE\CraftRoot\bin\plasmashell.exe" subst D: "%%~fP" >nul 2>&1
     )
+)
+if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
+    echo ERROR: extract to D:\KDE\CraftRoot or C:\KDE\CraftRoot with D: available.
+    exit /b 1
 )
 
 if not exist "%CRAFT_BIN%\plasmashell.exe" (
     echo session-shell: %CRAFT_BIN%\plasmashell.exe not found
-    cmd /c "start notepad"
     exit /b 1
 )
 

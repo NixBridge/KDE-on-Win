@@ -59,29 +59,6 @@ $tools = Join-Path $PSScriptRoot 'upstream\plasma-windows\tools'
 foreach ($name in 'deploy-vm.cmd', 'session-shell.cmd', 'plasma-common.cmd', 'plasma-shell.cmd', 'switch-shell.cmd', 'shell-registry.ps1', 'build-startmenu-desktops.ps1', 'vm-diagnostics.cmd') {
     Copy-Item -LiteralPath (Join-Path $tools $name) -Destination $stage
 }
-foreach ($name in 'deploy-vm.cmd', 'session-shell.cmd') {
-    $path = Join-Path $stage $name
-    $text = [IO.File]::ReadAllText($path)
-    $text = $text.Replace('D:\Projects\CraftRoot', 'D:\KDE\CraftRoot').Replace('D:/Projects/CraftRoot', 'D:/KDE/CraftRoot').Replace('Projects\CraftRoot', 'KDE\CraftRoot')
-    $prefixSetup = @'
-rem Resolve the build prefix without expanding variables set inside a block.
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    for %%P in ("%CRAFT_ROOT%\..\..") do (
-        if exist "%%~fP\KDE\CraftRoot\bin\plasmashell.exe" subst D: "%%~fP" >nul 2>&1
-    )
-)
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    echo ERROR: extract to D:\KDE\CraftRoot or C:\KDE\CraftRoot with D: available.
-    exit /b 1
-)
-
-'@
-    $pattern = '(?s)rem Make the craft-compiled.*?(?=if not exist "%CRAFT_BIN%\\plasmashell.exe")'
-    if ([regex]::Matches($text, $pattern).Count -ne 1) { throw "Unexpected prefix setup in $name" }
-    $text = [regex]::Replace($text, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $prefixSetup })
-    $text = $text.Replace("`r`n", "`n").Replace("`n", "`r`n")
-    [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
-}
 [IO.File]::WriteAllText((Join-Path $stage 'VM-TEST.txt'), "Extract this archive to D:\KDE\CraftRoot in the test VM, or C:\KDE\CraftRoot with drive D: available for a temporary SUBST mapping. Run deploy-vm.cmd with no arguments for a manual session. Optionally run run-vm-probe.cmd to check the window backend; results are written to bin\kws-probe-result.txt. Save logs before changing the login shell. This build has not passed VM acceptance yet.", [Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $tools 'dbus\session-plasma.conf') -Destination (Join-Path $stage 'dbus-session-plasma.conf')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\source-verification.json') -Destination $stage

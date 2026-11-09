@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "asyncdispatch.h"
+#include <memory>
 #include "../apps/localization.h"
 #include <QDesktopServices>
 #include <QUrl>
@@ -75,7 +77,11 @@ public:
             } catch (const winrt::hresult_error &error) { status->setText(tr("Install the notification package first. Windows error: %1").arg(text(error.message()))); log(text(error.message())); show(); }
         });
     }
-    ~Bridge() override { timer.stop(); if (worker) { worker->quit(); worker->wait(); } }
+    ~Bridge() override {
+        callbackTarget->invalidate();
+        timer.stop();
+        if (worker) { worker->quit(); worker->wait(); delete worker; worker = nullptr; }
+    }
 public Q_SLOTS:
     void showSettings() { show(); raise(); activateWindow(); }
 public:
@@ -90,14 +96,14 @@ private:
     {
         try {
             auto operation = UserNotificationListener::Current().RequestAccessAsync();
-            operation.Completed([this](const auto &result, winrt::Windows::Foundation::AsyncStatus) {
+            operation.Completed([this, target = callbackTarget](const auto &result, winrt::Windows::Foundation::AsyncStatus) {
                 bool allowed = false; QString error;
                 try { allowed = result.GetResults() == UserNotificationListenerAccessStatus::Allowed; }
                 catch (const winrt::hresult_error &failure) { error = text(failure.message()); }
-                QMetaObject::invokeMethod(this, [this, allowed, error] {
+                target->post([this, allowed, error] {
                     if (allowed) { log(QStringLiteral("Notification access granted")); hide(); timer.start(); poll(); }
                     else { status->setText(tr("Windows notification access was not granted. %1").arg(error)); show(); }
-                }, Qt::QueuedConnection);
+                });
             });
         } catch (const winrt::hresult_error &error) { status->setText(text(error.message())); log(text(error.message())); }
     }
@@ -105,10 +111,11 @@ private:
     {
         if (worker) return;
         // No notification permission prompts or blocking WinRT work on Plasma's UI thread.
-        worker = QThread::create([this] {
-            QList<Toast> snapshot; QString error; bool allowed = false;
+        worker = QThread::create([this, target = callbackTarget] {
+            QList<Toast> snapshot; QString error; bool allowed = false; bool initialized = false;
             try {
                 winrt::init_apartment(winrt::apartment_type::multi_threaded);
+                initialized = true;
                 auto listener = UserNotificationListener::Current();
                 allowed = listener.GetAccessStatus() == UserNotificationListenerAccessStatus::Allowed;
                 if (allowed) {
@@ -124,7 +131,8 @@ private:
                     }
                 }
             } catch (const winrt::hresult_error &failure) { error = text(failure.message()); }
-            QMetaObject::invokeMethod(this, [this, snapshot, allowed, error] { apply(snapshot, allowed, error); }, Qt::QueuedConnection);
+            if (initialized) winrt::uninit_apartment();
+            target->post([this, snapshot, allowed, error] { apply(snapshot, allowed, error); });
         });
         connect(worker, &QThread::finished, this, [this] { worker->deleteLater(); worker = nullptr; }); worker->start();
     }
@@ -147,6 +155,7 @@ private:
         if (!primed) log(QStringLiteral("Listener ready; existing notification history skipped"));
         primed = true;
     }
+    std::shared_ptr<AsyncCallbackTarget> callbackTarget = std::make_shared<AsyncCallbackTarget>(this);
     NotificationRelay relay;
     QLabel *status = nullptr;
     QTimer timer;

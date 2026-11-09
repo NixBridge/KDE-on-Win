@@ -37,21 +37,20 @@ set "SHELL_BACKUP=%USERPROFILE%\.plasma-windows\shell-backup.txt"
 set "PLASMA_SHELL=%CRAFT_BIN%\plasmashell.exe"
 set "SESSION_LAUNCHER=%CRAFT_ROOT%\session-shell.cmd"
 set "ACTION=%~1"
+if not "%~2"=="" exit /b 2
+if not "%ACTION%"=="" if /i not "%ACTION%"=="install" if /i not "%ACTION%"=="restore" exit /b 2
 
 if /i "%ACTION%"=="restore" goto :restore_shell
 
-rem Make the craft-compiled hard-coded prefix (D:/Projects/CraftRoot) work when
-rem the package was extracted elsewhere: if it sits in <root>\Projects\CraftRoot,
-rem map D: to <root> (virtual drive via subst, nothing on any disk root).
-if not exist "D:\Projects\CraftRoot\bin\plasmashell.exe" (
-    for %%P in ("%CRAFT_ROOT%\..\..") do set "SUBST_SRC=%%~fP"
-    if exist "%SUBST_SRC%\Projects\CraftRoot\bin\plasmashell.exe" (
-        subst D: "%SUBST_SRC%" >nul 2>&1
-    ) else (
-        echo WARNING: package is not under a "Projects\CraftRoot" layout.
-        echo craft-compiled tools reference D:/Projects/CraftRoot and will fail.
-        echo For full support extract plasma-vm.zip to  ^<any^>\Projects\CraftRoot
+rem Resolve the compiled prefix without delayed expansion of user paths.
+if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
+    for %%P in ("%CRAFT_ROOT%\..\..") do (
+        if exist "%%~fP\KDE\CraftRoot\bin\plasmashell.exe" subst D: "%%~fP" >nul 2>&1
     )
+)
+if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
+    echo ERROR: extract to D:\KDE\CraftRoot or C:\KDE\CraftRoot with D: available.
+    exit /b 1
 )
 
 if not exist "%CRAFT_BIN%\plasmashell.exe" (
@@ -83,9 +82,9 @@ call "%~dp0plasma-common.cmd" :pc_start_services
 
 echo Starting plasmashell (close this window to end the session)...
 "%CRAFT_BIN%\plasmashell.exe"
-echo plasmashell exited with code %errorlevel%
-endlocal
-exit /b %errorlevel%
+set "PLASMA_EXIT=%errorlevel%"
+echo plasmashell exited with code %PLASMA_EXIT%
+endlocal & exit /b %PLASMA_EXIT%
 
 rem ---------------------------------------------------------------------------
 rem install: back up the current user shell and switch it to plasmashell.

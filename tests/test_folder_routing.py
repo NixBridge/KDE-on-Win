@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-launcher = Path('D:/KDE/CraftRoot/bin/plasma-kde-launcher.exe')
+launcher = Path(os.environ.get('KDE_CRAFT_ROOT', 'D:/KDE/CraftRoot')) / 'bin/plasma-kde-launcher.exe'
 
 
 def plan(target, success=True):

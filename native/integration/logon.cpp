@@ -86,11 +86,12 @@ public:
     }
     HRESULT STDMETHODCALLTYPE Advise(ICredentialProviderCredentialEvents* value) override
     {
+        // Advise may receive the same object again. Acquire before releasing.
+        if (value)
+            value->AddRef();
         if (events)
             events->Release();
         events = value;
-        if (events)
-            events->AddRef();
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE UnAdvise() override
@@ -302,7 +303,8 @@ public:
             return E_INVALIDARG;
         wchar_t computer[MAX_COMPUTERNAME_LENGTH + 1] {};
         DWORD length = MAX_COMPUTERNAME_LENGTH + 1;
-        GetComputerNameW(computer, &length);
+        if (!GetComputerNameW(computer, &length))
+            return HRESULT_FROM_WIN32(GetLastError());
         std::wstring prefix;
         try {
             prefix = std::wstring(computer) + L"\\";
@@ -310,11 +312,17 @@ public:
             return E_OUTOFMEMORY;
         }
         DWORD count = 0;
-        array->GetCount(&count);
+        const HRESULT counted = array->GetCount(&count);
+        if (FAILED(counted))
+            return counted;
         for (DWORD i = 0; i < count; ++i) {
             ICredentialProviderUser* user = nullptr;
             if (FAILED(array->GetAt(i, &user)))
                 continue;
+            if (!user) {
+                clear();
+                return E_UNEXPECTED;
+            }
             PWSTR name = nullptr, sid = nullptr;
             user->GetStringValue(PKEY_Identity_QualifiedUserName, &name);
             user->GetSid(&sid);
@@ -454,6 +462,26 @@ extern "C" HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID iid, void*
     return result;
 }
 extern "C" HRESULT __stdcall DllCanUnloadNow() { return objects == 0 && locks == 0 ? S_OK : S_FALSE; }
+// Test-only malformed enumeration; never exposes or authenticates real users.
+class UserArrayFixture final : public ICredentialProviderUserArray {
+public:
+    bool fail = true;
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void**) override { return E_NOINTERFACE; }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    HRESULT STDMETHODCALLTYPE SetProviderFilter(REFGUID) override { return E_NOTIMPL; }
+    HRESULT STDMETHODCALLTYPE GetAccountOptions(CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS*) override { return E_NOTIMPL; }
+    HRESULT STDMETHODCALLTYPE GetCount(DWORD* count) override
+    {
+        *count = 1;
+        return fail ? E_FAIL : S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetAt(DWORD, ICredentialProviderUser** user) override
+    {
+        *user = nullptr;
+        return S_OK;
+    }
+};
 extern "C" HRESULT __stdcall KDELogonSelfTest()
 {
     // Synthetic credentials only: pack/unpack; never call LsaLogonUser.
@@ -480,6 +508,10 @@ extern "C" HRESULT __stdcall KDELogonSelfTest()
     CoTaskMemFree(status);
     credential->Release();
     Provider* provider = new Provider;
+    UserArrayFixture malformed;
+    ok = ok && provider->SetUserArray(&malformed) == E_FAIL;
+    malformed.fail = false;
+    ok = ok && provider->SetUserArray(&malformed) == E_UNEXPECTED;
     DWORD count = 9, selected = 0;
     BOOL automatic = TRUE;
     ok = ok && provider->SetUsageScenario(CPUS_CREDUI, 0) == E_NOTIMPL

@@ -51,6 +51,7 @@ for relative, source in sources.items():
     'Fix18 adds opt-in classic-control painting (apply-client-style.cmd), KDE Qt dialogs and an experimental local-account login tile (install-kde-logon.cmd). Full LogonUI replacement is not implemented. See docs/FIX18.md and docs/LOCAL_LOGON.md before VM testing.\n'
     'Fix19 hardens login DLL publication, style restoration, service arguments and normal-session recovery. See docs/FIX19.md.\n'
     'Fix20 adds editor find/replace, line navigation, wrap/zoom and process-monitor pause/manual refresh. See docs/FIX20.md.\n'
+    'Fix21 repairs startup overlay omissions, session handle inheritance, tray teardown/protocol bounds, notification callback lifetime and COM cleanup. See docs/FIX21.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

@@ -70,7 +70,8 @@ static BOOL readShellValue(WCHAR *out, DWORD outChars)
     if (RegOpenKeyExW(HKEY_CURRENT_USER, kWinlogonKey, 0, KEY_READ, &key) == ERROR_SUCCESS) {
         DWORD type = 0;
         DWORD size = outChars * sizeof(WCHAR);
-        if (RegQueryValueExW(key, kShellValue, NULL, &type, (LPBYTE)out, &size) == ERROR_SUCCESS && type == REG_SZ) {
+        if (RegQueryValueExW(key, kShellValue, NULL, &type, (LPBYTE)out, &size) == ERROR_SUCCESS && type == REG_SZ && outChars && size <= outChars * sizeof(WCHAR)) {
+            out[outChars - 1] = 0;
             ok = TRUE;
         }
         RegCloseKey(key);
@@ -107,23 +108,53 @@ static BOOL writeShellValue(const WCHAR *value)
 /* process control                                                     */
 /* ------------------------------------------------------------------ */
 
-static void runTaskkill(const WCHAR *imageName)
+static BOOL matchesSessionProcess(DWORD session, DWORD current, const WCHAR *path, const WCHAR *expected)
+{
+    return session == current && _wcsicmp(path, expected) == 0;
+}
+static void stopSessionProcess(const WCHAR *imageName)
 {
     if (g_dryRun) {
-        logMsg(L"[dry-run] would kill %s\n", imageName);
+        logMsg(L"[dry-run] would stop owned session process %s\n", imageName);
         return;
     }
-    WCHAR cmd[MAX_PATH * 2];
-    StringCchPrintfW(cmd, MAX_PATH * 2, L"taskkill.exe /f /im %s", imageName);
-    STARTUPINFOW si = {sizeof(si)};
-    PROCESS_INFORMATION pi = {0};
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    if (CreateProcessW(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        WaitForSingleObject(pi.hProcess, 3000);
-        CloseHandle(pi.hThread);
-        CloseHandle(pi.hProcess);
+    WCHAR expected[32768] = {0};
+    DWORD length = 0;
+    if (!_wcsicmp(imageName, L"explorer.exe")) {
+        length = GetWindowsDirectoryW(expected, 32768);
+        if (!length || length >= 32768) return;
+        if (FAILED(StringCchCatW(expected, 32768, L"\\explorer.exe"))) return;
+    } else {
+        length = GetModuleFileNameW(NULL, expected, 32768);
+        if (!length || length >= 32768) return;
+        WCHAR *slash = wcsrchr(expected, L'\\');
+        if (!slash) return;
+        *(slash + 1) = 0;
+        if (FAILED(StringCchCatW(expected, 32768, imageName))) return;
     }
+    DWORD currentSession = 0;
+    if (!ProcessIdToSessionId(GetCurrentProcessId(), &currentSession)) return;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) return;
+    PROCESSENTRY32W entry = {0};
+    entry.dwSize = sizeof(entry);
+    if (Process32FirstW(snapshot, &entry)) do {
+        DWORD session = 0;
+        if (_wcsicmp(entry.szExeFile, imageName) || !ProcessIdToSessionId(entry.th32ProcessID, &session)
+            || session != currentSession) continue;
+        HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | SYNCHRONIZE,
+            FALSE, entry.th32ProcessID);
+        if (!process) continue;
+        WCHAR path[32768] = {0};
+        DWORD size = 32768;
+        if (QueryFullProcessImageNameW(process, 0, path, &size)
+            && matchesSessionProcess(session, currentSession, path, expected)) {
+            if (TerminateProcess(process, 1)) WaitForSingleObject(process, 3000);
+            else logMsg(L"Could not stop %s: %lu\n", imageName, GetLastError());
+        }
+        CloseHandle(process);
+    } while (Process32NextW(snapshot, &entry));
+    CloseHandle(snapshot);
 }
 
 static BOOL isProcessRunning(const WCHAR *imageName)
@@ -135,9 +166,13 @@ static BOOL isProcessRunning(const WCHAR *imageName)
     PROCESSENTRY32W pe = {0};
     pe.dwSize = sizeof(pe);
     BOOL found = FALSE;
+    DWORD currentSession = 0;
+    if (!ProcessIdToSessionId(GetCurrentProcessId(), &currentSession)) { CloseHandle(snap); return FALSE; }
     if (Process32FirstW(snap, &pe)) {
         do {
-            if (_wcsicmp(pe.szExeFile, imageName) == 0) {
+            DWORD session = 0;
+            if (_wcsicmp(pe.szExeFile, imageName) == 0 && ProcessIdToSessionId(pe.th32ProcessID, &session)
+                && session == currentSession) {
                 found = TRUE;
                 break;
             }
@@ -154,16 +189,17 @@ static BOOL isProcessRunning(const WCHAR *imageName)
    trayhost bridges silently fail to register (tray stays empty). */
 static void startChildWithDbus(const WCHAR *exePath)
 {
-    WCHAR cmd[MAX_PATH * 4];
-    StringCchPrintfW(cmd, MAX_PATH * 4,
-                     L"cmd.exe /c set \"DBUS_SESSION_BUS_ADDRESS=tcp:host=127.0.0.1,port=12443\" && start \"\" \"%s\"",
-                     exePath);
+    /* Set only this process's environment. Avoid cmd expansion of paths
+       containing percent signs, ampersands or non-ASCII characters. */
+    SetEnvironmentVariableW(L"DBUS_SESSION_BUS_ADDRESS", L"tcp:host=127.0.0.1,port=12443");
+    WCHAR cmd[32768];
+    if (FAILED(StringCchPrintfW(cmd, 32768, L"\"%s\"", exePath))) return;
     STARTUPINFOW si = {sizeof(si)};
     PROCESS_INFORMATION pi = {0};
-    if (CreateProcessW(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+    if (CreateProcessW(exePath, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-    }
+    } else logMsg(L"Service creation failed: %lu\n", GetLastError());
 }
 
 /* kded6 watchdog: kded6 owns org.kde.StatusNotifierWatcher - while it
@@ -229,20 +265,21 @@ static void killPlasmaSession(void)
 {
     /* Order matters: plasmashell first (session host script exits with
        it), then the services, then the bus. */
-    runTaskkill(L"plasmashell.exe");
-    runTaskkill(L"trayhost.exe");
-    runTaskkill(L"kactivitymanagerd.exe");
-    runTaskkill(L"kded6.exe");
-    runTaskkill(L"dbus-daemon.exe");
+    stopSessionProcess(L"plasmashell.exe");
+    stopSessionProcess(L"trayhost.exe");
+    stopSessionProcess(L"kactivitymanagerd.exe");
+    stopSessionProcess(L"kded6.exe");
+    stopSessionProcess(L"dbus-daemon.exe");
 }
 
-static void startExplorer(void)
+static BOOL startExplorer(void)
 {
     if (g_dryRun) {
         logMsg(L"[dry-run] would start explorer.exe\n");
-        return;
+        return TRUE;
     }
-    ShellExecuteW(NULL, NULL, L"explorer.exe", NULL, NULL, SW_SHOWNORMAL);
+    if (GetShellWindow()) return TRUE;
+    return (INT_PTR)ShellExecuteW(NULL, NULL, L"explorer.exe", NULL, NULL, SW_SHOWNORMAL) > 32;
 }
 
 static BOOL nativeSessionHost(WCHAR *path, DWORD count)
@@ -255,13 +292,13 @@ static BOOL nativeSessionHost(WCHAR *path, DWORD count)
     return GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
 }
 
-static void startPlasmaSession(void)
+static BOOL startPlasmaSession(void)
 {
     if (g_dryRun) {
         WCHAR native[MAX_PATH * 2];
         if (nativeSessionHost(native, MAX_PATH * 2)) logMsg(L"[dry-run] would start native session: %s\n", native);
         else logMsg(L"[dry-run] would start: cmd.exe /c \"%s\"\n", g_sessionCmd);
-        return;
+        return TRUE;
     }
     WCHAR cmd[MAX_PATH * 2 + 16];
     WCHAR native[MAX_PATH * 2];
@@ -272,7 +309,10 @@ static void startPlasmaSession(void)
     if (CreateProcessW(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
+        return TRUE;
     }
+    logMsg(L"Session creation failed: %lu\n", GetLastError());
+    return FALSE;
 }
 
 /* ------------------------------------------------------------------ */
@@ -288,8 +328,11 @@ static void doSwitchToExplorer(void)
 {
     logMsg(L"Switching to explorer...\n");
     if (writeShellValue(L"explorer.exe")) {
+        if (!startExplorer()) {
+            logMsg(L"Explorer creation failed; keeping Plasma running.\n");
+            return;
+        }
         killPlasmaSession();
-        startExplorer();
         readShellValue(g_currentShell, 1024);
         updateTrayTip();
     }
@@ -312,8 +355,16 @@ static void doSwitchToPlasma(void)
     else StringCchPrintfW(regValue, MAX_PATH * 2 + 16, L"cmd.exe /c \"%s\"", g_sessionCmd);
     logMsg(L"Switching to plasma...\n");
     if (writeShellValue(regValue)) {
-        runTaskkill(L"explorer.exe");
-        startPlasmaSession();
+        if (!startPlasmaSession()) {
+            /* Preserve the working desktop and restore its configured shell. */
+            writeShellValue(g_currentShell[0] ? g_currentShell : L"explorer.exe");
+            logMsg(L"Keeping the current desktop after session creation failure.\n");
+            return;
+        }
+        /* Creation success is not desktop readiness. Slow or failed startup
+           must retain Explorer; the configured native host owns the next logon. */
+        if (isProcessRunning(L"plasmashell.exe")) stopSessionProcess(L"explorer.exe");
+        else logMsg(L"Plasma is still starting; retaining Explorer for recovery.\n");
         readShellValue(g_currentShell, 1024);
         updateTrayTip();
     }
@@ -469,27 +520,47 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
+enum SwitchMode { MODE_RESIDENT, MODE_EXPLORER, MODE_PLASMA, MODE_TEST, MODE_INVALID };
+static enum SwitchMode parseMode(int count, WCHAR **args)
+{
+    if (count == 1) return MODE_RESIDENT;
+    if (count == 2 && !wcscmp(args[1], L"--self-test")) return MODE_TEST;
+    if (count == 3 && (!wcscmp(args[1], L"--to") || !wcscmp(args[1], L"-to"))) {
+        if (!wcscmp(args[2], L"explorer")) return MODE_EXPLORER;
+        if (!wcscmp(args[2], L"plasma")) return MODE_PLASMA;
+    }
+    return MODE_INVALID;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
     (void)hPrevInstance;
     (void)nCmdShow;
+    (void)lpCmdLine;
+    int count = 0;
+    WCHAR **args = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (!args) return 2;
+    const enum SwitchMode mode = parseMode(count, args);
+    LocalFree(args);
+    if (mode == MODE_INVALID) return 2;
+    if (mode == MODE_TEST) {
+        WCHAR *valid[] = { L"fixture", L"--to", L"explorer" };
+        WCHAR *invalid[] = { L"fixture", L"--to-extra", L"explorer" };
+        WCHAR *mixed[] = { L"fixture", L"--to", L"plasma-explorer" };
+        WCHAR *extra[] = { L"fixture", L"--to", L"plasma", L"extra" };
+        BOOL ok = parseMode(3, valid) == MODE_EXPLORER && parseMode(3, invalid) == MODE_INVALID
+            && parseMode(3, mixed) == MODE_INVALID && parseMode(4, extra) == MODE_INVALID
+            && matchesSessionProcess(2, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"c:\\kde\\bin\\DBUS-DAEMON.EXE")
+            && !matchesSessionProcess(3, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe")
+            && !matchesSessionProcess(2, 2, L"C:\\other\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe");
+        return ok ? 0 : 1; /* No registry access, tray, process control or UI. */
+    }
     g_dryRun = GetEnvironmentVariableW(L"SWITCH_DRYRUN", NULL, 0) > 0;
-
     discoverSessionCmd();
     readShellValue(g_currentShell, 1024);
-
-    /* CLI mode: shellswitch.exe --to explorer|plasma (no tray, exits
-       after switching). Emergency path that works even when the tray
-       host is down. */
-    if (lpCmdLine && (wcsstr(lpCmdLine, L"--to") || wcsstr(lpCmdLine, L"-to"))) {
-        if (wcsstr(lpCmdLine, L"explorer")) {
-            doSwitchToExplorer();
-        } else if (wcsstr(lpCmdLine, L"plasma")) {
-            doSwitchToPlasma();
-        } else {
-            logMsg(L"usage: shellswitch.exe --to explorer|plasma\n");
-            return 2;
-        }
+    if (mode == MODE_EXPLORER || mode == MODE_PLASMA) {
+        if (mode == MODE_EXPLORER) doSwitchToExplorer();
+        else doSwitchToPlasma();
         return 0;
     }
 
@@ -537,10 +608,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
            g_dryRun ? L" (DRY RUN)" : L"",
            isPlasmaValue(g_currentShell) ? L"Plasma" : (g_currentShell[0] ? L"Explorer" : L"unknown"));
 
-    MSG msg;
-    while (GetMessageW(&msg, NULL, 0, 0)) {
+    MSG msg = {0};
+    int result;
+    while ((result = GetMessageW(&msg, NULL, 0, 0)) > 0) {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
-    return 0;
+    if (g_mutex) CloseHandle(g_mutex);
+    return result < 0 ? 1 : 0;
 }
