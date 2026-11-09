@@ -135,7 +135,8 @@
         "0015-windows-notifications-no-pulseaudio.patch",
         "0016-windows-settings-editor-taskbar-identities.patch",
         "0017-cache-windows-task-icons-and-paths.patch",
-        "0018-windows-live-desktop-appearance.patch"
+        "0018-windows-live-desktop-appearance.patch",
+        "0019-windows-desktop-native-stacking.patch"
       ]
     },
     "plasma5support": {

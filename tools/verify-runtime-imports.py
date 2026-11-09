@@ -18,6 +18,7 @@ queue = [binary_dir / name for name in ['plasmashell.exe', 'krunner.exe', 'kded6
 queue += [runtime / relative for relative in ['plugins/platforms/qwindows.dll', 'plugins/sqldrivers/qsqlite.dll', 'qml/org/kde/plasma/windowsmenu/startmenuplugin.dll']]
 queue += [binary_dir / name for name in ['plasma-text-editor.exe', 'plasma-system-settings.exe', 'plasma-window-decorations.exe', 'plasma-notification-bridge.exe', 'notification-relay-probe.exe']]
 queue += [binary_dir / name for name in ['appearance-sync-probe.exe', 'plasma-archive-manager.exe', 'konsole-session-probe.exe', 'plasma-personalization.exe', 'personalization-probe.exe', 'startmenu-model-probe.exe']]
+queue.append(binary_dir / 'desktop-stacking-probe.exe')
 for directory in ['qml', 'plugins']:
     queue.extend((runtime / directory).rglob('*.dll'))
 seen = set()

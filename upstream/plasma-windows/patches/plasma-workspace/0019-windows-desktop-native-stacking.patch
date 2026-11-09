@@ -1,0 +1,96 @@
+diff --git a/shell/desktopview.cpp b/shell/desktopview.cpp
+index be92f09..eb98b04 100644
+--- a/shell/desktopview.cpp
++++ b/shell/desktopview.cpp
+@@ -20,7 +20,7 @@
+ #include <QScreen>
+ 
+ #ifdef Q_OS_WIN
+-#include <windows.h>
++#include "windowsdesktopstacking.h"
+ #endif
+ 
+ #include <PlasmaQuick/AppletQuickItem>
+@@ -117,7 +117,8 @@ void DesktopView::showEvent(QShowEvent *e)
+     // window type: never take activation (clicks must not raise it above
+     // other windows) and re-assert HWND_BOTTOM whenever shown.
+     HWND hwnd = reinterpret_cast<HWND>(winId());
+-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_NOACTIVATE);
++    SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
++    SetWindowLongPtr(hwnd, GWL_EXSTYLE, (GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_NOACTIVATE) & ~WS_EX_TOPMOST);
+     SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+ #endif
+ }
+@@ -408,21 +409,24 @@ bool DesktopView::event(QEvent *e)
+         }
+     }
+ 
+-#ifdef Q_OS_WIN
+-    // Anything can raise the desktop (owner chains when a dialog activates,
+-    // edit mode, snap layouts...); re-assert HWND_BOTTOM so it always stays
+-    // below regular windows like KDE's desktop window type.
+-    if (e->type() == QEvent::Expose || e->type() == QEvent::ActivationChange || e->type() == QEvent::WindowActivate) {
+-        QTimer::singleShot(0, this, [this]() {
+-            HWND hwnd = reinterpret_cast<HWND>(winId());
+-            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+-        });
+-    }
+-#endif
++
+ 
+     return PlasmaQuick::ContainmentView::event(e);
+ }
+ 
++#ifdef Q_OS_WIN
++bool DesktopView::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
++{
++    // Constrain the actual native request before Windows changes the Z order.
++    // A queued lower() after activation leaves a fullscreen occluding desktop.
++    const auto msg = static_cast<MSG *>(message);
++    if (constrainWindowsDesktopStacking(msg->message, msg->lParam, result)) {
++        return true;
++    }
++    return PlasmaQuick::ContainmentView::nativeEvent(eventType, message, result);
++}
++#endif
++
+ bool DesktopView::handleKRunnerTextInput(QKeyEvent *e)
+ {
+     // allow only Shift and GroupSwitch modifiers
+diff --git a/shell/desktopview.h b/shell/desktopview.h
+index 7fe642d..f19dd26 100644
+--- a/shell/desktopview.h
++++ b/shell/desktopview.h
+@@ -91,6 +91,9 @@ public:
+ 
+ protected:
+     bool event(QEvent *e) override;
++#ifdef Q_OS_WIN
++    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
++#endif
+     void keyPressEvent(QKeyEvent *e) override;
+ 
+ protected Q_SLOTS:
+diff --git a/shell/windowsdesktopstacking.h b/shell/windowsdesktopstacking.h
+new file mode 100644
+index 0000000..77cd51b
+--- /dev/null
++++ b/shell/windowsdesktopstacking.h
+@@ -0,0 +1,17 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#pragma once
++#include <windows.h>
++
++// This policy applies only to the wallpaper HWND, never panels or popups.
++inline bool constrainWindowsDesktopStacking(UINT message, LPARAM parameter, qintptr *result)
++{
++    if (message == WM_WINDOWPOSCHANGING) {
++        auto position = reinterpret_cast<WINDOWPOS *>(parameter);
++        position->hwndInsertAfter = HWND_BOTTOM;
++        position->flags = (position->flags & ~SWP_NOZORDER) | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
++    } else if (message == WM_MOUSEACTIVATE) {
++        *result = MA_NOACTIVATE; // Preserve desktop clicks without raising the wallpaper.
++        return true;
++    }
++    return false;
++}

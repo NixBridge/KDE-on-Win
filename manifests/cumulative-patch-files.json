@@ -235,6 +235,7 @@
     "bin/data/qlogging-categories6/konsole.categories",
     "bin/data/zsh/site-functions/_konsole",
     "bin/desktop-protocol-probe.exe",
+    "bin/desktop-stacking-probe.exe",
     "bin/icon-probe.exe",
     "bin/klookandfeel.dll",
     "bin/kmpris.dll",
@@ -576,6 +577,7 @@
     "docs/DESKTOP_TOOLS.md": "docs/DESKTOP_TOOLS.md",
     "source-verification.json": "manifests/source-verification.json",
     "runtime-import-verification.json": "manifests/runtime-import-verification.json",
-    "docs/FIX13.md": "docs/FIX13.md"
+    "docs/FIX13.md": "docs/FIX13.md",
+    "docs/FIX14.md": "docs/FIX14.md"
   }
 }

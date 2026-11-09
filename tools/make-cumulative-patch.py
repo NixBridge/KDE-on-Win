@@ -44,6 +44,7 @@ for relative, source in sources.items():
     'The VM session registers Dolphin folder defaults and archive fallbacks once. Existing protected ZIP defaults need Open With > Always.\n'
     'See docs/FIX12.md for supported controls, association restore, archive limits and VM acceptance steps.\n'
     'Fix13 adds Chinese project UI, full-caption/restore fixes and synchronized KDE colors, accent and fonts. See docs/FIX13.md.\n'
+    'Fix14 constrains wallpaper Z order before native raises and disables DWM transitions only on decorated windows to avoid native-caption flashes. See docs/FIX14.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

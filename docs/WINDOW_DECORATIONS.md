@@ -57,3 +57,5 @@ Direct entry points: `start-system-settings.cmd`, `start-text-editor.cmd` and
 preserving later user unpinning.
 
 Fix13 covers the full physical caption width, handles native/Qt maximize-state differences and converts drag coordinates for the target DPI context. See [FIX13.md](FIX13.md) for validation and remaining VM acceptance.
+
+Fix14 disables DWM transitions on attached standard-caption windows because the owner-only animation excludes the separate KDE caption. Minimized targets remain tracked. Detaching restores the default enabled transition state; the write-only DWM attribute prevents recovering another tool's previous override. See [FIX14.md](FIX14.md).

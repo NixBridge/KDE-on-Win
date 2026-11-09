@@ -192,10 +192,20 @@ public:
         });
         SetWindowLongPtrW(reinterpret_cast<HWND>(winId()), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(target));
         oldBorderValid = SUCCEEDED(DwmGetWindowAttribute(target, DWMWA_BORDER_COLOR, &oldBorder, sizeof(oldBorder)));
+        // DWM captures only the owner during minimize, excluding this tool
+        // window. Its native caption would flash through that animation.
+        // This attribute is write-only: release restores Windows' default.
+        const BOOL disabled = TRUE;
+        transitionsDisabled
+            = SUCCEEDED(DwmSetWindowAttribute(target, DWMWA_TRANSITIONS_FORCEDISABLED, &disabled, sizeof(disabled)));
         updateCaption();
     }
     ~Caption() override
     {
+        if (transitionsDisabled && ownedTarget()) {
+            const BOOL disabled = FALSE;
+            DwmSetWindowAttribute(target, DWMWA_TRANSITIONS_FORCEDISABLED, &disabled, sizeof(disabled));
+        }
         if (oldBorderValid && ownedTarget())
             DwmSetWindowAttribute(target, DWMWA_BORDER_COLOR, &oldBorder, sizeof(oldBorder));
     }
@@ -263,6 +273,11 @@ public:
                 SWP_NOACTIVATE | SWP_NOOWNERZORDER | (raise ? 0 : SWP_NOZORDER));
             lastRectangle = rect;
         }
+    }
+    bool minimizesInstantly() const { return transitionsDisabled; }
+    bool retainWhileMinimized() const
+    {
+        return ownedTarget() && IsIconic(target) && (GetWindowLongPtrW(target, GWL_STYLE) & WS_CAPTION) == WS_CAPTION;
     }
     HWND target;
 
@@ -338,6 +353,7 @@ private:
     QToolButton *minimize, *maximize, *closeButton;
     COLORREF oldBorder = 0;
     bool oldBorderValid = false;
+    bool transitionsDisabled = false;
     bool borderApplied = false, iconInitialized = false, lastZoomed = false;
     COLORREF lastBorder = 0;
     QRect lastRectangle;
@@ -384,9 +400,14 @@ private:
                 return TRUE;
             },
             reinterpret_cast<LPARAM>(&live));
-        for (HWND target : bars.keys())
-            if (!live.contains(target))
+        for (HWND target : bars.keys()) {
+            // Keep the animation policy attached across minimization. The
+            // overlay itself hides, but must not be destroyed by the sweep.
+            if (bars.value(target)->retainWhileMinimized())
+                live.insert(target);
+            else if (!live.contains(target))
                 delete bars.take(target);
+        }
         for (HWND target : live) {
             auto& bar = bars[target];
             if (!bar)
@@ -444,15 +465,20 @@ int main(int argc, char** argv)
             300, nullptr, nullptr, module, nullptr);
         bool ok = native && custom && standardCaption(native, true) && !standardCaption(custom, true);
         if (native) {
+            Caption nativeBar(native);
+            ok &= nativeBar.minimizesInstantly();
             RECT visible {};
             GetWindowRect(native, &visible);
             DwmGetWindowAttribute(native, DWMWA_EXTENDED_FRAME_BOUNDS, &visible, sizeof(visible));
             const auto rectangle = captionRectangle(native);
             ok &= !rectangle.isEmpty() && rectangle.left() <= visible.left && rectangle.right() + 1 >= visible.right;
             HWND child = CreateWindowExW(0, L"STATIC", L"Restore fixture",
-                WS_CHILD | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MAXIMIZE, 0, 0, 100, 80, native, nullptr, module, nullptr);
+                WS_CHILD | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_MAXIMIZE, 0, 0, 100, 80,
+                native, nullptr, module, nullptr);
             if (child) {
                 Caption bar(child);
+                ShowWindow(child, SW_MINIMIZE);
+                ok &= bar.retainWhileMinimized();
                 auto buttons = bar.findChildren<QToolButton*>();
                 ShowWindow(child, SW_MAXIMIZE);
                 ok &= buttons.size() == 3 && IsZoomed(child);
@@ -473,7 +499,8 @@ int main(int argc, char** argv)
             DestroyWindow(custom);
         UnregisterClassW(klass.lpszClassName, module);
         QTextStream(stdout) << (ok ? "PASS" : "FAIL")
-                            << ": physical full-caption bounds, restore button and custom-caption exclusion on hidden "
+                            << ": physical full-caption bounds, instant-transition policy, minimized tracking, restore "
+                               "button and custom-caption exclusion on hidden "
                                "test-owned windows\n";
         return ok ? 0 : 1;
     }
