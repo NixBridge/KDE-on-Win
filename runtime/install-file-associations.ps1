@@ -6,16 +6,22 @@ $CraftRoot=[IO.Path]::GetFullPath($CraftRoot)
 if($CraftRoot.Length -gt [IO.Path]::GetPathRoot($CraftRoot).Length){$CraftRoot=$CraftRoot.TrimEnd([char[]]'\/')}
 $launcher=Join-Path $CraftRoot 'bin\plasma-kde-launcher.exe'
 if(-not (Test-Path -LiteralPath $launcher -PathType Leaf)){throw "Missing launcher: $launcher"}
+$dolphin=Join-Path $CraftRoot 'bin\dolphin.exe'
+if(-not (Test-Path -LiteralPath $dolphin -PathType Leaf)){throw "Missing Dolphin: $dolphin"}
 $changes=[Collections.Generic.List[object]]::new()
 function Add-Value([string]$Path,[string]$Name,[string]$Value){$changes.Add([pscustomobject]@{Path=$Path;Name=$Name;Value=$Value})}
 $classes='Software\Classes'
-foreach($type in @('Directory','Drive')){
+foreach($type in @('Directory','Drive','Folder')){
     Add-Value "$classes\$type\shell" '' 'nixbridge-dolphin'
-    Add-Value "$classes\$type\shell\nixbridge-dolphin" '' 'Open with Dolphin'
-    Add-Value "$classes\$type\shell\nixbridge-dolphin" 'Icon' ('"'+(Join-Path $CraftRoot 'bin\dolphin.exe')+'",0')
-    # Appending \. avoids Windows command-line parsing of a trailing slash
-    # before the closing quote on drive roots. It is a valid directory path.
-    Add-Value "$classes\$type\shell\nixbridge-dolphin\command" '' ('"'+$launcher+'" dolphin "%1\."')
+    foreach($verb in @('nixbridge-dolphin','open','explore','opennewwindow','opennewprocess')){
+        Add-Value "$classes\$type\shell\$verb" '' 'Open with Dolphin'
+        Add-Value "$classes\$type\shell\$verb" 'Icon' ('"'+(Join-Path $CraftRoot 'bin\dolphin.exe')+'",0')
+        # The suffix safely quotes drive roots. The launcher also understands
+        # shell namespace names and strips the suffix before parsing those.
+        Add-Value "$classes\$type\shell\$verb\command" '' ('"'+$launcher+'" folder "%1\."')
+        # Override Explorer's inherited COM verb handler for explicit opens.
+        Add-Value "$classes\$type\shell\$verb\command" 'DelegateExecute' ''
+    }
 }
 $prog='NixBridge.KDEArchive'
 Add-Value "$classes\$prog" '' 'KDE Archive'
@@ -36,8 +42,8 @@ $state=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'plasma-
 [IO.Directory]::CreateDirectory($state)|Out-Null
 $backupPath=Join-Path $state 'file-associations-backup.json'
 $marker=Join-Path $state 'file-associations-version.txt'
-$signature=$CraftRoot.ToUpperInvariant()+'#1'
-if($IfNeeded -and (Test-Path -LiteralPath $marker) -and ([IO.File]::ReadAllText($marker) -ceq $signature)){return}
+$signature=$CraftRoot.ToUpperInvariant()+'#2'
+if(-not $Restore -and $IfNeeded -and (Test-Path -LiteralPath $marker) -and ([IO.File]::ReadAllText($marker) -ceq $signature)){return}
 $records=[Collections.Generic.List[object]]::new()
 if(Test-Path -LiteralPath $backupPath){foreach($r in @(Get-Content -LiteralPath $backupPath -Raw | ConvertFrom-Json)){$records.Add($r)}}
 $registry=[Microsoft.Win32.Registry]::CurrentUser

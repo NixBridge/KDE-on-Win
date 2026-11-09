@@ -30,6 +30,7 @@ target_link_libraries(plasmawindowsstyle PRIVATE Qt6::Widgets KF6::IconThemes KF
 install(TARGETS plasmawindowsstyle RUNTIME DESTINATION plugins/styles LIBRARY DESTINATION plugins/styles)
 add_executable(plasma-kde-launcher WIN32 "${PROJECT_SOURCE_DIR}/apps/kde-launcher.cpp")
 target_link_libraries(plasma-kde-launcher PRIVATE Qt6::Gui KF6::ConfigCore)
+target_link_libraries(plasma-kde-launcher PRIVATE shell32 ole32)
 install(TARGETS plasma-kde-launcher RUNTIME DESTINATION bin)
 add_executable(plasma-process-monitor WIN32 "${PROJECT_SOURCE_DIR}/apps/process-monitor.cpp" "${SOURCE_ROOT}/startmenu/windowsiconmap.cpp")
 target_compile_definitions(plasma-process-monitor PRIVATE NOMINMAX UNICODE _UNICODE _WIN32_WINNT=0x0A00)

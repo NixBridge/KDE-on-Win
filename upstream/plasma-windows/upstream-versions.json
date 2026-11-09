@@ -110,7 +110,8 @@
         "0001-windows-minimal-scope.patch",
         "0002-windows-native-file-icons.patch",
         "0003-windows-shortcut-launch-breeze-icons.patch",
-        "0004-windows-opaque-context-menu.patch"
+        "0004-windows-opaque-context-menu.patch",
+        "0005-windows-dolphin-desktop-directories.patch"
       ]
     },
     "plasma-workspace": {

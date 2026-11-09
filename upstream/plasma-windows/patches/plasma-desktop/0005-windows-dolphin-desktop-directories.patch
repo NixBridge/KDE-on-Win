@@ -1,0 +1,27 @@
+diff --git a/containments/desktop/plugins/folder/foldermodel.cpp b/containments/desktop/plugins/folder/foldermodel.cpp
+index 67f8526..66e9784 100644
+--- a/containments/desktop/plugins/folder/foldermodel.cpp
++++ b/containments/desktop/plugins/folder/foldermodel.cpp
+@@ -21,6 +21,7 @@
+ #include <shellapi.h>
+ #endif
+ #include <QClipboard>
++#include <QProcess>
+ #include <QCollator>
+ #include <QDir>
+ #include <QDrag>
+@@ -893,6 +894,14 @@ void FolderModel::run(int row)
+     // Keep Windows shortcut arguments and working directories intact by opening
+     // the shortcut itself through the Shell rather than treating it as a document.
+     const QString originalPath = item.localPath();
++    if (QFileInfo(originalPath).isDir()) {
++        if (!QProcess::startDetached(QCoreApplication::applicationDirPath() + QStringLiteral("/plasma-kde-launcher.exe"),
++                                     {QStringLiteral("folder"), originalPath})) {
++            qCWarning(FOLDERMODEL) << "Could not launch Dolphin for desktop directory" << originalPath;
++        }
++        return;
++    }
++
+     if (!originalPath.isEmpty()) {
+         const QString localPath = QDir::toNativeSeparators(originalPath);
+         const QString suffix = QFileInfo(localPath).suffix().toLower();

@@ -3,13 +3,48 @@
 #include <QDir>
 #include <QProcess>
 #include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QTextStream>
 #include <QStandardPaths>
 #include <KSharedConfig>
 #include <KConfigGroup>
+#include "../../upstream/plasma-windows/src/shared/folderroute.h"
 int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
     const auto args = app.arguments();
+    // Shell associations start outside Plasma and do not inherit its environment.
+    const auto bin = app.applicationDirPath();
+    qputenv("PATH", (QDir::toNativeSeparators(bin) + ';' + qEnvironmentVariable("PATH")).toUtf8());
+    if (qEnvironmentVariableIsEmpty("DBUS_SESSION_BUS_ADDRESS"))
+        qputenv("DBUS_SESSION_BUS_ADDRESS", "tcp:host=127.0.0.1,port=12443");
+    if (qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND"))
+        qputenv("QT_QUICK_BACKEND", "software");
+    if (args.value(1) == QStringLiteral("folder") || args.value(1) == QStringLiteral("--folder-plan")) {
+        const HRESULT apartment = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const auto route = resolveWindowsFolder(args.value(2));
+        if (SUCCEEDED(apartment))
+            CoUninitialize();
+        if (args.value(1) == QStringLiteral("--folder-plan")) {
+            const QJsonObject plan { { "directory", route.directory }, { "shellNamespace", route.shellNamespace } };
+            QTextStream(stdout) << QJsonDocument(plan).toJson(QJsonDocument::Compact) << '\n';
+            return route.directory.isEmpty() && route.shellNamespace.isEmpty() ? 2 : 0;
+        }
+        if (!route.directory.isEmpty()) {
+            qputenv("QT_STYLE_OVERRIDE", "plasmawindows");
+            return QProcess::startDetached(app.applicationDirPath() + "/dolphin.exe", { route.directory }) ? 0 : 1;
+        }
+        if (!route.shellNamespace.isEmpty()) {
+            // Explicit executable avoids recursing through the Folder association.
+            return QProcess::startDetached(
+                       qEnvironmentVariable("SystemRoot") + "/explorer.exe", { route.shellNamespace })
+                ? 0
+                : 1;
+        }
+        return 2;
+    }
     if (args.value(1) == QStringLiteral("--register-mime-defaults")
         || args.value(1) == QStringLiteral("--restore-mime-defaults")) {
         const bool restore = args.value(1) == QStringLiteral("--restore-mime-defaults");

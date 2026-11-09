@@ -124,12 +124,13 @@
     "name": "plasma-desktop",
     "url": "https://download.kde.org/stable/plasma/6.7.4/plasma-desktop-6.7.4.tar.xz",
     "sha256": "c2f0c2b7ab70cbd99ef17ffad4c3117dab12ef6a71790da33e39688386474962",
-    "patches_applied": 4,
+    "patches_applied": 5,
     "patches": [
       "0001-windows-minimal-scope.patch",
       "0002-windows-native-file-icons.patch",
       "0003-windows-shortcut-launch-breeze-icons.patch",
-      "0004-windows-opaque-context-menu.patch"
+      "0004-windows-opaque-context-menu.patch",
+      "0005-windows-dolphin-desktop-directories.patch"
     ]
   },
   {

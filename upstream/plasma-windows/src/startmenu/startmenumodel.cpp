@@ -515,6 +515,12 @@ void StartMenuModel::launch(int row) const
         && readWindowsShortcut(e.linkPath).arguments.trimmed().isEmpty()) {
         const QString program = QFileInfo(QDir::fromNativeSeparators(e.exec)).fileName().toLower();
         const QString bin = QCoreApplication::applicationDirPath();
+        if (QFileInfo(e.exec).isDir() || program == QLatin1String("explorer.exe")) {
+            QProcess::startDetached(bin + QStringLiteral("/plasma-kde-launcher.exe"),
+                {QStringLiteral("folder"), QFileInfo(e.exec).isDir() ? e.exec : QDir::homePath()});
+            return;
+        }
+
         if (program == QLatin1String("notepad.exe") || program == QLatin1String("control.exe")
             || program == QLatin1String("systemsettings.exe")) {
             const QString role = program == QLatin1String("notepad.exe") ? QStringLiteral("text-editor")

@@ -69,4 +69,4 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
-Latest cumulative integration: [Fix15](docs/FIX15.md) keeps Breeze caption buttons readable against each window's actual background. Includes [Fix14](docs/FIX14.md) desktop stacking and minimize animation fixes, plus all earlier updates.
+Latest cumulative integration: [Fix16](docs/FIX16.md) routes filesystem folders, desktop directory shortcuts and standard Windows folder verbs to Dolphin. Includes [Fix15](docs/FIX15.md) caption contrast and all earlier updates.
