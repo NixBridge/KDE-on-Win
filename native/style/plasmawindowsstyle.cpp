@@ -338,7 +338,7 @@ public:
             return;
         const QString executable = QFileInfo(QCoreApplication::applicationFilePath()).fileName().toLower();
         if (!QStringList { "plasma-archive-manager.exe", "konsole.exe", "dolphin.exe", "plasma-process-monitor.exe",
-                "plasma-text-editor.exe", "plasma-system-settings.exe", "plasma-open-with.exe",
+                "plasma-text-editor.exe", "plasma-system-settings.exe", "plasma-open-with.exe", "plasma-desktop-tools.exe",
                 "breeze-window-probe.exe" }
                 .contains(executable))
             return;

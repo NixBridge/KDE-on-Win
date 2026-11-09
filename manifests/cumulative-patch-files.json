@@ -30,6 +30,7 @@
     "bin/context-menu-probe.exe",
     "bin/data/applications/org.kde.konsole.desktop",
     "bin/data/applications/org.nixbridge.archive.desktop",
+    "bin/data/applications/org.nixbridge.desktoptools.desktop",
     "bin/data/applications/org.nixbridge.processmonitor.desktop",
     "bin/data/applications/org.nixbridge.systemsettings.desktop",
     "bin/data/applications/org.nixbridge.texteditor.desktop",
@@ -237,6 +238,7 @@
     "bin/desktop-protocol-probe.exe",
     "bin/desktop-stacking-probe.exe",
     "bin/icon-probe.exe",
+    "bin/input-layout-probe.exe",
     "bin/kde-controls.dll",
     "bin/kde-logon-probe.exe",
     "bin/kde-logon-provider.dll",
@@ -259,6 +261,7 @@
     "bin/personalization-probe.exe",
     "bin/plasma-apply-wallpaperimage.exe",
     "bin/plasma-archive-manager.exe",
+    "bin/plasma-desktop-tools.exe",
     "bin/plasma-kde-launcher.exe",
     "bin/plasma-notification-bridge.exe",
     "bin/plasma-open-with.exe",
@@ -275,6 +278,7 @@
     "bin/taskbar-icon-probe.exe",
     "bin/taskmanager.dll",
     "bin/volume-lifecycle-probe.exe",
+    "bin/window-actions-probe.exe",
     "bin/x86/kde-controls.dll",
     "bin/x86/kde-style-host.exe",
     "plugins/kf6/kded/desktopnotifier.dll",
@@ -607,6 +611,10 @@
     "docs/FIX20.md": "docs/FIX20.md",
     "deploy-vm.cmd": "upstream/plasma-windows/tools/deploy-vm.cmd",
     "session-shell.cmd": "upstream/plasma-windows/tools/session-shell.cmd",
-    "docs/FIX21.md": "docs/FIX21.md"
+    "docs/FIX21.md": "docs/FIX21.md",
+    "start-desktop-tools.cmd": "runtime/start-desktop-tools.cmd",
+    "plasma-shell.cmd": "upstream/plasma-windows/tools/plasma-shell.cmd",
+    "docs/FIX22.md": "docs/FIX22.md",
+    "fix22-source-verification.json": "manifests/fix22-source-verification.json"
   }
 }

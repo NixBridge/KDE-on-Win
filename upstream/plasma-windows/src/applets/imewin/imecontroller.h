@@ -33,4 +33,5 @@ private:
     QString m_name;
     QString m_code;
     HWND m_targetWnd = nullptr;
+    DWORD m_targetPid=0,m_targetThread=0;
 };

@@ -113,25 +113,22 @@ rem ---------------------------------------------------------------------------
 call :pc_resolve_root
 set "DBUS_CONF=%~dp0dbus-session-plasma.conf"
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
-if errorlevel 1 (
-    if exist "%DBUS_CONF%" (
-        call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --config-file="%DBUS_CONF%" --nofork
-    ) else (
-        call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --session --nofork
-    )
-    rem Wait until the bus is actually listening. A fixed sleep raced the
-    rem daemon's TCP listener initialization at logon, so services started
-    rem right after connected nowhere and Qt spawned a second, private
-    rem dbus-daemon --session per process.
-    powershell -NoProfile -Command "$i = 0; while ($i -lt 50 -and -not (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200; $i++ }; if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+if not errorlevel 1 exit /b 0
+if exist "%DBUS_CONF%" (
+    call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --config-file="%DBUS_CONF%" --nofork
+) else (
+    call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --session --nofork
 )
-exit /b 0
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$i = 0; while ($i -lt 50 -and -not (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200; $i++ }; if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+exit /b %errorlevel%
 
 rem ---------------------------------------------------------------------------
 rem :pc_start_services - kactivitymanagerd + kded6 + trayhost in the background
 rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
+if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" call :pc_spawn "%CRAFT_BIN%\plasma-desktop-tools.exe" --daemon
 if exist "%CRAFT_ROOT%\install-file-associations.ps1" (
     call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\install-file-associations.ps1" -CraftRoot "%CRAFT_ROOT%" -IfNeeded
 )

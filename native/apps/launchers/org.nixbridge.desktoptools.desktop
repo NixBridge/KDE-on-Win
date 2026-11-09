@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Desktop Tools and Clipboard
+Name[zh_CN]=桌面工具与剪贴板
+Exec=plasma-desktop-tools.exe --clipboard
+Icon=edit-paste
+Categories=Utility;

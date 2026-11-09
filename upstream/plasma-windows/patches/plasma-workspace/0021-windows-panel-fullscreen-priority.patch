@@ -1,0 +1,67 @@
+diff --git a/shell/panelview.cpp b/shell/panelview.cpp
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -1226,10 +1226,37 @@
+ }
+ 
+ #ifdef Q_OS_WIN
++#include "windowsfullscreenpolicy.h"
+ void PanelView::enforceWindowsPanelStacking()
+ {
+     if (!isVisible()) return;
+     const HWND panel = reinterpret_cast<HWND>(winId());
++    if(m_windowsStackHandle!=winId()) {m_windowsStackHandle=winId();m_windowsFullscreenSuppressed=false;}
++    const HWND foreground=GetForegroundWindow();
++    DWORD pid=0;GetWindowThreadProcessId(foreground,&pid);
++    RECT frame {};MONITORINFO monitor {};monitor.cbSize=sizeof(monitor);
++    const auto screen=MonitorFromWindow(panel,MONITOR_DEFAULTTONEAREST);
++    wchar_t foregroundClass[128] {};GetClassNameW(foreground,foregroundClass,128);
++    const bool shellSurface=!wcscmp(foregroundClass,L"Progman")||!wcscmp(foregroundClass,L"WorkerW")
++        ||!wcscmp(foregroundClass,L"Shell_TrayWnd")||!wcscmp(foregroundClass,L"Shell_SecondaryTrayWnd");
++    const bool fullscreen=foreground && !shellSurface && !(GetWindowLongPtrW(foreground,GWL_EXSTYLE)&WS_EX_TOOLWINDOW) && pid!=GetCurrentProcessId() && IsWindowVisible(foreground) && !IsIconic(foreground)
++        && GetWindowRect(foreground,&frame) && GetMonitorInfoW(screen,&monitor)
++        && windowsCoversMonitor(frame,monitor.rcMonitor,IsZoomed(foreground)&&((GetWindowLongPtrW(foreground,GWL_STYLE)&WS_CAPTION)||((GetWindowLongPtrW(foreground,GWL_STYLE)&WS_SYSMENU)&&(GetWindowLongPtrW(foreground,GWL_STYLE)&WS_THICKFRAME))));
++    if(fullscreen) {
++        if(!m_windowsFullscreenSuppressed) {
++            m_windowsRestoreTopmost=GetWindowLongPtrW(panel,GWL_EXSTYLE)&WS_EX_TOPMOST;
++            SetWindowPos(panel,HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
++            if(!(GetWindowLongPtrW(foreground,GWL_EXSTYLE)&WS_EX_TOPMOST))
++                SetWindowPos(panel,foreground,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
++        }
++        m_windowsFullscreenSuppressed=true;
++        return;
++    }
++    if(m_windowsFullscreenSuppressed) {
++        SetWindowPos(panel,m_windowsRestoreTopmost?HWND_TOPMOST:HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
++        m_windowsFullscreenSuppressed=false;
++    }
++
+     DWORD explorerPid = 0;
+     GetWindowThreadProcessId(GetShellWindow(), &explorerPid);
+     if (!explorerPid) return;
+diff --git a/shell/panelview.h b/shell/panelview.h
+--- a/shell/panelview.h
++++ b/shell/panelview.h
+@@ -277,6 +277,8 @@
+     QTimer m_workAreaTimer;
+     QTimer m_windowsStackTimer;
+     void enforceWindowsPanelStacking();
++    bool m_windowsFullscreenSuppressed=false,m_windowsRestoreTopmost=false;
++    WId m_windowsStackHandle=0;
+ #endif
+ 
+ Q_SIGNALS:
+diff --git a/shell/windowsfullscreenpolicy.h b/shell/windowsfullscreenpolicy.h
+new file mode 100644
+--- /dev/null
++++ b/shell/windowsfullscreenpolicy.h
+@@ -0,0 +1,9 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#pragma once
++#include <windows.h>
++inline bool windowsCoversMonitor(const RECT& window,const RECT& monitor,bool ordinaryMaximized)
++{
++    return !ordinaryMaximized && monitor.right>monitor.left && monitor.bottom>monitor.top
++        && window.left<=monitor.left && window.top<=monitor.top
++        && window.right>=monitor.right && window.bottom>=monitor.bottom;
++}

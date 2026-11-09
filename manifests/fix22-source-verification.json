@@ -1,0 +1,77 @@
+[
+  {
+    "name": "plasma-workspace",
+    "archive_sha256": "21ec3c002929eb65377a1ae0eb105b9ab6f608049dac5493e188f51bd50398d5",
+    "patches": [
+      "0001-windows-build-conditions.patch",
+      "0002-subdir-wayland-guards.patch",
+      "0003-minimal-shell-subsets.patch",
+      "0004-windows-m36-shell.patch",
+      "0005-windows-panel-activatable.patch",
+      "0006-windows-workarea-debounce.patch",
+      "0007-windows-session-backend.patch",
+      "0008-windows-no-libkscreen.patch",
+      "0009-windows-shell-platform-guards.patch",
+      "0010-windows-runner-notification-views.patch",
+      "0011-windows-splash-initialization.patch",
+      "0012-windows-desktop-kio-workers.patch",
+      "0013-windows-panel-above-explorer.patch",
+      "0014-windows-taskbar-icons-and-identities.patch",
+      "0015-windows-notifications-no-pulseaudio.patch",
+      "0016-windows-settings-editor-taskbar-identities.patch",
+      "0017-cache-windows-task-icons-and-paths.patch",
+      "0018-windows-live-desktop-appearance.patch",
+      "0019-windows-desktop-native-stacking.patch",
+      "0020-windows-taskbar-commands-grouping.patch",
+      "0021-windows-panel-fullscreen-priority.patch"
+    ],
+    "strict_apply": true,
+    "compiled_source_bytes_equal": true,
+    "files": [
+      {
+        "path": "libtaskmanager/windowswindowtasksmodel.cpp",
+        "sha256": "3003fc2abf13023313554f406b4fa9992b6632f6b0bd6e4751653efe0ba88c99"
+      },
+      {
+        "path": "libtaskmanager/windowswindowactions.h",
+        "sha256": "7aead79c5dd2929ad84b5fed75ee2e338596da311cafaaa0d7d8a314812d7f0f"
+      },
+      {
+        "path": "libtaskmanager/windowsdesktopapps.h",
+        "sha256": "f0487b78ae3c8c559a443757acf5428f03712028de2943379a6da6760aba47a6"
+      },
+      {
+        "path": "shell/panelview.cpp",
+        "sha256": "cb5ab329d21ce3274561d1515b42032e1f1e32b22a734d779408cc74021ac257"
+      },
+      {
+        "path": "shell/panelview.h",
+        "sha256": "1b16be7510b24cdfda56c813db0b6561095b5f7c66dbe5062873c66e39a2b5d6"
+      },
+      {
+        "path": "shell/windowsfullscreenpolicy.h",
+        "sha256": "56103701283e4cfc04c0c5fef4b3aff6c340713cbaccec958614a8c18db807ca"
+      }
+    ]
+  },
+  {
+    "name": "plasma-desktop",
+    "archive_sha256": "c2f0c2b7ab70cbd99ef17ffad4c3117dab12ef6a71790da33e39688386474962",
+    "patches": [
+      "0001-windows-minimal-scope.patch",
+      "0002-windows-native-file-icons.patch",
+      "0003-windows-shortcut-launch-breeze-icons.patch",
+      "0004-windows-opaque-context-menu.patch",
+      "0005-windows-dolphin-desktop-directories.patch",
+      "0006-windows-desktop-tools-menu.patch"
+    ],
+    "strict_apply": true,
+    "compiled_source_bytes_equal": true,
+    "files": [
+      {
+        "path": "containments/desktop/plugins/folder/foldermodel.cpp",
+        "sha256": "8720f41e2bad5fd998c1671b8d72d3472ef2eaeab911143a9e209b596584df9f"
+      }
+    ]
+  }
+]

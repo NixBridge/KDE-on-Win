@@ -54,3 +54,10 @@ install(FILES "${project_qm}" DESTINATION bin/data/kde-on-win/translations)
 find_package(LibNotificationManager REQUIRED)
 
 target_link_libraries(plasma-system-settings PRIVATE PW::LibNotificationManager)
+
+add_executable(plasma-desktop-tools WIN32 "${PROJECT_SOURCE_DIR}/apps/desktop-tools.cpp")
+target_compile_definitions(plasma-desktop-tools PRIVATE NOMINMAX UNICODE _UNICODE)
+target_compile_options(plasma-desktop-tools PRIVATE /utf-8)
+target_include_directories(plasma-desktop-tools PRIVATE "${SOURCE_ROOT}/shared")
+target_link_libraries(plasma-desktop-tools PRIVATE Qt6::Widgets Qt6::Network KF6::IconThemes user32)
+install(TARGETS plasma-desktop-tools RUNTIME DESTINATION bin)

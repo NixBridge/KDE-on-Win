@@ -22,16 +22,21 @@ NotificationRelay::NotificationRelay(QObject *parent, const QDBusConnection &bus
             for (const auto &entry : m_entries) if (entry->active && !entry->busy && !entry->id) send(entry);
             return;
         }
+        ++m_generation;
         // IDs belong to one notification server instance only.
         for (auto &entry : m_entries) entry->active = false;
         m_entries.clear(); m_ids.clear();
     });
 }
+NotificationRelay::~NotificationRelay()
+{
+    for(uint id:m_ids.keys()) close(id);
+}
 void NotificationRelay::publish(const QString &key, const QString &app, const QString &title, const QString &body,
                                 const QString &icon, bool clickable, uchar urgency, int timeout)
 {
     auto &entry = m_entries[key];
-    if (!entry) { entry.reset(new Entry); entry->key = key; }
+    if (!entry) { entry.reset(new Entry); entry->key = key; entry->generation = m_generation; }
     entry->app = app; entry->title = title; entry->body = body; entry->icon = icon;
     entry->clickable = clickable; entry->urgency = qMin(urgency, uchar(2)); entry->timeout = timeout;
     entry->dirty = true;
@@ -51,6 +56,8 @@ void NotificationRelay::send(const QSharedPointer<Entry> &entry)
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, entry] {
         QDBusPendingReply<uint> reply = *watcher;
         watcher->deleteLater(); entry->busy = false;
+        // Never close a new server's notification using an old server's ID.
+        if(entry->generation != m_generation) return;
         if (reply.isError()) {
             if (entry->active) Q_EMIT failed(entry->key, reply.error().message());
         } else if (!entry->active) {

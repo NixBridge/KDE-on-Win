@@ -78,11 +78,13 @@ call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
 
 echo === 5/5 Start session (dbus + kactivitymanagerd + kded6 + plasmashell) ===
 call "%~dp0plasma-common.cmd" :pc_start_bus
+if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_start_services
 
 echo Starting plasmashell (close this window to end the session)...
 "%CRAFT_BIN%\plasmashell.exe"
 set "PLASMA_EXIT=%errorlevel%"
+if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" "%CRAFT_BIN%\plasma-desktop-tools.exe" --stop-if-idle
 echo plasmashell exited with code %PLASMA_EXIT%
 endlocal & exit /b %PLASMA_EXIT%
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "localization.h"
 #include <QApplication>
+#include <QMap>
 #include <QMainWindow>
 #include <QListWidget>
 #include <QStackedWidget>
@@ -404,6 +405,13 @@ int main(int argc, char** argv)
     for (int i = 0; i < 9; ++i)
         addDirectSystemControls(page(QObject::tr(names[i]), QLatin1String(icons[i])), i);
     auto* support = page(QObject::tr("About & Diagnostics"), QStringLiteral("help-about"));
+    auto* desktopTools = new QPushButton(QObject::tr("Clipboard history and desktop shortcuts…"));
+    support->addWidget(desktopTools);
+    QObject::connect(desktopTools, &QPushButton::clicked, &window, [&] {
+        if (!QProcess::startDetached(app.applicationDirPath() + "/plasma-desktop-tools.exe", { "--settings" }))
+            QMessageBox::warning(
+                &window, QObject::tr("Cannot start application"), QObject::tr("Desktop tools could not be started."));
+    });
     auto* associations = new QPushButton(QObject::tr("Use Dolphin for folders and KDE for archives"));
     support->addWidget(associations);
     QObject::connect(associations, &QPushButton::clicked, &window, [] {
@@ -483,13 +491,20 @@ int main(int argc, char** argv)
     support->addStretch();
     QObject::connect(categories, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
     categories->setCurrentRow(0);
-    if (app.arguments().contains(QStringLiteral("--page=network")))
-        categories->setCurrentRow(6);
+    const QMap<QString, int> pageNames { { "appearance", 0 }, { "panel", 1 }, { "desktop", 2 }, { "start-menu", 3 },
+        { "display", 4 }, { "sound", 5 }, { "network", 6 } };
+    for (const auto& argument : app.arguments())
+        if (argument.startsWith("--page=") && pageNames.contains(argument.mid(7)))
+            categories->setCurrentRow(pageNames.value(argument.mid(7)));
     window.show();
     if (app.arguments().contains(QStringLiteral("--ui-smoke-test")))
         QTimer::singleShot(500, &window, [&] {
-            bool ok = pages->count() == 14 && categories->count() == 14 && height->minimum() == 24
-                && iconSize->maximum() == 72;
+            int requested = 0;
+            for (const auto& argument : app.arguments())
+                if (argument.startsWith("--page=") && pageNames.contains(argument.mid(7)))
+                    requested = pageNames.value(argument.mid(7));
+            bool ok = pages->currentIndex() == requested && pages->count() == 14 && categories->count() == 14
+                && height->minimum() == 24 && iconSize->maximum() == 72;
             categories->setCurrentRow(3);
             ok &= pages->currentIndex() == 3;
             ok &= window.findChild<QWidget*>(QStringLiteral("PlasmaBreezeTitleBar")) != nullptr;

@@ -27,6 +27,7 @@ powershell -ExecutionPolicy Bypass -File "%~dp0build-startmenu-desktops.ps1" >nu
 call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
 
 call "%~dp0plasma-common.cmd" :pc_start_bus
+if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_start_services
 
 rem Run kded6 in the foreground; keep this script alive as session host.

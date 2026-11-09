@@ -14,3 +14,13 @@ for name in ['deploy-vm.cmd', 'session-shell.cmd', 'plasma-common.cmd']:
 text = (root / manifest['repository']['deploy-vm.cmd']).read_text(encoding='utf-8')
 assert 'kde-session-host.exe' in text and ':restore_shell' in text
 print('PASS: cumulative overlay includes canonical startup, shell-install and Explorer recovery scripts in runtime encoding.')
+
+assert manifest['repository']['plasma-shell.cmd'] == 'upstream/plasma-windows/tools/plasma-shell.cmd'
+assert 'bin/plasma-desktop-tools.exe' in manifest['runtime']
+common=(root/manifest['repository']['plasma-common.cmd']).read_text(encoding='utf-8')
+bus=common[common.index(':pc_start_bus\n'):common.index('rem :pc_start_services')]
+assert 'exit /b %errorlevel%' in bus
+for name in ['deploy-vm.cmd','session-shell.cmd','plasma-shell.cmd']:
+    content=(root/manifest['repository'][name]).read_text(encoding='utf-8')
+    assert ':pc_start_bus\nif errorlevel 1 exit /b 1' in content, name
+print('PASS: new helper and secondary shell entrypoint ship; all VM entrypoints propagate bus startup failure.')

@@ -24,3 +24,9 @@ Fix21 isolated regression suite: `python tests/run_regressions.py --runtime D:/K
 This runs 49 checks, using private settings, offscreen Qt rendering and test-owned hidden HWNDs.
 It never starts a real desktop session, installs global hooks or changes login/association registration.
 The tray and callback probes avoid the live system tray and notification permissions; notification relay uses a private temporary D-Bus daemon.
+
+
+Fix22 expands the same runner to 57 checks and writes `work/fix22-test-results.json`.
+The clipboard/history tests use synthetic MIME data and a private per-process IPC endpoint; they never access the system clipboard or register real hotkeys.
+The new window-actions probe uses only child HWNDs under a hidden test parent. Fullscreen geometry checks do not constitute multi-monitor or game acceptance.
+Chinese offscreen UI checks explicitly load Windows fonts in the test process and assert actual glyph coverage.

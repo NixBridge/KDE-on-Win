@@ -1,0 +1,327 @@
+{
+  "version": "20261110-fix22",
+  "vm_acceptance": "pending",
+  "classic_controls": "implemented; opt-in; cross-process VM acceptance pending",
+  "password_logon": "experimental local-account V2 credential provider; actual sign-in unverified",
+  "full_logonui_replacement": false,
+  "global_modern_client_area_theming": false,
+  "native_session_host": "implemented; actual logon-session VM acceptance pending",
+  "archive": "plasma-windows-20261110-fix22.zip",
+  "archive_bytes": 30140166,
+  "archive_sha256": "c24d5ec722a150d4c00c35c85913a160066bd858a29a0875b19ab59bd02f8c08",
+  "cumulative_files": 614,
+  "previous_overlay_entries_preserved": true,
+  "all_overlay_sources_byte_verified": true,
+  "host_logon_registration_changed": false,
+  "runtime_imports": {
+    "modules_checked": 644,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "checks": [
+    {
+      "name": "plasma-desktop-tools --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "input-layout-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=display",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=appearance",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=invalid",
+      "exit": 0
+    },
+    {
+      "name": "kde-session-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "trayhost --self-test",
+      "exit": 0
+    },
+    {
+      "name": "shellswitch --self-test",
+      "exit": 0
+    },
+    {
+      "name": "volume-lifecycle-probe ",
+      "exit": 0
+    },
+    {
+      "name": "notification-callback-probe ",
+      "exit": 0
+    },
+    {
+      "name": "notification-relay-probe ",
+      "exit": 0
+    },
+    {
+      "name": "kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "x86/kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-logon-probe ",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --dialog-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --invoke-self-test",
+      "exit": 0
+    },
+    {
+      "name": "konsole-conpty-probe ",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --editing-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe ",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe ",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe ",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe ",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe ",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe ",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native window-actions-probe",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_folder_routing.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_deployment.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_integration_binaries.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_session_log_fallback.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_cumulative_contract.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_msvc_deps.py",
+      "exit": 0
+    }
+  ],
+  "control_reentrancy": "x86/x64 hidden fixture destroys a button during painting; callback state retained until return",
+  "chinese_translations": 340,
+  "builds": {
+    "native_x64": "passed",
+    "taskmanager_plasmashell_folderplugin_x64": "passed",
+    "x86_rebuilt": false,
+    "x86_existing_self_test": "passed"
+  },
+  "repaired_historical_overlay_omissions": [
+    "deploy-vm.cmd",
+    "session-shell.cmd"
+  ],
+  "vm_pending": [
+    "native clipboard privacy formats, fast copying, drag/drop and paste",
+    "real hotkey registration, AltGr/local conflicts, focus and repeated opening",
+    "mixed DPI, monitor hotplug, fullscreen games and panel re-layering",
+    "known KDE window groups and save prompts; unidentified third-party hosts stay ungrouped",
+    "real startup failures, sleep/wake, forced exits and Explorer recovery",
+    "native Windows logoff/shutdown; synthetic query/end-session messages only tested",
+    "real notification permission/click behavior and service churn",
+    "experimental local-account logon remains unverified"
+  ],
+  "cumulative_dependency_check": {
+    "modules_checked": 257,
+    "new_dlls": []
+  },
+  "fixes": [
+    "propagate bus startup failures and bound watchdog retries without automatic replenishment",
+    "notification server generation guard, requested expiry and teardown",
+    "fullscreen-aware panel priority including ordinary frameless maximized windows",
+    "PID-checked task commands and grouping restricted to known current-runtime KDE apps",
+    "Windows-localized input layout labels and target identity validation",
+    "system-settings page dispatch and desktop menu integration"
+  ],
+  "features": {
+    "desktop_context_actions": [
+      "refresh",
+      "display settings",
+      "appearance settings",
+      "Konsole workdir",
+      "clipboard tools"
+    ],
+    "clipboard_history": {
+      "ram_only": true,
+      "default_limit": 20,
+      "maximum_limit": 200,
+      "maximum_utf16_units": 65536,
+      "explicit_privacy_markers": true,
+      "real_system_clipboard_tested": false
+    },
+    "shortcuts": {
+      "api": "RegisterHotKey with thread messages",
+      "default": "Ctrl+Alt+Shift+E/R/D/V",
+      "alternative": "Ctrl+Alt+E/R/D/V",
+      "native_meta_shortcuts_preserved": true,
+      "real_registration_tested": false
+    },
+    "application_session_restore": {
+      "implemented": false,
+      "enabled": false
+    },
+    "third_party_guessed_close_all": false
+  },
+  "host_real_hotkeys_registered": false,
+  "live_desktop_session_launched": false,
+  "source_verification": {
+    "manifest": "fix22-source-verification.json",
+    "workspace_patches": 21,
+    "desktop_patches": 6,
+    "compiled_files_byte_equal": 7
+  },
+  "desktop_tools_live_clipboard_listener_started_on_host": false,
+  "global_control_style_hook_installed_on_host": false
+}

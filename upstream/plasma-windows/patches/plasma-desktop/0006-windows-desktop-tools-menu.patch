@@ -1,0 +1,40 @@
+diff --git a/containments/desktop/plugins/folder/foldermodel.cpp b/containments/desktop/plugins/folder/foldermodel.cpp
+--- a/containments/desktop/plugins/folder/foldermodel.cpp
++++ b/containments/desktop/plugins/folder/foldermodel.cpp
+@@ -44,6 +44,8 @@
+ #include <QDBusConnection>
+ #include <QDBusConnectionInterface>
+ #include <QStandardPaths>
++#include <QSettings>
++#include <QLocale>
+ #include <QQmlEngine>
+ #include <QJSEngine>
+ #include <KConfigGroup>
+@@ -2051,6 +2053,27 @@
+     }
+ 
+     if (indexes.isEmpty()) {
++#ifdef Q_OS_WIN
++        QSettings preferences(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
++                              + QStringLiteral("/plasma-win-session/appearance.ini"),QSettings::IniFormat);
++        QString language=preferences.value(QStringLiteral("language"),QStringLiteral("system")).toString();
++        const bool chinese=(language==QStringLiteral("system")?QLocale::system().uiLanguages().value(0,QLocale::system().name()):language).startsWith(QStringLiteral("zh"));
++        menu->addAction(m_actionCollection.action(QStringLiteral("refresh")));
++        const auto addDesktopTool=[&](const QString& text,const QString& icon,const QStringList& arguments) {
++            auto* action=menu->addAction(QIcon::fromTheme(icon),text);
++            const QString launcher=QCoreApplication::applicationDirPath()+QStringLiteral("/plasma-kde-launcher.exe");
++            action->setEnabled(QFileInfo::exists(launcher));
++            connect(action,&QAction::triggered,menu,[launcher,arguments] {
++                if(!QProcess::startDetached(launcher,arguments))qWarning()<<"Desktop tool could not be started";
++            });
++        };
++        addDesktopTool(chinese?QStringLiteral("显示设置"):QStringLiteral("Display Settings"),QStringLiteral("preferences-desktop-display"),{QStringLiteral("system-settings"),QStringLiteral("--page=display")});
++        addDesktopTool(chinese?QStringLiteral("个性化设置"):QStringLiteral("Personalization"),QStringLiteral("preferences-desktop-theme"),{QStringLiteral("system-settings"),QStringLiteral("--page=appearance")});
++        const QString desktopPath=rootItem().localPath().isEmpty()?QStandardPaths::writableLocation(QStandardPaths::DesktopLocation):rootItem().localPath();
++        addDesktopTool(chinese?QStringLiteral("在 Konsole 中打开终端"):QStringLiteral("Open Terminal in Konsole"),QStringLiteral("utilities-terminal"),{QStringLiteral("konsole"),QStringLiteral("--workdir"),desktopPath});
++        addDesktopTool(chinese?QStringLiteral("剪贴板历史与桌面工具"):QStringLiteral("Clipboard and Desktop Tools"),QStringLiteral("edit-paste"),{QStringLiteral("desktop-tools"),QStringLiteral("--clipboard")});
++        menu->addSeparator();
++#endif
+         menu->addAction(m_actionCollection.action(QStringLiteral("newMenu")));
+         menu->addSeparator();
+         menu->addAction(m_actionCollection.action(QStringLiteral("paste")));

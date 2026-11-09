@@ -56,7 +56,13 @@ static void logMsg(const WCHAR *fmt, ...)
     StringCchVPrintfW(buf, 1024, fmt, ap);
     va_end(ap);
     OutputDebugStringW(buf);
-    WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), buf, (DWORD)wcslen(buf), NULL, NULL);
+    HANDLE output=GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD written=0;
+    if(!WriteConsoleW(output,buf,(DWORD)wcslen(buf),&written,NULL)) {
+        char utf8[4096];
+        int length=WideCharToMultiByte(CP_UTF8,0,buf,-1,utf8,sizeof(utf8),NULL,NULL);
+        if(length>1)WriteFile(output,utf8,(DWORD)(length-1),&written,NULL);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -202,15 +208,25 @@ static void startChildWithDbus(const WCHAR *exePath)
     } else logMsg(L"Service creation failed: %lu\n", GetLastError());
 }
 
+struct RestartBudget { unsigned attempts; ULONGLONG last; };
+static BOOL allowRestart(struct RestartBudget *budget, BOOL desktop, BOOL running, ULONGLONG now)
+{
+    if (!desktop) { ZeroMemory(budget,sizeof(*budget)); return FALSE; }
+    if (running) return FALSE;
+    if (budget->attempts>=3) return FALSE;
+    if (budget->attempts && now-budget->last<(5000ull<<budget->attempts)) return FALSE;
+    ++budget->attempts; budget->last=now; return TRUE;
+}
+
 /* kded6 watchdog: kded6 owns org.kde.StatusNotifierWatcher - while it
    is down the plasma tray stays empty no matter how healthy trayhost
    is (its bridges only register with the watcher when it appears).
    Same restart policy as ensureTrayHost. */
 static void ensureKded6(void)
 {
-    if (!isProcessRunning(L"plasmashell.exe") || isProcessRunning(L"kded6.exe")) {
-        return;
-    }
+    static struct RestartBudget budget={0};
+    if (!allowRestart(&budget,isProcessRunning(L"plasmashell.exe"),isProcessRunning(L"kded6.exe"),GetTickCount64())) return;
+    if (budget.attempts==3) logMsg(L"Final watchdog retry for kded6.exe; restart the session if it fails.\n");
     if (g_dryRun) {
         logMsg(L"[dry-run] would restart kded6.exe\n");
         return;
@@ -237,9 +253,9 @@ static void ensureKded6(void)
    it crashes under heavy DELETE/ADD churn, taking the tray down. */
 static void ensureTrayHost(void)
 {
-    if (!isProcessRunning(L"plasmashell.exe") || isProcessRunning(L"trayhost.exe")) {
-        return;
-    }
+    static struct RestartBudget budget={0};
+    if (!allowRestart(&budget,isProcessRunning(L"plasmashell.exe"),isProcessRunning(L"trayhost.exe"),GetTickCount64())) return;
+    if (budget.attempts==3) logMsg(L"Final watchdog retry for trayhost.exe; restart the session if it fails.\n");
     if (g_dryRun) {
         logMsg(L"[dry-run] would restart trayhost.exe\n");
         return;
@@ -553,6 +569,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
             && matchesSessionProcess(2, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"c:\\kde\\bin\\DBUS-DAEMON.EXE")
             && !matchesSessionProcess(3, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe")
             && !matchesSessionProcess(2, 2, L"C:\\other\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe");
+        struct RestartBudget budget={0};
+        ok = ok && allowRestart(&budget,TRUE,FALSE,1) && !allowRestart(&budget,TRUE,FALSE,5001)
+            && allowRestart(&budget,TRUE,FALSE,10001) && allowRestart(&budget,TRUE,FALSE,30001)
+            && !allowRestart(&budget,TRUE,FALSE,90001);
+        allowRestart(&budget,TRUE,TRUE,100000); allowRestart(&budget,TRUE,TRUE,600000);
+        ok = ok && !allowRestart(&budget,TRUE,FALSE,700000);
+        allowRestart(&budget,FALSE,FALSE,710000);
+        ok = ok && allowRestart(&budget,TRUE,FALSE,720000);
+        logMsg(ok ? L"PASS: strict arguments, current-session identity and finite watchdog budget; no process control\n"
+                  : L"FAIL: shell switch policy\n");
         return ok ? 0 : 1; /* No registry access, tray, process control or UI. */
     }
     g_dryRun = GetEnvironmentVariableW(L"SWITCH_DRYRUN", NULL, 0) > 0;

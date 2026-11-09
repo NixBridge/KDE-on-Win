@@ -6,6 +6,8 @@
 
 #include <QDebug>
 #include <windows.h>
+#include "../../shared/inputlayoutlabel.h"
+#include <QVector>
 
 ImeController::ImeController(QObject *parent)
     : QObject(parent)
@@ -32,44 +34,29 @@ void ImeController::refresh()
     // Remember the real user window: when the panel is clicked, the
     // foreground window is our own shell, but the layout switch must be
     // sent to the application the user actually uses.
-    if (fg && fg != m_targetWnd) {
+    if (fg) {
         DWORD fgPid = 0;
-        GetWindowThreadProcessId(fg, &fgPid);
+        const DWORD fgThread=GetWindowThreadProcessId(fg, &fgPid);
         if (fgPid != GetCurrentProcessId()) {
             m_targetWnd = fg;
+            m_targetPid=fgPid;
+            m_targetThread=fgThread;
         }
     }
     // Read the layout of the user window (m_targetWnd), not the shell's:
     // after a click the foreground is the panel itself, whose thread has
     // its own HKL that never changes - that made the indicator stick.
-    const HWND probe = (m_targetWnd && IsWindow(m_targetWnd)) ? m_targetWnd : fg;
+    DWORD pid=0;
+    const DWORD owner=GetWindowThreadProcessId(m_targetWnd,&pid);
+    const HWND probe = (owner==m_targetThread && pid==m_targetPid && owner) ? m_targetWnd : fg;
     const DWORD tid = probe ? GetWindowThreadProcessId(probe, nullptr) : 0;
     const HKL hkl = GetKeyboardLayout(tid);
     const LANGID lang = LOWORD(hkl);
-    const WORD primary = PRIMARYLANGID(lang);
+    const auto label=inputLayoutLabel(lang);
+    const auto& code=label.first;
+    const auto& name=label.second;
 
-    QString code;
-    QString name;
-    switch (primary) {
-    case LANG_CHINESE:
-        code = QStringLiteral("中");
-        name = QStringLiteral("Chinese");
-        break;
-    case LANG_JAPANESE:
-        code = QStringLiteral("日");
-        name = QStringLiteral("Japanese");
-        break;
-    case LANG_KOREAN:
-        code = QStringLiteral("한");
-        name = QStringLiteral("Korean");
-        break;
-    default:
-        code = QStringLiteral("EN");
-        name = QStringLiteral("English");
-        break;
-    }
-
-    if (code != m_code) {
+    if (code != m_code || name != m_name) {
         m_code = code;
         m_name = name;
         Q_EMIT layoutNameChanged();
@@ -78,18 +65,20 @@ void ImeController::refresh()
 
 void ImeController::toggle()
 {
-    HKL list[16];
-    const int count = GetKeyboardLayoutList(16, list);
+    const int capacity=GetKeyboardLayoutList(0,nullptr);
+    if(capacity<=0 || capacity>256)return;
+    QVector<HKL> list(capacity);
+    const int count = GetKeyboardLayoutList(capacity, list.data());
     if (count <= 0) {
         return;
     }
     // Prefer the last real user window; fall back to the current
     // foreground (which after clicking our panel is the shell itself).
     HWND target = m_targetWnd;
-    if (!target || !IsWindow(target)) {
-        target = GetForegroundWindow();
-    }
-    if (!target) {
+    DWORD pid=0; DWORD thread=GetWindowThreadProcessId(target,&pid);
+    if (!thread || pid!=m_targetPid || thread!=m_targetThread) target=GetForegroundWindow();
+    GetWindowThreadProcessId(target,&pid);
+    if (!target || pid==GetCurrentProcessId()) {
         return;
     }
     const HKL cur = GetKeyboardLayout(GetWindowThreadProcessId(target, nullptr));

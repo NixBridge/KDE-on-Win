@@ -36,6 +36,7 @@ call "%~dp0plasma-common.cmd" :pc_setup_env
 call "%~dp0plasma-common.cmd" :pc_mirror_data
 
 call "%~dp0plasma-common.cmd" :pc_start_bus
+if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_start_services
 
 rem Tray-resident shell switcher: also acts as the kded6/trayhost watchdog
@@ -48,4 +49,6 @@ if exist "%CRAFT_BIN%\shellswitch.exe" (
 
 rem Run the shell in the foreground; keep this script alive as session host.
 "%CRAFT_BIN%\plasmashell.exe"
-exit /b %errorlevel%
+set "PLASMA_EXIT=%errorlevel%"
+if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" "%CRAFT_BIN%\plasma-desktop-tools.exe" --stop-if-idle
+exit /b %PLASMA_EXIT%

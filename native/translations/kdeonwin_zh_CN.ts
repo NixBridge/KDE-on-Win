@@ -1558,6 +1558,18 @@
         <source>%1 processes | Memory %2% | Automatic updates paused</source>
         <translation>%1 个进程 | 内存 %2% | 已暂停自动更新</translation>
     </message>
+    <message>
+        <source>Clipboard history and desktop shortcuts…</source>
+        <translation>剪贴板历史与桌面快捷键…</translation>
+    </message>
+    <message>
+        <source>Desktop tools could not be started.</source>
+        <translation>无法启动桌面工具。</translation>
+    </message>
+    <message>
+        <source>Cannot start application</source>
+        <translation>无法启动程序</translation>
+    </message>
 </context>
 <context>
     <name>WindowChrome</name>
@@ -1575,6 +1587,85 @@
         <location filename="../style/plasmawindowsstyle.cpp" line="78"/>
         <source>Close</source>
         <translation>关闭</translation>
+    </message>
+</context>
+<context>
+    <name>DesktopTools</name>
+    <message>
+        <source>Desktop Tools and Clipboard</source>
+        <translation>桌面工具与剪贴板</translation>
+    </message>
+    <message>
+        <source>Text history stays in memory. Explicit privacy markers are respected; not all passwords can be identified.</source>
+        <translation>文本历史仅保存在内存中，遵守明确的隐私标记；无法自动识别所有密码。</translation>
+    </message>
+    <message>
+        <source>Clipboard history</source>
+        <translation>剪贴板历史</translation>
+    </message>
+    <message>
+        <source>Copy selected</source>
+        <translation>复制选中项</translation>
+    </message>
+    <message>
+        <source>Clear history</source>
+        <translation>清空历史</translation>
+    </message>
+    <message>
+        <source>Keep text history during this session</source>
+        <translation>在本次运行期间保留文本历史</translation>
+    </message>
+    <message>
+        <source>History limit: </source>
+        <translation>历史数量：</translation>
+    </message>
+    <message>
+        <source>Shortcuts: Ctrl+Alt+E/R/D/V</source>
+        <translation>快捷键：Ctrl+Alt+E/R/D/V</translation>
+    </message>
+    <message>
+        <source>Shortcuts: Ctrl+Alt+Shift+E/R/D/V</source>
+        <translation>快捷键：Ctrl+Alt+Shift+E/R/D/V</translation>
+    </message>
+    <message>
+        <source>Windows reserves Meta+E/R/D. These remain native; use E for Dolphin, R to run, D for desktop, V for history with the selected modifiers. Ctrl+Alt can conflict with AltGr.</source>
+        <translation>Meta+E/R/D 为 Windows 保留快捷键，保留原生行为。配合所选修饰键，E 打开 Dolphin，R 运行程序，D 显示桌面，V 查看历史。Ctrl+Alt 可能与 AltGr 冲突。</translation>
+    </message>
+    <message>
+        <source>Quit desktop tools</source>
+        <translation>退出桌面工具</translation>
+    </message>
+    <message>
+        <source>Run application</source>
+        <translation>运行程序</translation>
+    </message>
+    <message>
+        <source>Program and arguments:</source>
+        <translation>程序与参数：</translation>
+    </message>
+    <message>
+        <source>Cannot start application</source>
+        <translation>无法启动程序</translation>
+    </message>
+    <message>
+        <source>Check the executable path and arguments. Shell operators belong in Konsole.</source>
+        <translation>请检查可执行文件路径和参数。Shell 运算符请在 Konsole 中使用。</translation>
+    </message>
+    <message>
+        <source>The KDE launcher is missing or could not be started.</source>
+        <translation>KDE 启动器缺失或无法启动。</translation>
+    </message>
+    <message>
+        <source>Shortcuts registered.</source>
+        <translation>快捷键已注册。</translation>
+    </message>
+    <message>
+        <source>Shortcuts unavailable: %1. Choose the alternate modifiers or use the menu.</source>
+        <translation>以下快捷键不可用：%1。请选择另一组修饰键，或使用菜单。</translation>
+    </message>
+    <message>
+        <source>Settings could not be read or saved. Changes may last only for this run.</source>
+        <translation>无法读取或保存配置，更改可能仅在本次运行有效。</translation>
     </message>
 </context>
 </TS>

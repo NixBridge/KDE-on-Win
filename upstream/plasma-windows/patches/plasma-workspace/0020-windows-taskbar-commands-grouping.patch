@@ -1,0 +1,271 @@
+diff --git a/libtaskmanager/windowswindowtasksmodel.cpp b/libtaskmanager/windowswindowtasksmodel.cpp
+--- a/libtaskmanager/windowswindowtasksmodel.cpp
++++ b/libtaskmanager/windowswindowtasksmodel.cpp
+@@ -5,6 +5,7 @@
+ */
+ #include "windowswindowtasksmodel.h"
+ #include "windowsdesktopapps.h"
++#include "windowswindowactions.h"
+ 
+ #include <KWindowInfo>
+ #include <KWindowSystem>
+@@ -12,6 +13,7 @@
+ 
+ #include <QDateTime>
+ #include <QFileInfo>
++#include <QDir>
+ #include <QGuiApplication>
+ #include <QIcon>
+ #include <QPointer>
+@@ -29,6 +31,13 @@
+ 
+ namespace
+ {
++const WindowsDesktopApp* managedDesktopApp(const QString& exe)
++{
++    const auto* app=windowsDesktopApp(exe);
++    if(!app)return nullptr;
++    const auto expected=QGuiApplication::applicationDirPath()+QLatin1Char('/')+QLatin1String(app->exe);
++    return QDir::cleanPath(QDir::fromNativeSeparators(exe)).compare(expected,Qt::CaseInsensitive)==0?app:nullptr;
++}
+ struct CachedIcon { DWORD pid=0; qint64 time=0; QIcon icon; };
+ QHash<HWND,CachedIcon> iconCache;
+ QIcon iconForWindow(HWND hwnd)
+@@ -121,6 +130,12 @@
+     WindowsWindowTasksModel *const q;
+     QTimer refreshTimer;
+     QList<WId> windows;
++    QHash<WId,DWORD> owners;
++    HWND windowForIndex(const QModelIndex& index) const {
++        if(!index.isValid() || index.model()!=q || index.row()<0 || index.row()>=windows.size())return nullptr;
++        WId id=windows.at(index.row());HWND window=reinterpret_cast<HWND>(id);
++        return windowIdentity(window,owners.value(id)) ? window : nullptr;
++    }
+     WId activeWindow = 0;
+ };
+ 
+@@ -167,6 +182,7 @@
+     }
+     q->beginInsertRows(QModelIndex(), windows.size(), windows.size());
+     windows.append(id);
++    owners.insert(id,pid);
+     q->endInsertRows();
+ }
+ 
+@@ -178,6 +194,7 @@
+     }
+     q->beginRemoveRows(QModelIndex(), idx, idx);
+     windows.removeAt(idx);
++    owners.remove(id);
+     pathCache.remove(id);
+     iconCache.remove(reinterpret_cast<HWND>(id));
+     q->endRemoveRows();
+@@ -217,11 +234,7 @@
+     for (const WId id : all) {
+         DWORD pid = 0;
+         GetWindowThreadProcessId(reinterpret_cast<HWND>(id), &pid);
+-        if (pid != shellPid && !windows.contains(id)) {
+-            q->beginInsertRows(QModelIndex(), windows.size(), windows.size());
+-            windows.append(id);
+-            q->endInsertRows();
+-        }
++        if (pid != shellPid) addWindow(id);
+     }
+     activeWindow = KWindowSystemWindows::activeWindow();
+     refreshData();
+@@ -231,7 +244,7 @@
+ {
+     if (q->rowCount() > 0) {
+         q->dataChanged(q->index(0), q->index(q->rowCount() - 1),
+-            {Qt::DisplayRole,Qt::DecorationRole,AbstractTasksModel::IsActive,
++            {Qt::DisplayRole,Qt::DecorationRole,AbstractTasksModel::IsClosable,AbstractTasksModel::IsMinimizable,AbstractTasksModel::IsMaximizable,AbstractTasksModel::IsActive,
+              AbstractTasksModel::IsMinimized,AbstractTasksModel::IsMaximized,
+              AbstractTasksModel::IsFullScreen,AbstractTasksModel::Geometry,
+              AbstractTasksModel::ScreenGeometry,AbstractTasksModel::StackingOrder});
+@@ -256,7 +269,7 @@
+ 
+ QVariant WindowsWindowTasksModel::data(const QModelIndex &index, int role) const
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
++    if (!d->windowForIndex(index)) {
+         return {};
+     }
+     const WId wid = d->windows.at(index.row());
+@@ -269,7 +282,7 @@
+         return QString::fromWCharArray(buf, len);
+     }
+     case Qt::DecorationRole:
+-        if (const auto *app = windowsDesktopApp(exePathForWindow(wid))) {
++        if (const auto *app = managedDesktopApp(exePathForWindow(wid))) {
+             const QIcon icon = windowsRasterThemeIcon(QLatin1String(app->icon));
+             if (!icon.isNull()) return icon;
+         }
+@@ -278,8 +291,9 @@
+     case AbstractTasksModel::AppName: {
+         const QString exe = exePathForWindow(wid);
+         if (role == AbstractTasksModel::AppId) {
+-            if (const auto *app = windowsDesktopApp(exe)) return QLatin1String(app->desktop);
+-        }
++            if (const auto *app = managedDesktopApp(exe)) return QLatin1String(app->desktop);
++        }
++        if(role == AbstractTasksModel::AppId) return exe.toCaseFolded();
+         return exe.isEmpty() ? QString() : QFileInfo(exe).completeBaseName();
+     }
+     case AbstractTasksModel::GenericName:
+@@ -287,7 +301,7 @@
+     case AbstractTasksModel::LauncherUrl:
+     case AbstractTasksModel::LauncherUrlWithoutIcon: {
+         const QString exe = exePathForWindow(wid);
+-        if (const auto *app = windowsDesktopApp(exe)) return QUrl(QStringLiteral("applications:") + QLatin1String(app->desktop));
++        if (const auto *app = managedDesktopApp(exe)) return QUrl(QStringLiteral("applications:") + QLatin1String(app->desktop));
+         return exe.isEmpty() ? QUrl() : QUrl::fromLocalFile(exe);
+     }
+     case AbstractTasksModel::WinIdList:
+@@ -304,20 +318,22 @@
+     case AbstractTasksModel::IsGroupParent:
+         return false;
+     case AbstractTasksModel::IsGroupable:
+-        return false;
++        // Without reliable per-window AUMIDs, hosted third-party apps must not
++        // acquire a guessed Close All group just because their EXE matches.
++        return managedDesktopApp(exePathForWindow(wid)) != nullptr;
+     case AbstractTasksModel::IsActive:
+         return wid == d->activeWindow;
+     case AbstractTasksModel::IsClosable:
+-        return true;
++        return windowCommandAllowed(hwnd,d->owners.value(wid),SC_CLOSE);
+     case AbstractTasksModel::IsMovable:
+     case AbstractTasksModel::IsResizable:
+         return false;
+     case AbstractTasksModel::IsMaximizable:
+-        return true;
++        return IsZoomed(hwnd) || windowCommandAllowed(hwnd,d->owners.value(wid),SC_MAXIMIZE);
+     case AbstractTasksModel::IsMaximized:
+         return IsZoomed(hwnd) != FALSE;
+     case AbstractTasksModel::IsMinimizable:
+-        return true;
++        return IsIconic(hwnd) || windowCommandAllowed(hwnd,d->owners.value(wid),SC_MINIMIZE);
+     case AbstractTasksModel::IsMinimized:
+         return IsIconic(hwnd) != FALSE;
+     case AbstractTasksModel::IsKeepAbove:
+@@ -349,15 +365,11 @@
+         return QRect(r.left, r.top, r.right - r.left, r.bottom - r.top);
+     }
+     case AbstractTasksModel::ScreenGeometry: {
+-        RECT wnd = {};
+-        GetWindowRect(hwnd, &wnd);
+-        const QPoint physCenter((wnd.left + wnd.right) / 2, (wnd.top + wnd.bottom) / 2);
+-        for (QScreen *screen : QGuiApplication::screens()) {
+-            const QRect phys(screen->geometry().topLeft() * screen->devicePixelRatio(),
+-                             screen->geometry().size() * screen->devicePixelRatio());
+-            if (phys.contains(physCenter)) {
+-                return screen->geometry();
+-            }
++        MONITORINFOEXW monitor {}; monitor.cbSize=sizeof(monitor);
++        if(GetMonitorInfoW(MonitorFromWindow(hwnd,MONITOR_DEFAULTTONEAREST),&monitor)) {
++            const QString device=QString::fromWCharArray(monitor.szDevice);
++            for(QScreen* screen:QGuiApplication::screens())
++                if(screen->name().compare(device,Qt::CaseInsensitive)==0)return screen->geometry();
+         }
+         return {};
+     }
+@@ -395,7 +407,7 @@
+ 
+ void WindowsWindowTasksModel::requestActivate(const QModelIndex &index)
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
++    if (!d->windowForIndex(index)) {
+         return;
+     }
+     const HWND hwnd = reinterpret_cast<HWND>(d->windows.at(index.row()));
+@@ -407,7 +419,7 @@
+ 
+ void WindowsWindowTasksModel::requestNewInstance(const QModelIndex &index)
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
++    if (!d->windowForIndex(index)) {
+         return;
+     }
+     const QString exe = exePathForWindow(d->windows.at(index.row()));
+@@ -418,10 +430,11 @@
+ 
+ void WindowsWindowTasksModel::requestClose(const QModelIndex &index)
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
+-        return;
+-    }
+-    PostMessageW(reinterpret_cast<HWND>(d->windows.at(index.row())), WM_CLOSE, 0, 0);
++    if (!d->windowForIndex(index)) {
++        return;
++    }
++    HWND window=d->windowForIndex(index);
++    requestWindowCommand(window,d->owners.value(d->windows.at(index.row())),SC_CLOSE);
+ }
+ 
+ void WindowsWindowTasksModel::requestMove(const QModelIndex &index)
+@@ -436,20 +449,22 @@
+ 
+ void WindowsWindowTasksModel::requestToggleMinimized(const QModelIndex &index)
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
++    if (!d->windowForIndex(index)) {
+         return;
+     }
+     HWND hwnd = reinterpret_cast<HWND>(d->windows.at(index.row()));
+-    ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_MINIMIZE);
++    requestWindowCommand(hwnd,d->owners.value(d->windows.at(index.row())),IsIconic(hwnd)?SC_RESTORE:SC_MINIMIZE);
++    QTimer::singleShot(100,this,[this]{d->refreshData();});
+ }
+ 
+ void WindowsWindowTasksModel::requestToggleMaximized(const QModelIndex &index)
+ {
+-    if (!index.isValid() || index.row() >= d->windows.count()) {
++    if (!d->windowForIndex(index)) {
+         return;
+     }
+     HWND hwnd = reinterpret_cast<HWND>(d->windows.at(index.row()));
+-    ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
++    requestWindowCommand(hwnd,d->owners.value(d->windows.at(index.row())),IsZoomed(hwnd)||IsIconic(hwnd)?SC_RESTORE:SC_MAXIMIZE);
++    QTimer::singleShot(100,this,[this]{d->refreshData();});
+ }
+ 
+ void WindowsWindowTasksModel::requestToggleKeepAbove(const QModelIndex &index)
+diff --git a/libtaskmanager/windowswindowactions.h b/libtaskmanager/windowswindowactions.h
+new file mode 100644
+--- /dev/null
++++ b/libtaskmanager/windowswindowactions.h
+@@ -0,0 +1,23 @@
++// SPDX-License-Identifier: LGPL-2.1-or-later
++#pragma once
++#include <windows.h>
++namespace TaskManager {
++inline bool windowIdentity(HWND window,DWORD expected)
++{
++    DWORD pid=0;return expected && IsWindow(window) && GetWindowThreadProcessId(window,&pid) && pid==expected;
++}
++inline bool windowCommandAllowed(HWND window,DWORD expected,UINT command)
++{
++    if(!windowIdentity(window,expected))return false;
++    const auto style=GetWindowLongPtrW(window,GWL_STYLE);
++    if(command==SC_MINIMIZE && !(style&WS_MINIMIZEBOX))return false;
++    if(command==SC_MAXIMIZE && !(style&WS_MAXIMIZEBOX))return false;
++    if(command==SC_RESTORE && !IsIconic(window) && !IsZoomed(window))return false;
++    const UINT flags=GetMenuState(GetSystemMenu(window,FALSE),command,MF_BYCOMMAND);
++    return (style&WS_SYSMENU) && flags!=UINT(-1) && !(flags&(MF_DISABLED|MF_GRAYED));
++}
++inline bool requestWindowCommand(HWND window,DWORD expected,UINT command)
++{
++    return windowCommandAllowed(window,expected,command) && PostMessageW(window,WM_SYSCOMMAND,command,0);
++}
++}
+diff --git a/libtaskmanager/windowsdesktopapps.h b/libtaskmanager/windowsdesktopapps.h
+--- a/libtaskmanager/windowsdesktopapps.h
++++ b/libtaskmanager/windowsdesktopapps.h
+@@ -9,6 +9,7 @@
+ namespace TaskManager {
+ struct WindowsDesktopApp { const char *exe; const char *desktop; const char *icon; };
+ inline constexpr WindowsDesktopApp windowsDesktopApps[] = {
++    {"plasma-desktop-tools.exe", "org.nixbridge.desktoptools.desktop", "edit-paste"},
+     {"plasma-archive-manager.exe", "org.nixbridge.archive.desktop", "utilities-file-archiver"},
+     {"konsole.exe", "org.kde.konsole.desktop", "utilities-terminal"},
+     {"dolphin.exe", "org.kde.dolphin.desktop", "system-file-manager"},

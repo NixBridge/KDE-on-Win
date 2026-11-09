@@ -10,9 +10,10 @@ class NotificationRelay : public QObject
     Q_OBJECT
 public:
     explicit NotificationRelay(QObject *parent = nullptr, const QDBusConnection &bus = QDBusConnection::sessionBus());
+    ~NotificationRelay() override;
     void publish(const QString &key, const QString &app, const QString &title, const QString &body,
                  const QString &icon = QStringLiteral("dialog-information"), bool clickable = false,
-                 uchar urgency = 1, int timeout = -1);
+                 uchar urgency = 1, int timeout = 8000);
     void withdraw(const QString &key);
 Q_SIGNALS:
     void delivered(const QString &key);
@@ -28,10 +29,12 @@ private:
         uint id = 0;
         bool clickable = false, busy = false, dirty = false, active = true;
         uchar urgency = 1;
-        int timeout = -1;
+        int timeout = 8000;
+        quint64 generation = 0;
     };
     void send(const QSharedPointer<Entry> &entry);
     void close(uint id);
+    quint64 m_generation = 1;
     QDBusConnection m_bus;
     QHash<QString, QSharedPointer<Entry>> m_entries;
     QHash<uint, QString> m_ids;
