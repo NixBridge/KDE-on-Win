@@ -15,4 +15,6 @@ with tempfile.TemporaryDirectory(prefix='settings-parser-',dir=root/'work') as f
         script=script.replace('%1',"'00000000-0000-0000-0000-000000000001:1'='"+'a'*64+"'")
         source=folder/f'update-{index}.ps1';source.write_text(script,encoding='utf-8')
         subprocess.run(['powershell.exe','-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(driver),'-Source',str(source)],capture_output=True,check=True)
-print('PASS: update discovery/installation script syntax; no update APIs executed.')
+    for source in [root/'runtime/start-window-decorations-admin.ps1', root/'runtime/install-file-associations.ps1']:
+        subprocess.run(['powershell.exe','-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(driver),'-Source',str(source)],capture_output=True,check=True)
+print('PASS: update, elevated-decoration and association script syntax; no APIs or installation scripts executed.')

@@ -200,7 +200,8 @@ int main(int argc, char** argv)
     panel->addStretch();
     bool waitingForApply = false;
     auto applyPending = [&] {
-        if(app.arguments().contains(QStringLiteral("--ui-smoke-test")))return;
+        if (app.arguments().contains(QStringLiteral("--ui-smoke-test")))
+            return;
         settings.remove("personalizationError");
         settings.setValue(
             QStringLiteral("personalizationRevision"), QUuid::createUuid().toString(QUuid::WithoutBraces));
@@ -390,6 +391,12 @@ int main(int argc, char** argv)
             { "/c",
                 QDir::toNativeSeparators(
                     QCoreApplication::applicationDirPath() + "/../install-file-associations.cmd") });
+    });
+    auto* linkChooser = new QPushButton(QObject::tr("Configure KDE link chooser…"));
+    support->addWidget(linkChooser);
+    QObject::connect(linkChooser, &QPushButton::clicked, &window, [] {
+        QProcess::startDetached(
+            QCoreApplication::applicationDirPath() + "/plasma-open-with.exe", { "--configure-defaults" });
     });
     auto* archiveDefault = new QPushButton(QObject::tr("Choose protected archive default (Open With)…"));
     support->addWidget(archiveDefault);

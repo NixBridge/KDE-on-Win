@@ -16,6 +16,9 @@
 #include <QFontMetrics>
 #include <QAbstractNativeEventFilter>
 #include <QDBusConnection>
+#include <QDBusInterface>
+#include <QEventLoop>
+#include <QElapsedTimer>
 #include <KIconTheme>
 #include <KIconLoader>
 #include <windows.h>
@@ -365,13 +368,24 @@ private:
 };
 
 class Decorations final : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.nixbridge.WindowDecorations")
 public:
-    Decorations()
+    explicit Decorations(HWND hiddenFixture = nullptr)
+        : fixture(hiddenFixture)
     {
+        if (fixture)
+            return; // Tests may attach only this hidden, test-owned HWND.
         instance = this;
         locationHook = SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, nullptr, event, 0, 0,
             WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
         foregroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr, event, 0, 0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+        showHook = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, nullptr, event, 0, 0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+        dialogHook = SetWinEventHook(EVENT_SYSTEM_DIALOGSTART, EVENT_SYSTEM_DIALOGSTART, nullptr, event, 0, 0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+        destroyHook = SetWinEventHook(EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY, nullptr, event, 0, 0,
             WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
         connect(&timer, &QTimer::timeout, this, [this] { sweep(); });
         timer.start(1500);
@@ -379,7 +393,11 @@ public:
     }
     ~Decorations() override
     {
-        instance = nullptr;
+        if (!fixture)
+            instance = nullptr;
+        for (auto hook : { showHook, dialogHook, destroyHook })
+            if (hook)
+                UnhookWinEvent(hook);
         if (locationHook)
             UnhookWinEvent(locationHook);
         if (foregroundHook)
@@ -387,7 +405,41 @@ public:
         qDeleteAll(bars);
     }
 
+    void observe(HWND target)
+    {
+        if (!target || (fixture && target != fixture) || pending.contains(target))
+            return;
+        pending.insert(target);
+        // SHOW/FOREGROUND may precede final frame geometry. Retry only this
+        // candidate briefly instead of waiting for the 1.5-second full sweep.
+        tryCandidate(target, 0);
+    }
+    bool tracks(HWND target) const { return bars.contains(target); }
+public Q_SLOTS:
+    void Quit() { QCoreApplication::quit(); }
+
 private:
+    void tryCandidate(HWND target, int attempt)
+    {
+        QTimer::singleShot(attempt ? 25 : 0, this, [this, target, attempt] {
+            if (!pending.contains(target))
+                return;
+            QSettings preferences(appearanceSettingsPath(), QSettings::IniFormat);
+            const bool enabled = preferences.value("decorateWindows", true).toBool();
+            if (enabled && IsWindow(target) && standardCaption(target, target == fixture)) {
+                auto& bar = bars[target];
+                if (!bar)
+                    bar = new Caption(target);
+                bar->updateCaption();
+                pending.remove(target);
+            } else if (enabled && IsWindow(target) && attempt < 3) {
+                tryCandidate(target, attempt + 1);
+            } else {
+                pending.remove(target);
+            }
+        });
+    }
+
     void sweep()
     {
         QSettings settings(appearanceSettingsPath(), QSettings::IniFormat);
@@ -423,7 +475,12 @@ private:
     {
         if (!instance)
             return;
-        if (type == EVENT_OBJECT_LOCATIONCHANGE && object == OBJID_WINDOW) {
+        if ((type == EVENT_OBJECT_SHOW && object == OBJID_WINDOW) || type == EVENT_SYSTEM_DIALOGSTART) {
+            instance->observe(target);
+        } else if (type == EVENT_OBJECT_DESTROY && object == OBJID_WINDOW) {
+            instance->pending.remove(target);
+            delete instance->bars.take(target);
+        } else if (type == EVENT_OBJECT_LOCATIONCHANGE && object == OBJID_WINDOW) {
             if (auto* bar = instance->bars.value(target))
                 bar->updateCaption();
         } else if (type == EVENT_SYSTEM_FOREGROUND) {
@@ -432,6 +489,7 @@ private:
             if (auto* current = instance->bars.value(target))
                 current->updateCaption();
             instance->lastForeground = target;
+            instance->observe(target);
         }
     }
     static inline Decorations* instance = nullptr;
@@ -439,6 +497,9 @@ private:
     QTimer timer;
     HWINEVENTHOOK locationHook = nullptr, foregroundHook = nullptr;
     HWND lastForeground = nullptr;
+    HWND fixture = nullptr;
+    QSet<HWND> pending;
+    HWINEVENTHOOK showHook = nullptr, dialogHook = nullptr, destroyHook = nullptr;
 };
 static LRESULT CALLBACK fixtureProcedure(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
@@ -469,6 +530,17 @@ int main(int argc, char** argv)
             300, nullptr, nullptr, module, nullptr);
         bool ok = native && custom && standardCaption(native, true) && !standardCaption(custom, true);
         if (native) {
+            {
+                Decorations rapid(native);
+                QElapsedTimer elapsed;
+                elapsed.start();
+                rapid.observe(native);
+                rapid.observe(native); // Coalesce duplicate SHOW/FOREGROUND events.
+                QEventLoop loop;
+                QTimer::singleShot(150, &loop, &QEventLoop::quit);
+                loop.exec();
+                ok &= rapid.tracks(native) && elapsed.elapsed() < 500;
+            }
             Caption nativeBar(native);
             ok &= nativeBar.minimizesInstantly();
             RECT visible {};
@@ -503,15 +575,27 @@ int main(int argc, char** argv)
             DestroyWindow(custom);
         UnregisterClassW(klass.lpszClassName, module);
         QTextStream(stdout) << (ok ? "PASS" : "FAIL")
-                            << ": physical full-caption bounds, instant-transition policy, minimized tracking, restore "
+                            << ": event-driven caption attachment, physical full-caption bounds, instant-transition "
+                               "policy, minimized tracking, restore "
                                "button and custom-caption exclusion on hidden "
                                "test-owned windows\n";
         return ok ? 0 : 1;
     }
     auto bus = QDBusConnection::sessionBus();
-    if (!bus.registerService(QStringLiteral("org.nixbridge.WindowDecorations")))
+    bool registered = bus.registerService(QStringLiteral("org.nixbridge.WindowDecorations"));
+    if (!registered && app.arguments().contains(QStringLiteral("--replace"))) {
+        QDBusInterface previous(QStringLiteral("org.nixbridge.WindowDecorations"), QStringLiteral("/Decorations"),
+            QStringLiteral("org.nixbridge.WindowDecorations"), bus);
+        previous.call(QStringLiteral("Quit"));
+        for (int retry = 0; retry < 20 && !registered; ++retry) {
+            Sleep(25);
+            registered = bus.registerService(QStringLiteral("org.nixbridge.WindowDecorations"));
+        }
+    }
+    if (!registered)
         return 1;
     Decorations decorations;
+    bus.registerObject(QStringLiteral("/Decorations"), &decorations, QDBusConnection::ExportAllSlots);
     return app.exec();
 }
 

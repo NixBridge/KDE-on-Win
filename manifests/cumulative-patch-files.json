@@ -255,6 +255,7 @@
     "bin/plasma-archive-manager.exe",
     "bin/plasma-kde-launcher.exe",
     "bin/plasma-notification-bridge.exe",
+    "bin/plasma-open-with.exe",
     "bin/plasma-personalization.exe",
     "bin/plasma-process-monitor.exe",
     "bin/plasma-system-settings.exe",
@@ -580,6 +581,11 @@
     "docs/FIX13.md": "docs/FIX13.md",
     "docs/FIX14.md": "docs/FIX14.md",
     "docs/FIX15.md": "docs/FIX15.md",
-    "docs/FIX16.md": "docs/FIX16.md"
+    "docs/FIX16.md": "docs/FIX16.md",
+    "start-window-decorations-admin.cmd": "runtime/start-window-decorations-admin.cmd",
+    "start-window-decorations-admin.ps1": "runtime/start-window-decorations-admin.ps1",
+    "configure-kde-link-chooser.cmd": "runtime/configure-kde-link-chooser.cmd",
+    "docs/FIX17.md": "docs/FIX17.md",
+    "docs/STYLE_SCOPE.md": "docs/STYLE_SCOPE.md"
   }
 }

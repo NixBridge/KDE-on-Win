@@ -37,12 +37,28 @@ foreach($extension in $extensions){
 Add-Value 'Software\NixBridge\KDE-on-Win\Capabilities' 'ApplicationName' 'KDE Archive Manager'
 Add-Value 'Software\NixBridge\KDE-on-Win\Capabilities' 'ApplicationDescription' 'Open ZIP, 7z and TAR archives in KDE-on-Win'
 Add-Value 'Software\RegisteredApplications' 'KDE-on-Win Archive Manager' 'Software\NixBridge\KDE-on-Win\Capabilities'
+$chooser=Join-Path $CraftRoot 'bin\plasma-open-with.exe'
+if(-not (Test-Path -LiteralPath $chooser -PathType Leaf)){throw "Missing application chooser: $chooser"}
+$choice='NixBridge.KDEOpenWith'
+$choiceCommand='"'+$chooser+'" "%1"'
+Add-Value "$classes\$choice" '' 'KDE Application Chooser'
+Add-Value "$classes\$choice" 'URL Protocol' ''
+Add-Value "$classes\$choice\shell\open\command" '' $choiceCommand
+Add-Value "$classes\mailto" '' 'URL:MailTo Protocol'
+Add-Value "$classes\mailto" 'URL Protocol' ''
+Add-Value "$classes\mailto\shell\open\command" '' $choiceCommand
+Add-Value "$classes\*\shell\nixbridge-kde-open-with" '' 'Open with KDE...'
+Add-Value "$classes\*\shell\nixbridge-kde-open-with\command" '' $choiceCommand
+Add-Value 'Software\NixBridge\KDEOpenWith\Capabilities' 'ApplicationName' 'KDE Application Chooser'
+Add-Value 'Software\NixBridge\KDEOpenWith\Capabilities' 'ApplicationDescription' 'Choose applications for links using KDE-on-Win'
+Add-Value 'Software\NixBridge\KDEOpenWith\Capabilities\URLAssociations' 'mailto' $choice
+Add-Value 'Software\RegisteredApplications' 'KDE-on-Win Application Chooser' 'Software\NixBridge\KDEOpenWith\Capabilities'
 if($Plan){$changes | ConvertTo-Json -Depth 5;return}
 $state=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'plasma-win-session'
 [IO.Directory]::CreateDirectory($state)|Out-Null
 $backupPath=Join-Path $state 'file-associations-backup.json'
 $marker=Join-Path $state 'file-associations-version.txt'
-$signature=$CraftRoot.ToUpperInvariant()+'#2'
+$signature=$CraftRoot.ToUpperInvariant()+'#3'
 if(-not $Restore -and $IfNeeded -and (Test-Path -LiteralPath $marker) -and ([IO.File]::ReadAllText($marker) -ceq $signature)){return}
 $records=[Collections.Generic.List[object]]::new()
 if(Test-Path -LiteralPath $backupPath){foreach($r in @(Get-Content -LiteralPath $backupPath -Raw | ConvertFrom-Json)){$records.Add($r)}}

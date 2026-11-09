@@ -1454,6 +1454,7 @@
         <source>Apply language and reopen Settings</source>
         <translation>应用语言并重新打开系统设置</translation>
     </message>
+<message><source>Configure KDE link chooser…</source><translation>配置 KDE 链接应用选择器…</translation></message>
 </context>
 <context>
     <name>WindowChrome</name>

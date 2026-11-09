@@ -84,9 +84,10 @@ int main(int argc, char** argv)
         }
         return config->sync() ? 0 : 1;
     }
-    const QHash<QString, QString> programs { { "archive", "plasma-archive-manager.exe" }, { "konsole", "konsole.exe" },
-        { "dolphin", "dolphin.exe" }, { "process-monitor", "plasma-process-monitor.exe" },
-        { "text-editor", "plasma-text-editor.exe" }, { "system-settings", "plasma-system-settings.exe" } };
+    const QHash<QString, QString> programs { { "open-with", "plasma-open-with.exe" },
+        { "archive", "plasma-archive-manager.exe" }, { "konsole", "konsole.exe" }, { "dolphin", "dolphin.exe" },
+        { "process-monitor", "plasma-process-monitor.exe" }, { "text-editor", "plasma-text-editor.exe" },
+        { "system-settings", "plasma-system-settings.exe" } };
     const QString program = programs.value(args.value(1));
     if (program.isEmpty())
         return 2;

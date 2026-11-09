@@ -11,6 +11,8 @@ records=json.loads(p.stdout.decode('utf-8'))
 assert not any('UserChoice' in r['Path'] for r in records)
 commands=[r['Value'] for r in records if r['Path'].endswith('nixbridge-dolphin\\command') and r['Name']=='']
 assert len(commands)==3
+assert any(r['Path'].endswith('KDEOpenWith\\Capabilities\\URLAssociations') and r['Name']=='mailto' and r['Value']=='NixBridge.KDEOpenWith' for r in records)
+assert any(r['Path']=='Software\\Classes\\mailto\\shell\\open\\command' and 'plasma-open-with.exe' in r['Value'] for r in records)
 for kind in ['Directory','Drive','Folder']:
     for verb in ['nixbridge-dolphin','open','explore','opennewwindow','opennewprocess']:
         key='Software\\Classes\\'+kind+'\\shell\\'+verb+'\\command'
