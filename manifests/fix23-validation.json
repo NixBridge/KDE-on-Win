@@ -1,0 +1,35 @@
+{
+  "build": "x64 desktop tools and project translations only",
+  "checks": [
+    {
+      "name": "desktop-tools --self-test",
+      "exit": 0
+    },
+    {
+      "name": "desktop-tools --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "desktop-tools --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_cumulative_contract.py",
+      "exit": 0
+    }
+  ],
+  "package": {
+    "archive": "F:\\Projects\\KDE on Win\\dist\\20261110-fix23\\plasma-windows-20261110-fix23.zip",
+    "bytes": 30142925,
+    "sha256": "bb1aa329d8f74de9d48ab0ee067c01c9b318c0ff18019507180f84fc39a278db",
+    "cumulative_runtime_files": 615
+  },
+  "package_crc_and_all_sources_verified": true,
+  "fix22_entries_retained": true,
+  "real_vm_tested": false,
+  "live_clipboard_or_hotkeys_tested": false
+}

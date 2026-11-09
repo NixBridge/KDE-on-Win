@@ -615,6 +615,7 @@
     "start-desktop-tools.cmd": "runtime/start-desktop-tools.cmd",
     "plasma-shell.cmd": "upstream/plasma-windows/tools/plasma-shell.cmd",
     "docs/FIX22.md": "docs/FIX22.md",
-    "fix22-source-verification.json": "manifests/fix22-source-verification.json"
+    "fix22-source-verification.json": "manifests/fix22-source-verification.json",
+    "docs/FIX23.md": "docs/FIX23.md"
   }
 }

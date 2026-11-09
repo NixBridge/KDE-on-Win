@@ -93,6 +93,9 @@ public:
         items = new QListWidget(body);
         items->setAccessibleName(tr("Clipboard history"));
         layout->addWidget(items, 1);
+        emptyHint = new QLabel;
+        emptyHint->setWordWrap(true);
+        layout->addWidget(emptyHint);
         auto* buttons = new QHBoxLayout;
         layout->addLayout(buttons);
         auto* use = new QPushButton(tr("Copy selected"));
@@ -100,6 +103,8 @@ public:
         copyButton->setEnabled(false);
         connect(items, &QListWidget::currentRowChanged, this, [this](int row) { copyButton->setEnabled(row >= 0); });
         auto* clear = new QPushButton(tr("Clear history"));
+        clearButton = clear;
+        clear->setEnabled(false);
         buttons->addWidget(use);
         buttons->addWidget(clear);
         connect(use, &QPushButton::clicked, this, [this] { select(); });
@@ -222,14 +227,17 @@ public:
         }
         if (command == "clipboard" || command == "settings") {
             ++requests;
-            refresh();
+            refresh(true);
             if (isMinimized())
                 showNormal();
             else
                 show();
             raise();
             activateWindow();
-            items->setFocus();
+            if (command == "settings")
+                hotkeys->setFocus();
+            else
+                items->setFocus();
         } else if (command == "dolphin")
             launch("dolphin", {});
         else if (command == "desktop") {
@@ -249,11 +257,29 @@ public:
     }
     bool uiTest()
     {
+        history.clear();
+        refresh();
+        bool ok = items->count() == 0 && !clearButton->isEnabled() && !copyButton->isEnabled()
+            && !emptyHint->isHidden();
         QMimeData data;
         data.setText(QStringLiteral("中文 clipboard fixture"));
         history.capture(&data);
         refresh();
-        bool ok = items->count() == 1 && items->item(0)->data(Qt::UserRole).toString() == data.text();
+        ok &= clearButton->isEnabled() && emptyHint->isHidden() && items->count() == 1
+            && items->item(0)->data(Qt::UserRole).toString() == data.text();
+        hide();
+        data.setText("hidden fixture");
+        history.capture(&data);
+        refresh();
+        ok &= items->count() == 1; // Hidden capture does not rebuild the list.
+        show();
+        ok &= items->count() == 2; // Native reopening also refreshes without IPC.
+        dispatch("settings");
+        QCoreApplication::processEvents();
+        ok &= items->count() == 2 && focusWidget() == hotkeys;
+        dispatch("clipboard");
+        ok &= focusWidget() == items;
+        requests = 0;
         MSG session {};
         session.message = WM_QUERYENDSESSION;
         qintptr result = 0;
@@ -297,6 +323,13 @@ public:
         save("clipboardHistoryLimit", 12);
         ok &= preferenceError && QFileInfo(blocked).isDir();
         qputenv("KDE_ON_WIN_SETTINGS", originalSettings);
+        shortcutStatus = "fixture shortcuts";
+        save("clipboardHistoryLimit", 20);
+        ok &= !preferenceError && status->text() == shortcutStatus;
+        history.setEnabled(false);
+        refresh();
+        ok &= !clearButton->isEnabled() && !copyButton->isEnabled() && !emptyHint->isHidden()
+            && emptyHint->text() == tr("Text history is disabled.");
         QLocalSocket stop;
         stop.connectToServer(pipe);
         if (!stop.waitForConnected(1000))
@@ -310,6 +343,11 @@ public:
     }
 
 protected:
+    void showEvent(QShowEvent* event) override
+    {
+        QMainWindow::showEvent(event);
+        refresh(true);
+    }
     void closeEvent(QCloseEvent* event) override
     {
         hide();
@@ -358,8 +396,13 @@ private:
         prefs.setValue(key, value);
         prefs.sync();
         preferenceError = prefs.status() != QSettings::NoError;
-        if (preferenceError)
-            status->setText(tr("Settings could not be read or saved. Changes may last only for this run."));
+        updateStatus();
+    }
+    void updateStatus()
+    {
+        status->setText(preferenceError
+                ? tr("Settings could not be read or saved. Changes may last only for this run.")
+                : shortcutStatus);
     }
     void launch(const QString& role, const QStringList& args)
     {
@@ -368,8 +411,15 @@ private:
             QMessageBox::warning(
                 this, tr("Cannot start application"), tr("The KDE launcher is missing or could not be started."));
     }
-    void refresh()
+    void refresh(bool force = false)
     {
+        if (!force && !isVisible())
+            return;
+        emptyHint->setText(history.enabled
+                ? tr("No text history yet. Copy text to add it here.")
+                : tr("Text history is disabled."));
+        emptyHint->setVisible(history.entries.isEmpty());
+        clearButton->setEnabled(!history.entries.isEmpty());
         const QString selected = items->currentItem() ? items->currentItem()->data(Qt::UserRole).toString() : QString();
         items->clear();
         for (const auto& text : history.entries) {
@@ -411,12 +461,11 @@ private:
             else
                 failed.append(keys[i]);
         }
-        status->setText(failed.isEmpty()
+        shortcutStatus = failed.isEmpty()
                 ? tr("Shortcuts registered.")
                 : tr("Shortcuts unavailable: %1. Choose the alternate modifiers or use the menu.")
-                      .arg(failed.join('/')));
-        if (preferenceError)
-            status->setText(tr("Settings could not be read or saved. Changes may last only for this run."));
+                      .arg(failed.join('/'));
+        updateStatus();
     }
     QString pipe = channel();
     bool preferenceError = false;
@@ -426,6 +475,9 @@ private:
     ClipboardHistory history;
     DesktopToggle desktop;
     QLocalServer server;
+    QString shortcutStatus;
+    QLabel* emptyHint = nullptr;
+    QPushButton* clearButton = nullptr;
     QPushButton* copyButton = nullptr;
     QListWidget* items;
     QComboBox* hotkeys;

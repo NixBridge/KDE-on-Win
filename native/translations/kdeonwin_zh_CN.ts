@@ -1667,5 +1667,13 @@
         <source>Settings could not be read or saved. Changes may last only for this run.</source>
         <translation>无法读取或保存配置，更改可能仅在本次运行有效。</translation>
     </message>
+    <message>
+        <source>No text history yet. Copy text to add it here.</source>
+        <translation>暂无文本历史，复制文本后将在此显示。</translation>
+    </message>
+    <message>
+        <source>Text history is disabled.</source>
+        <translation>文本历史记录已关闭。</translation>
+    </message>
 </context>
 </TS>

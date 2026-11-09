@@ -53,6 +53,7 @@ for relative, source in sources.items():
     'Fix20 adds editor find/replace, line navigation, wrap/zoom and process-monitor pause/manual refresh. See docs/FIX20.md.\n'
     'Fix21 repairs startup overlay omissions, session handle inheritance, tray teardown/protocol bounds, notification callback lifetime and COM cleanup. See docs/FIX21.md.\n'
     'Fix22 adds desktop menu tools, taskbar command/grouping fixes, fullscreen panel priority, safe shortcut alternatives and in-memory clipboard history. Session restore is not implemented or enabled. See docs/FIX22.md.\n'
+    'Fix23 improves desktop-tools focus, empty-history feedback, hidden refresh and settings-error recovery. See docs/FIX23.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:
