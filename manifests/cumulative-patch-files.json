@@ -616,6 +616,17 @@
     "plasma-shell.cmd": "upstream/plasma-windows/tools/plasma-shell.cmd",
     "docs/FIX22.md": "docs/FIX22.md",
     "fix22-source-verification.json": "manifests/fix22-source-verification.json",
-    "docs/FIX23.md": "docs/FIX23.md"
+    "docs/FIX23.md": "docs/FIX23.md",
+    "bin/data/dbus-1/services/org.kde.KSplash.service": "runtime/portable/bin/data/dbus-1/services/org.kde.KSplash.service",
+    "bin/data/dbus-1/services/org.kde.plasma.Notifications.service": "runtime/portable/bin/data/dbus-1/services/org.kde.plasma.Notifications.service",
+    "bin/data/applications/org.kde.plasmashell.desktop": "runtime/portable/bin/data/applications/org.kde.plasmashell.desktop",
+    "bin/data/applications/org.kde.knighttimed.desktop": "runtime/portable/bin/data/applications/org.kde.knighttimed.desktop",
+    "etc/xdg/autostart/org.kde.plasmashell.desktop": "runtime/portable/etc/xdg/autostart/org.kde.plasmashell.desktop",
+    "bin/data/kglobalaccel/org.kde.krunner.desktop": "runtime/portable/bin/data/kglobalaccel/org.kde.krunner.desktop",
+    "bin/data/dbus-1/session.conf": "runtime/portable/bin/data/dbus-1/session.conf",
+    "dbus-session-plasma.conf": "upstream/plasma-windows/tools/dbus/session-plasma.conf",
+    "write-session-menu.ps1": "upstream/plasma-windows/tools/write-session-menu.ps1",
+    "VM-TEST.txt": "runtime/VM-TEST.txt",
+    "docs/FIX24.md": "docs/FIX24.md"
   }
 }

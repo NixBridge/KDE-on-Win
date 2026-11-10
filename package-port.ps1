@@ -56,10 +56,18 @@ foreach ($name in 'bin', 'lib', 'plugins', 'qml', 'share', 'etc', 'translations'
     }
 }
 $tools = Join-Path $PSScriptRoot 'upstream\plasma-windows\tools'
-foreach ($name in 'deploy-vm.cmd', 'session-shell.cmd', 'plasma-common.cmd', 'plasma-shell.cmd', 'switch-shell.cmd', 'shell-registry.ps1', 'build-startmenu-desktops.ps1', 'vm-diagnostics.cmd') {
+foreach ($name in 'deploy-vm.cmd', 'session-shell.cmd', 'plasma-common.cmd', 'plasma-shell.cmd', 'switch-shell.cmd', 'shell-registry.ps1', 'build-startmenu-desktops.ps1', 'vm-diagnostics.cmd', 'write-session-menu.ps1') {
     Copy-Item -LiteralPath (Join-Path $tools $name) -Destination $stage
 }
-[IO.File]::WriteAllText((Join-Path $stage 'VM-TEST.txt'), "Extract this archive to D:\KDE\CraftRoot in the test VM, or C:\KDE\CraftRoot with drive D: available for a temporary SUBST mapping. Run deploy-vm.cmd with no arguments for a manual session. Optionally run run-vm-probe.cmd to check the window backend; results are written to bin\kws-probe-result.txt. Save logs before changing the login shell. This build has not passed VM acceptance yet.", [Text.UTF8Encoding]::new($false))
+# Publish portable launch metadata over the build-prefix versions.
+$portable = Join-Path $PSScriptRoot 'runtime\portable'
+foreach ($file in Get-ChildItem -LiteralPath $portable -Recurse -File) {
+    $relative = $file.FullName.Substring($portable.Length + 1)
+    $target = Join-Path $stage $relative
+    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($target)) | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $target -Force
+}
+[IO.File]::WriteAllText((Join-Path $stage 'VM-TEST.txt'), "Extract this archive to any local directory in the test VM, including paths with spaces or Chinese characters. Keep the package directory structure intact. No D: drive or SUBST mapping is required. Run deploy-vm.cmd with no arguments for a manual session. Optionally run run-vm-probe.cmd to check the window backend; results are written to bin\kws-probe-result.txt. Save logs before changing the login shell. This build has not passed VM acceptance yet.", [Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $tools 'dbus\session-plasma.conf') -Destination (Join-Path $stage 'dbus-session-plasma.conf')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\source-verification.json') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\extra-source-verification.json') -Destination $stage

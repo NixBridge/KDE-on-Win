@@ -26,8 +26,10 @@ rem ---------------------------------------------------------------------------
 rem :pc_resolve_root - set CRAFT_ROOT to this script's folder
 rem ---------------------------------------------------------------------------
 :pc_resolve_root
-if "%CRAFT_ROOT%"=="" set "CRAFT_ROOT=%~dp0"
-if "%CRAFT_ROOT:~-1%"=="\" set "CRAFT_ROOT=%CRAFT_ROOT:~0,-1%"
+rem A packaged runtime wins over stale inherited developer environment variables.
+if exist "%~dp0bin\plasmashell.exe" set "CRAFT_ROOT=%~dp0"
+if not defined CRAFT_ROOT set "CRAFT_ROOT=%~dp0"
+for %%P in ("%CRAFT_ROOT%\.") do set "CRAFT_ROOT=%%~fP"
 set "CRAFT_BIN=%CRAFT_ROOT%\bin"
 set "CRAFT_DATA=%CRAFT_ROOT%\bin\data"
 exit /b 0
@@ -75,24 +77,8 @@ rem :pc_write_menu - write %LOCALAPPDATA%\menus\applications.menu
 rem ---------------------------------------------------------------------------
 :pc_write_menu
 call :pc_resolve_root
-if not exist "%LOCALAPPDATA%\menus" mkdir "%LOCALAPPDATA%\menus"
-rem No DOCTYPE line: cmd eats the '!' of "<!DOCTYPE" under delayed
-rem expansion, producing "<DOCTYPE ..." which kf.service.sycoca rejects
-rem ("Expected '=', got '[a-zA-Z]'" at line 1). The DTD is not needed.
-(
-    echo ^<Menu^>
-    echo   ^<Name^>Applications^</Name^>
-    echo   ^<Directory^>applications.directory^</Directory^>
-    echo   ^<AppDir^>%LOCALAPPDATA:\=/%/applications^</AppDir^>
-    echo   ^<AppDir^>%CRAFT_DATA:\=/%/applications^</AppDir^>
-    echo   ^<DefaultDirectoryDirs/^>
-    echo   ^<DefaultMergeDirs/^>
-    echo   ^<Include^>
-    echo     ^<All/^>
-    echo   ^</Include^>
-    echo ^</Menu^>
-) > "%LOCALAPPDATA%\menus\applications.menu"
-exit /b 0
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0write-session-menu.ps1"
+exit /b %errorlevel%
 
 rem ---------------------------------------------------------------------------
 rem :pc_rebuild_ksycoca - rebuild the KService database

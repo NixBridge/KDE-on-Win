@@ -1,0 +1,35 @@
+{
+  "scope": "runtime path relocation; no native source changes or recompilation",
+  "checks": [
+    "runtime bootstrap and nonmutating association plan, Unicode/space/&/parentheses/! paths",
+    "private D-Bus service discovery, original and relocated binaries",
+    "cumulative contract",
+    "settings scripts syntax",
+    "modified PowerShell scripts syntax",
+    "qtpaths6 --query QT_INSTALL_PREFIX",
+    "qml-import-probe ",
+    "qml-import-probe --check-startmenu-model",
+    "plasma-desktop-tools --self-test",
+    "plasma-desktop-tools --ui-smoke-test",
+    "relocated desktop protocol, private D-Bus"
+  ],
+  "all_checks_passed": true,
+  "cumulative": {
+    "archive": "F:\\Projects\\KDE on Win\\dist\\20261110-fix24\\plasma-windows-20261110-fix24.zip",
+    "bytes": 30153153,
+    "sha256": "046d35c90179a2d9af707c040c06d1a569fb2c4c2f0441359e22810e854cf71c",
+    "cumulative_runtime_files": 626
+  },
+  "complete": {
+    "archive": "F:\\Projects\\KDE on Win\\dist\\20261110-fix24\\plasma-windows-vm-fix24-complete.zip",
+    "bytes": 1410212921,
+    "sha256": "9160794da15a19978a437ff6b6a4ea7b7da6ca602a781a52fa200a4d89805360"
+  },
+  "all_cumulative_sources_verified": 626,
+  "fix23_entries_retained": true,
+  "complete_crc_and_overlay_verified": true,
+  "relocated_test_binaries_match_final_complete_package": true,
+  "no_live_desktop_session_or_shell_installation": true,
+  "vm_acceptance": false,
+  "note": "KIO probe used private D-Bus; its fixture-owned children were explicitly cleaned. No native registry associations changed. No full regression rebuild/run."
+}

@@ -90,6 +90,8 @@ for command in [['python', 'tests/test_archive_worker.py'],
  ['python', 'tests/test_settings_scripts.py'],
  ['python', 'tests/test_session_log_fallback.py'],
  ['python', 'tests/test_cumulative_contract.py'],
+ ['python', 'tests/test_runtime_relocation.py'],
+ ['python', 'tests/test_dbus_relocation.py'],
  ['python', 'tests/test_msvc_deps.py']]:
     if command[0] == 'python':
         command[0] = sys.executable

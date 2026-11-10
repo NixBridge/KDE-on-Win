@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions DisableDelayedExpansion
 rem ===========================================================================
 rem deploy-vm.cmd - one-shot deployment + session start inside the test VM
 rem
@@ -42,19 +42,8 @@ if not "%ACTION%"=="" if /i not "%ACTION%"=="install" if /i not "%ACTION%"=="res
 
 if /i "%ACTION%"=="restore" goto :restore_shell
 
-rem Resolve the compiled prefix without delayed expansion of user paths.
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    for %%P in ("%CRAFT_ROOT%\..\..") do (
-        if exist "%%~fP\KDE\CraftRoot\bin\plasmashell.exe" subst D: "%%~fP" >nul 2>&1
-    )
-)
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    echo ERROR: extract to D:\KDE\CraftRoot or C:\KDE\CraftRoot with D: available.
-    exit /b 1
-)
-
 if not exist "%CRAFT_BIN%\plasmashell.exe" (
-    echo ERROR: %CRAFT_BIN%\plasmashell.exe not found.
+    echo ERROR: "%CRAFT_BIN%\plasmashell.exe" not found.
     echo The CraftRoot runtime must sit in the same folder as this script.
     echo Extract plasma-vm.zip next to deploy-vm.cmd first.
     pause
@@ -72,6 +61,7 @@ call "%~dp0plasma-common.cmd" :pc_mirror_data
 
 echo === 3/5 applications.menu ===
 call "%~dp0plasma-common.cmd" :pc_write_menu
+if errorlevel 1 exit /b 1
 
 echo === 4/5 Rebuild ksycoca ===
 call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca

@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions DisableDelayedExpansion
 rem ===========================================================================
 rem session-shell.cmd - session host used as the Windows logon shell
 rem
@@ -16,24 +16,16 @@ rem ===========================================================================
 
 call "%~dp0plasma-common.cmd" :pc_resolve_root
 
-rem Resolve the compiled prefix without delayed expansion of user paths.
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    for %%P in ("%CRAFT_ROOT%\..\..") do (
-        if exist "%%~fP\KDE\CraftRoot\bin\plasmashell.exe" subst D: "%%~fP" >nul 2>&1
-    )
-)
-if not exist "D:\KDE\CraftRoot\bin\plasmashell.exe" (
-    echo ERROR: extract to D:\KDE\CraftRoot or C:\KDE\CraftRoot with D: available.
-    exit /b 1
-)
-
 if not exist "%CRAFT_BIN%\plasmashell.exe" (
-    echo session-shell: %CRAFT_BIN%\plasmashell.exe not found
+    echo session-shell: "%CRAFT_BIN%\plasmashell.exe" not found
     exit /b 1
 )
 
 call "%~dp0plasma-common.cmd" :pc_setup_env
 call "%~dp0plasma-common.cmd" :pc_mirror_data
+call "%~dp0plasma-common.cmd" :pc_write_menu
+if errorlevel 1 exit /b 1
+call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
 
 call "%~dp0plasma-common.cmd" :pc_start_bus
 if errorlevel 1 exit /b 1

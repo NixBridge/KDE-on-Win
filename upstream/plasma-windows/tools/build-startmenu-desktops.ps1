@@ -215,12 +215,9 @@ foreach ($app in $uwp) {
 Write-Host "Generated $count .desktop bridge files in $outDir"
 
 if ($RebuildSycoca) {
-    $craftRoot = if ($env:CRAFT_ROOT) { $env:CRAFT_ROOT } else { "D:\Projects\CraftRoot" }
+    $craftRoot = if ($env:CRAFT_ROOT) { $env:CRAFT_ROOT } else { $PSScriptRoot }
     $kbuildsycoca = Join-Path $craftRoot "bin\kbuildsycoca6.exe"
-    if (-not (Test-Path $kbuildsycoca)) {
-        $kbuildsycoca = "D:\Projects\CraftRoot\bin\kbuildsycoca6.exe"
-    }
-    if (Test-Path $kbuildsycoca) {
+    if (Test-Path -LiteralPath $kbuildsycoca) {
         & $kbuildsycoca --noincremental 2>&1 | Out-Null
         Write-Host "ksycoca rebuilt"
     } else {

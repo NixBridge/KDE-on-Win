@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 title Plasma Shell Session Manager (VM)
 
 rem ===========================================================================
@@ -31,7 +31,7 @@ set "SESSION_LAUNCHER=%CRAFT_ROOT%\session-shell.cmd"
 rem -------- sanity: plasmashell present --------
 if not exist "%CRAFT_BIN%\plasmashell.exe" (
     echo.
-    echo [ERROR] %CRAFT_BIN%\plasmashell.exe not found.
+    echo [ERROR] "%CRAFT_BIN%\plasmashell.exe" not found.
     echo         Make sure this script sits inside the CraftRoot directory,
     echo         next to the bin folder.
     pause
@@ -45,9 +45,10 @@ rem :env_setup - session env + mirror KDE data into %LOCALAPPDATA%
 rem ---------------------------------------------------------------------------
 :env_setup
 call "%~dp0plasma-common.cmd" :pc_setup_env
-echo [PREP] Mirroring KDE runtime data to %LOCALAPPDATA% ...
+echo [PREP] Mirroring KDE runtime data to "%LOCALAPPDATA%" ...
 call "%~dp0plasma-common.cmd" :pc_mirror_data
 call "%~dp0plasma-common.cmd" :pc_write_menu
+if errorlevel 1 exit /b 1
 echo [PREP] Rebuilding ksycoca database ...
 call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
 exit /b 0
@@ -144,7 +145,8 @@ echo.
 if exist "%SHELL_BACKUP%" (
     echo           Backup file: %SHELL_BACKUP%
     set /p PREV=<"%SHELL_BACKUP%"
-    echo           Backed-up value: !PREV!
+    echo           Backed-up value:
+    type "%SHELL_BACKUP%"
 ) else (
     echo           Backup file: %SHELL_BACKUP%  (no backup yet)
 )
@@ -162,7 +164,7 @@ echo  ============================================
 echo      Plasma Shell Session Manager (VM)
 echo  ============================================
 echo.
-echo    CraftRoot: %CRAFT_ROOT%
+echo    CraftRoot: "%CRAFT_ROOT%"
 echo.
 echo    [1] Start a temporary Plasma session (no config changes)
 echo    [2] Set Plasma as the default shell (backup, next logon)
