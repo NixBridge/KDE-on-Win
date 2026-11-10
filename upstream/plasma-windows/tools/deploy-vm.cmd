@@ -1,5 +1,13 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
+set "ERRORLEVEL="
+rem Capture early bootstrap failures as well as desktop-process output.
+if not "%~1"=="" goto :deploy_body
+if defined KDE_DEPLOY_CAPTURED goto :deploy_body
+if not exist "%~dp0diagnose-startup.cmd" goto :deploy_body
+call "%~dp0diagnose-startup.cmd"
+exit /b %errorlevel%
+:deploy_body
 rem ===========================================================================
 rem deploy-vm.cmd - one-shot deployment + session start inside the test VM
 rem

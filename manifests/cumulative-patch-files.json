@@ -636,6 +636,7 @@
     "switch-shell.cmd": "upstream/plasma-windows/tools/switch-shell.cmd",
     "docs/FIX25.md": "docs/FIX25.md",
     "fix25-source-verification.json": "manifests/fix25-source-verification.json",
-    "docs/FIX25-STARTUP-HOTFIX.md": "docs/FIX25-STARTUP-HOTFIX.md"
+    "docs/FIX25-STARTUP-HOTFIX.md": "docs/FIX25-STARTUP-HOTFIX.md",
+    "diagnose-startup.cmd": "upstream/plasma-windows/tools/diagnose-startup.cmd"
   }
 }
