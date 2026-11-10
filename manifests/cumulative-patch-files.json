@@ -635,6 +635,7 @@
     "shell-registry.ps1": "upstream/plasma-windows/tools/shell-registry.ps1",
     "switch-shell.cmd": "upstream/plasma-windows/tools/switch-shell.cmd",
     "docs/FIX25.md": "docs/FIX25.md",
-    "fix25-source-verification.json": "manifests/fix25-source-verification.json"
+    "fix25-source-verification.json": "manifests/fix25-source-verification.json",
+    "docs/FIX25-STARTUP-HOTFIX.md": "docs/FIX25-STARTUP-HOTFIX.md"
   }
 }

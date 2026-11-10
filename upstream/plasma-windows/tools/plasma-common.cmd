@@ -150,3 +150,23 @@ exit /b %errorlevel%
 :pc_spawn_legacy
 start "" %*
 exit /b 0
+
+rem Foreground desktop output is otherwise absent from hidden-service logs.
+:pc_run_plasma
+set "PLASMA_LOG_DIR=%LOCALAPPDATA%\plasma-win-session\logs"
+if defined KDE_ON_WIN_SETTINGS for %%P in ("%KDE_ON_WIN_SETTINGS%") do set "PLASMA_LOG_DIR=%%~dpPlogs"
+if not exist "%PLASMA_LOG_DIR%" mkdir "%PLASMA_LOG_DIR%" 2>nul
+set "PLASMA_LOG=%PLASMA_LOG_DIR%\plasmashell.exe.log"
+if not exist "%PLASMA_LOG_DIR%" goto :pc_run_plasma_console
+type nul >>"%PLASMA_LOG%" 2>nul || goto :pc_run_plasma_console
+echo Plasma output: "%PLASMA_LOG%"
+"%CRAFT_BIN%\plasmashell.exe" >>"%PLASMA_LOG%" 2>&1
+set "PLASMA_RUN_EXIT=%errorlevel%"
+if "%PLASMA_RUN_EXIT%"=="0" exit /b 0
+echo ERROR: plasmashell exited with code %PLASMA_RUN_EXIT%.
+type "%PLASMA_LOG%"
+exit /b %PLASMA_RUN_EXIT%
+:pc_run_plasma_console
+echo WARNING: Cannot write Plasma log. Keeping output in this console.
+"%CRAFT_BIN%\plasmashell.exe"
+exit /b %errorlevel%

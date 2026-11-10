@@ -13,7 +13,7 @@ The Windows VM has reached the Plasma desktop with a panel, launcher, task manag
 
 ## VM use
 
-Extract the separately built runtime to `D:\KDE\CraftRoot`. Alternatively, use `C:\KDE\CraftRoot` with drive D: free for the launcher's SUBST mapping. Apply the latest cumulative overlay to that same directory.
+Extract the separately built runtime to a directory of your choice. Apply the latest cumulative overlay to that same directory; Fix24 and later do not require drive D: or SUBST.
 
 Run `deploy-vm.cmd` without arguments for a temporary session. Run `run-runtime-checks.cmd` to check QML imports and `desktop:/`. The experimental user-shell install/restore options are documented in `docs/PORTING.md`. Runtime logs include `%TEMP%\plasmashell-debug.log`.
 
@@ -70,3 +70,5 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
 Latest cumulative integration: [Fix25](docs/FIX25.md) hardens Shell backups/recovery and native window-event lifetime, adds Places/Quick Actions, opt-in Windows theme following, shortcut failure details and previewable private diagnostics. Includes [Fix24](docs/FIX24.md), which removes the fixed drive/path requirement; extract the complete runtime to any local folder and run `deploy-vm.cmd`. Includes [Fix23](docs/FIX23.md), which fixes desktop-tools focus, hidden-list refresh and stale settings errors, with clearer empty-history feedback. Includes [Fix22](docs/FIX22.md), which improves taskbar commands/grouping, fullscreen panel priority, input labels, notification restart safety and bounded startup recovery. Adds desktop menu actions, configurable safe shortcut alternatives and memory-only clipboard history. Includes [Fix21](docs/FIX21.md) and all earlier updates. Optional application session restore remains unimplemented and disabled. Full LogonUI, WinUI/XAML and arbitrary client-area replacement remain outside the implemented coverage; see [style coverage](docs/STYLE_SCOPE.md).
+
+Fix25 startup hotfix: fixes Windows PowerShell 5.1 association-backup replacement and captures foreground Plasma startup errors. See [startup hotfix notes](docs/FIX25-STARTUP-HOTFIX.md).

@@ -81,7 +81,9 @@ if($Restore){
             $record=[pscustomobject]@{Path=$change.Path;Name=$change.Name;Existed=$exists;Original=$original;Kind=$kind;Written=$change.Value};$records.Add($record)
         }else{$record.Written=$change.Value}
         # Persist the undo record before changing any association.
-        $temporary=$backupPath+'.tmp';[IO.File]::WriteAllText($temporary,($records|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false));if([IO.File]::Exists($backupPath)){[IO.File]::Replace($temporary,$backupPath,$null)}else{[IO.File]::Move($temporary,$backupPath)}
+        # Windows PowerShell 5.1 converts $null to an empty string for this overload;
+        # NullString passes a real null backup filename to File.Replace.
+        $temporary=$backupPath+'.tmp';[IO.File]::WriteAllText($temporary,($records|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false));if([IO.File]::Exists($backupPath)){[IO.File]::Replace($temporary,$backupPath,[NullString]::Value)}else{[IO.File]::Move($temporary,$backupPath)}
         $key=$registry.CreateSubKey($change.Path);try{$key.SetValue($change.Name,$change.Value,[Microsoft.Win32.RegistryValueKind]::String)}finally{$key.Dispose()}
     }
     $mimeProcess=Start-Process -FilePath $launcher -ArgumentList '--register-mime-defaults' -Wait -PassThru -WindowStyle Hidden

@@ -72,7 +72,7 @@ if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_start_services
 
 echo Starting plasmashell (close this window to end the session)...
-"%CRAFT_BIN%\plasmashell.exe"
+call "%~dp0plasma-common.cmd" :pc_run_plasma
 set "PLASMA_EXIT=%errorlevel%"
 if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" "%CRAFT_BIN%\plasma-desktop-tools.exe" --stop-if-idle
 echo plasmashell exited with code %PLASMA_EXIT%
