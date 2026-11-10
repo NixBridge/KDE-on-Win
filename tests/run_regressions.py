@@ -18,7 +18,7 @@ options = parser.parse_args()
 options.runtime = options.runtime.resolve()
 env['KDE_CRAFT_ROOT'] = str(options.runtime)
 env.update(QT_QPA_PLATFORM='offscreen', QT_PLUGIN_PATH=str(options.runtime / 'plugins'), QML_IMPORT_PATH=str(options.runtime / 'qml'), QML2_IMPORT_PATH=str(options.runtime / 'qml'), QT_QUICK_BACKEND='software', DBUS_SESSION_BUS_ADDRESS='tcp:host=127.0.0.1,port=19999')
-checks = [('desktop-integration-probe', []), ('plasma-desktop-tools', ['--self-test']),
+checks = [('plasmashell', ['--windows-startup-self-test']), ('desktop-integration-probe', []), ('plasma-desktop-tools', ['--self-test']),
  ('plasma-desktop-tools', ['--ui-smoke-test']),
  ('plasma-desktop-tools', ['--ui-smoke-test','--expect-chinese']),
  ('input-layout-probe', []),
@@ -96,6 +96,7 @@ for command in [['python', 'tests/test_archive_worker.py'],
  ['python', 'tests/test_legacy_shell_paths.py'],
  ['python', 'tests/test_session_log_fallback.py'],
  ['python', 'tests/test_cumulative_contract.py'],
+ ['python', 'tests/test_native_overlay_guard.py'],
  ['python', 'tests/test_runtime_relocation.py'],
  ['python', 'tests/test_dbus_relocation.py'],
  ['python', 'tests/test_msvc_deps.py']]:

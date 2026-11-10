@@ -34,3 +34,13 @@ for name in ['deploy-vm.cmd','plasma-shell.cmd']:
     assert text.count('shell-registry.ps1" -Action')==2
 assert 'bin/data/applications/org.nixbridge.quickactions.desktop' in manifest['runtime']
 print('PASS: canonical idempotent Shell transaction and Quick Actions entry ship in cumulative overlay.')
+
+# These native applet DLLs contain controllers or plugin metadata; QML overlays alone do not update them.
+# Their existence in the original archive must not hide later lifecycle fixes.
+for name in ['org.kde.plasma.imewin.dll','org.kde.plasma.volumewin.dll','org.kde.plasma.windowsmenu.dll']:
+    assert 'plugins/plasma/applets/' + name in manifest['runtime'], name
+print('PASS: native IME, volume and launcher applet binaries are shipped by the cumulative overlay.')
+
+for name in ['trayhost.exe','shellswitch.exe','titlebar.exe','kwindowsystem-probe.exe','desktop-launch-probe.exe']:
+    assert 'bin/' + name in manifest['runtime'], name
+print('PASS: updated tray host, shell switcher and remaining native build products are cumulative, not inherited from the base archive.')

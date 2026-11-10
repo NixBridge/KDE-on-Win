@@ -142,7 +142,8 @@
         "0020-windows-taskbar-commands-grouping.patch",
         "0021-windows-panel-fullscreen-priority.patch",
         "0022-windows-window-event-refresh.patch",
-        "0023-forward-windows-shell-errors.patch"
+        "0023-forward-windows-shell-errors.patch",
+        "0024-windows-panel-startup-readiness.patch"
       ]
     },
     "plasma5support": {

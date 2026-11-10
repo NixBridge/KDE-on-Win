@@ -1,0 +1,155 @@
+--- a/shell/main.cpp
++++ b/shell/main.cpp
+@@ -9,12 +9,19 @@
+ 
+ #include "debug.h"
+ #include "shellcorona.h"
++#include "panelview.h"
+ #include "softwarerendernotifier.h"
+ #ifdef WITH_KUSERFEEDBACKCORE
+ #include "userfeedback.h"
+ #endif
+ 
+ #include <QApplication>
++#include <QStandardPaths>
++#include <QQmlComponent>
++#include <QElapsedTimer>
++#include <QTemporaryFile>
++#include <QThread>
++#include <Plasma/Containment>
+ #include <QCommandLineParser>
+ #ifdef Q_OS_WIN
+ #include <QDateTime>
+@@ -45,6 +52,7 @@
+ 
+ #include <csignal>
+ #include <cstdio>
++#include <cstring>
+ 
+ #if __has_include(<malloc.h>)
+ #include <malloc.h>
+@@ -116,6 +124,13 @@
+     // this variable controls whether to reconnect or exit if the compositor dies, given plasmashell does a lot of
+     // bespoke wayland code disable for now. consider disabling when layer-shell lands
+     qunsetenv("QT_WAYLAND_RECONNECT");
++    const bool startupSelfTest = argc == 2 && std::strcmp(argv[1], "--windows-startup-self-test") == 0;
++    if (startupSelfTest) {
++        QStandardPaths::setTestModeEnabled(true);
++        qputenv("QT_QPA_PLATFORM", "offscreen");
++        qputenv("QT_QUICK_BACKEND", "software");
++        qputenv("DBUS_SESSION_BUS_ADDRESS", "tcp:host=127.0.0.1,port=0");
++    }
+     QApplication app(argc, argv);
+ #ifdef Q_OS_WIN
+     // Palette/font polling is scoped to the shell; child processes do not
+@@ -188,6 +203,61 @@
+     bool replace = false;
+ 
+     ShellCorona corona;
++    if (startupSelfTest) {
++        PanelView panel(&corona);
++        if (panel.rootObject()) return 2;
++        const bool duration = QMetaObject::invokeMethod(&panel, "updateFloatingAnimationDuration", Qt::DirectConnection);
++        const bool statusWithoutContainment = QMetaObject::invokeMethod(&panel, "refreshStatus", Qt::DirectConnection,
++            Q_ARG(Plasma::Types::ItemStatus, Plasma::Types::AcceptingInputStatus));
++        auto *containment = corona.createContainment(QStringLiteral("org.kde.panel"));
++        if (!containment) return 3;
++        panel.setContainment(containment);
++        if (panel.rootObject()) return 4;
++        containment->setStatus(Plasma::Types::AcceptingInputStatus);
++        const bool status = statusWithoutContainment && QMetaObject::invokeMethod(&panel, "refreshStatus", Qt::DirectConnection,
++            Q_ARG(Plasma::Types::ItemStatus, Plasma::Types::AcceptingInputStatus));
++        if (containment->status() != Plasma::Types::AcceptingInputStatus) return 5;
++        QQmlComponent component(panel.engine().get());
++        component.loadUrl(QUrl::fromLocalFile(QCoreApplication::applicationDirPath()
++            + QStringLiteral("/data/plasma/shells/org.kde.plasma.desktop/contents/views/Panel.qml")), QQmlComponent::PreferSynchronous);
++        QElapsedTimer deadline;
++        deadline.start();
++        while (component.isLoading() && deadline.elapsed() < 5000) {
++            app.processEvents();
++            QThread::msleep(5);
++        }
++        if (!component.isReady()) {
++            for (const auto &error : component.errors()) qWarning() << error;
++            return 6;
++        }
++        auto pendingFocusTimers = [&panel]() {
++            int count = 0;
++            for (auto *timer : panel.findChildren<QTimer *>(QString(), Qt::FindDirectChildrenOnly)) {
++                if (timer->isSingleShot() && timer->interval() == 3000) ++count;
++            }
++            return count;
++        };
++        const int timersBeforeReady = pendingFocusTimers();
++        QTemporaryFile readyQml(QDir::temp().filePath(QStringLiteral("plasma-panel-ready-XXXXXX.qml")));
++        if (!readyQml.open()) return 7;
++        readyQml.write("import QtQuick\nItem { property int floatingnessAnimationDuration: 100 }\n");
++        readyQml.flush();
++        panel.setSource(QUrl::fromLocalFile(readyQml.fileName()));
++        deadline.restart();
++        while ((!panel.rootObject() || pendingFocusTimers() <= timersBeforeReady) && deadline.elapsed() < 5000) {
++            app.processEvents();
++            QThread::msleep(5);
++        }
++        if (!panel.rootObject() || pendingFocusTimers() <= timersBeforeReady) {
++            qWarning() << "startup readiness assertion" << panel.rootObject() << timersBeforeReady << pendingFocusTimers()
++                       << containment->status() << panel.status();
++            return 8;
++        }
++        if (!QMetaObject::invokeMethod(&panel, "updateFloatingAnimationDuration", Qt::DirectConnection)) return 9;
++        std::puts(duration && status ? "PASS: real PanelView callbacks before QML readiness, pending input replayed and shipped Panel.qml compiled; no desktop shown"
++                                    : "FAIL: panel startup callback invocation");
++        return duration && status ? 0 : 1;
++    }
+     {
+         QCommandLineParser cliOptions;
+ 
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -1229,6 +1229,7 @@
+ #include "windowsfullscreenpolicy.h"
+ void PanelView::enforceWindowsPanelStacking()
+ {
++    if (QGuiApplication::platformName() != QStringLiteral("windows")) return;
+     if (!isVisible()) return;
+     const HWND panel = reinterpret_cast<HWND>(winId());
+     if(m_windowsStackHandle!=winId()) {m_windowsStackHandle=winId();m_windowsFullscreenSuppressed=false;}
+@@ -1277,6 +1278,7 @@
+ 
+ void PanelView::updateWorkArea(bool visible)
+ {
++    if (QGuiApplication::platformName() != QStringLiteral("windows")) return;
+     QScreen *scr = screen();
+     if (!scr) {
+         return;
+@@ -1952,11 +1954,19 @@
+             connect(rootObject, SIGNAL(touchingWindowChanged()), this, SLOT(updateTouchingWindow()));
+         }
+         updateTouchingWindow();
++        if (containment() && containment()->status() == Plasma::Types::AcceptingInputStatus) {
++            refreshStatus(containment()->status());
++        }
+     }
+ }
+ 
+ void PanelView::refreshStatus(Plasma::Types::ItemStatus status)
+ {
++    // Status signals can precede the asynchronous panel QML root, or arrive
++    // while its containment is being replaced. Do not focus a missing view.
++    if (!containment() || (status == Plasma::Types::AcceptingInputStatus && !rootObject())) {
++        return;
++    }
+     if (status == Plasma::Types::NeedsAttentionStatus) {
+         showTemporarily();
+ #ifndef Q_OS_WIN
+@@ -2172,7 +2182,9 @@
+ 
+ void PanelView::updateFloatingAnimationDuration()
+ {
+-    m_floatingnessAnimation.setDuration(rootObject()->property("floatingnessAnimationDuration").toInt());
++    if (auto *root = rootObject()) {
++        m_floatingnessAnimation.setDuration(root->property("floatingnessAnimationDuration").toInt());
++    }
+ }
+ 
+ #include "moc_panelview.cpp"

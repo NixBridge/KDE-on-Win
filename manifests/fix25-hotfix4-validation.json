@@ -1,0 +1,389 @@
+{
+  "release": "Fix25 startup hotfix4",
+  "review_baseline": "105a14fb4a052128c7d5d972365b98679cf98ac3",
+  "historical_baselines": [
+    "af1129a",
+    "04bf5eb",
+    "4a4ef01",
+    "ac0c243",
+    "644ac9d",
+    "151b114"
+  ],
+  "reproductions": [
+    {
+      "case": "real PanelView animation callback with no QML root",
+      "before_exit": "0xC0000005",
+      "after_exit": 0
+    },
+    {
+      "case": "real PanelView accepting-input callback, valid containment but no QML root",
+      "before_exit": "0xC0000005",
+      "fault_module": "Qt6Quick.dll",
+      "after_exit": 0
+    }
+  ],
+  "vm_identical_fault_location_proven": false,
+  "native_products_added_to_overlay": [
+    "bin/trayhost.exe",
+    "bin/titlebar.exe",
+    "bin/shellswitch.exe",
+    "bin/desktop-launch-probe.exe",
+    "bin/kwindowsystem-probe.exe",
+    "plugins/plasma/applets/org.kde.plasma.imewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.volumewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.windowsmenu.dll"
+  ],
+  "native_install_products_verified": 44,
+  "native_products": [
+    "bin/kde-logon-provider.dll",
+    "bin/kde-logon-probe.exe",
+    "bin/kde-session-host.exe",
+    "bin/kde-controls.dll",
+    "bin/kde-style-host.exe",
+    "bin/trayhost.exe",
+    "bin/titlebar.exe",
+    "bin/shellswitch.exe",
+    "bin/plasma-text-editor.exe",
+    "bin/plasma-system-settings.exe",
+    "bin/plasma-archive-manager.exe",
+    "bin/plasma-open-with.exe",
+    "bin/plasma-personalization.exe",
+    "bin/plasma-window-decorations.exe",
+    "bin/plasma-notification-bridge.exe",
+    "plugins/styles/plasmawindowsstyle.dll",
+    "bin/plasma-kde-launcher.exe",
+    "bin/plasma-process-monitor.exe",
+    "bin/plasma-desktop-tools.exe",
+    "bin/personalization-probe.exe",
+    "bin/startmenu-model-probe.exe",
+    "bin/notification-relay-probe.exe",
+    "bin/taskbar-icon-probe.exe",
+    "bin/konsole-conpty-probe.exe",
+    "bin/konsole-session-probe.exe",
+    "bin/desktop-stacking-probe.exe",
+    "bin/breeze-window-probe.exe",
+    "bin/breeze-mapping-probe.exe",
+    "bin/context-menu-probe.exe",
+    "bin/desktop-launch-probe.exe",
+    "bin/native-file-icon-probe.exe",
+    "bin/icon-probe.exe",
+    "bin/desktop-protocol-probe.exe",
+    "bin/qml-import-probe.exe",
+    "bin/kwindowsystem-probe.exe",
+    "bin/appearance-sync-probe.exe",
+    "bin/volume-lifecycle-probe.exe",
+    "bin/notification-callback-probe.exe",
+    "bin/window-actions-probe.exe",
+    "bin/input-layout-probe.exe",
+    "qml/org/kde/plasma/windowsmenu/startmenuplugin.dll",
+    "plugins/plasma/applets/org.kde.plasma.volumewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.imewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.windowsmenu.dll"
+  ],
+  "merged_delivery": {
+    "base_archive_entries": 46625,
+    "critical_qt_kde_binary_hashes_match_sdk": true,
+    "old_tray_self_test_timed_out": true,
+    "updated_tray_self_test_exit": 0,
+    "full_regressions_count": 69,
+    "checks": [
+      {
+        "name": "plasmashell --windows-startup-self-test",
+        "exit": 0
+      },
+      {
+        "name": "desktop-integration-probe",
+        "exit": 0
+      },
+      {
+        "name": "plasma-desktop-tools --self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-desktop-tools --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-desktop-tools --ui-smoke-test --expect-chinese",
+        "exit": 0
+      },
+      {
+        "name": "input-layout-probe",
+        "exit": 0
+      },
+      {
+        "name": "plasma-system-settings --ui-smoke-test --page=display",
+        "exit": 0
+      },
+      {
+        "name": "plasma-system-settings --ui-smoke-test --page=appearance",
+        "exit": 0
+      },
+      {
+        "name": "plasma-system-settings --ui-smoke-test --page=invalid",
+        "exit": 0
+      },
+      {
+        "name": "kde-session-host --self-test",
+        "exit": 0
+      },
+      {
+        "name": "trayhost --self-test",
+        "exit": 0
+      },
+      {
+        "name": "shellswitch --self-test",
+        "exit": 0
+      },
+      {
+        "name": "volume-lifecycle-probe",
+        "exit": 0
+      },
+      {
+        "name": "notification-callback-probe",
+        "exit": 0
+      },
+      {
+        "name": "notification-relay-probe",
+        "exit": 0
+      },
+      {
+        "name": "kde-style-host --self-test",
+        "exit": 0
+      },
+      {
+        "name": "x86/kde-style-host --self-test",
+        "exit": 0
+      },
+      {
+        "name": "kde-logon-probe",
+        "exit": 0
+      },
+      {
+        "name": "breeze-window-probe --dialog-self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-open-with --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+        "exit": 0
+      },
+      {
+        "name": "plasma-open-with --invoke-self-test",
+        "exit": 0
+      },
+      {
+        "name": "konsole-conpty-probe",
+        "exit": 0
+      },
+      {
+        "name": "konsole-session-probe",
+        "exit": 0
+      },
+      {
+        "name": "plasma-system-settings --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+        "exit": 0
+      },
+      {
+        "name": "plasma-text-editor --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-text-editor --self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-text-editor --editing-self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+        "exit": 0
+      },
+      {
+        "name": "plasma-process-monitor --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-process-monitor --self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-archive-manager --ui-smoke-test",
+        "exit": 0
+      },
+      {
+        "name": "breeze-window-probe",
+        "exit": 0
+      },
+      {
+        "name": "breeze-window-probe --caption-contrast-self-test",
+        "exit": 0
+      },
+      {
+        "name": "plasma-window-decorations --self-test",
+        "exit": 0
+      },
+      {
+        "name": "appearance-sync-probe",
+        "exit": 0
+      },
+      {
+        "name": "personalization-probe",
+        "exit": 0
+      },
+      {
+        "name": "taskbar-icon-probe",
+        "exit": 0
+      },
+      {
+        "name": "startmenu-model-probe",
+        "exit": 0
+      },
+      {
+        "name": "qml-import-probe --check-startmenu-model",
+        "exit": 0
+      },
+      {
+        "name": "qml-import-probe",
+        "exit": 0
+      },
+      {
+        "name": "plasma-notification-bridge --check-platform",
+        "exit": 0
+      },
+      {
+        "name": "native window-events-probe",
+        "exit": 0
+      },
+      {
+        "name": "native window-actions-probe",
+        "exit": 0
+      },
+      {
+        "name": "native desktop-stacking-probe",
+        "exit": 0
+      },
+      {
+        "name": "native breeze-window-probe",
+        "exit": 0
+      },
+      {
+        "name": "native plasma-window-decorations",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_archive_worker.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/taskbar-migration.cjs",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_association_plan.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_startup_hotfix.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_bootstrap_diagnostic.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_plasma_error_output.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_folder_routing.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_logon_plan.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_logon_deployment.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_integration_binaries.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_translation_catalog.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_settings_scripts.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_shell_backup.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_shell_registry_provider.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_legacy_shell_paths.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_session_log_fallback.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_cumulative_contract.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_native_overlay_guard.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_runtime_relocation.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_dbus_relocation.py",
+        "exit": 0
+      },
+      {
+        "name": "tests/test_msvc_deps.py",
+        "exit": 0
+      }
+    ]
+  },
+  "imports": {
+    "modules_checked": 646,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "dependencies": {
+    "modules_checked": 267,
+    "new_dlls": []
+  },
+  "build": {
+    "plasmashell_x64_compiled": true,
+    "historical_native_products_byte_equal_to_build_outputs": true,
+    "installed_shell_sha256": "db0a2c19e0bbb2f3a4aed92f943ebcd102ff067c27244835d18878cbd5da5df7"
+  },
+  "source_replay": "fix25-hotfix4-source-verification.json",
+  "vm_interactive_acceptance": false,
+  "no_user_retest_requested": true,
+  "limitations": "Real VM stack is unavailable; do not claim the reported VM has only these failure paths. See docs/FIX25-CODE-REVIEW.md."
+}

@@ -69,6 +69,8 @@ New integration work and modifications are AI-generated/AI-assisted using OpenAI
 
 Current integration fixes and direct system controls are documented in [docs/FIX12.md](docs/FIX12.md), including cumulative overlay use and reversible file associations.
 
+Latest startup repair: [Fix25 Hotfix4 code review](docs/FIX25-CODE-REVIEW.md) fixes reproducible panel startup null dereferences and restores omitted native applet/tray/shell-switch binaries to the cumulative overlay.
+
 Latest cumulative integration: [Fix25](docs/FIX25.md) hardens Shell backups/recovery and native window-event lifetime, adds Places/Quick Actions, opt-in Windows theme following, shortcut failure details and previewable private diagnostics. Includes [Fix24](docs/FIX24.md), which removes the fixed drive/path requirement; extract the complete runtime to any local folder and run `deploy-vm.cmd`. Includes [Fix23](docs/FIX23.md), which fixes desktop-tools focus, hidden-list refresh and stale settings errors, with clearer empty-history feedback. Includes [Fix22](docs/FIX22.md), which improves taskbar commands/grouping, fullscreen panel priority, input labels, notification restart safety and bounded startup recovery. Adds desktop menu actions, configurable safe shortcut alternatives and memory-only clipboard history. Includes [Fix21](docs/FIX21.md) and all earlier updates. Optional application session restore remains unimplemented and disabled. Full LogonUI, WinUI/XAML and arbitrary client-area replacement remain outside the implemented coverage; see [style coverage](docs/STYLE_SCOPE.md).
 
 Fix25 startup hotfix: fixes Windows PowerShell 5.1 association-backup replacement and captures foreground Plasma startup errors. See [startup hotfix notes](docs/FIX25-STARTUP-HOTFIX.md).

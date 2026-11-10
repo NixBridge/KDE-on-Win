@@ -13,11 +13,24 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument('--runtime', type=Path, default=Path('D:/KDE/CraftRoot'))
 parser.add_argument('--version', required=True)
+parser.add_argument('--native-install-manifest', type=Path, help='Fail if a native install EXE/DLL is omitted from the overlay')
 args = parser.parse_args()
 if not args.version.replace('-', '').isalnum():
     parser.error('version must contain only letters, digits and hyphens')
 root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'manifests' / 'cumulative-patch-files.json').read_text())
+if args.native_install_manifest:
+    runtime_root = args.runtime.resolve()
+    for line in args.native_install_manifest.read_text(encoding='utf-8').splitlines():
+        product = Path(line)
+        if product.suffix.lower() not in {'.exe', '.dll'}:
+            continue
+        try:
+            relative = product.resolve().relative_to(runtime_root).as_posix()
+        except ValueError:
+            raise SystemExit('Native install product is outside the selected runtime: ' + str(product))
+        if relative not in manifest['runtime']:
+            raise SystemExit('Native build product is missing from cumulative overlay: ' + relative)
 release = re.search(r'fix[0-9]+$', args.version, re.IGNORECASE)
 subprocess.run([sys.executable, str(root / 'tools/write-release-info.py'), '--runtime', str(args.runtime),
                 '--version', release.group().capitalize() if release else 'development'], check=True)
@@ -63,6 +76,7 @@ for relative, source in sources.items():
     'Fix23 improves desktop-tools focus, empty-history feedback, hidden refresh and settings-error recovery. See docs/FIX23.md.\n'
     'Fix24 removes the fixed drive requirement and ships relocatable launch metadata and Unicode-safe menus. See docs/FIX24.md.\n'
     'Fix25 hardens Shell recovery and native window events, and adds Places/Quick Actions, opt-in Windows theme following, shortcut failure details and private diagnostic export. See docs/FIX25.md.\n'
+    'Fix25 Hotfix4 repairs panel startup null-root handling and restores omitted native applet/tray/Shell-switch binaries. See docs/FIX25-CODE-REVIEW.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:
