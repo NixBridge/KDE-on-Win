@@ -1,0 +1,305 @@
+{
+  "release": "Fix25 startup hotfix3",
+  "reported_vm_exit": {
+    "signed": -1073741819,
+    "hex": "0xC0000005",
+    "meaning": "access violation",
+    "cause_resolved": false
+  },
+  "production_change": "Forward Qt errors to stderr as well as the existing temporary log.",
+  "build": {
+    "plasmashell_x64": true,
+    "installed_binary_equals_build": true,
+    "sha256": "ac4c84ba806df992f67a1374a0f53a5872c5febb3aef1fb70419c005e60c6d92"
+  },
+  "checks": [
+    {
+      "name": "desktop-integration-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "input-layout-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=display",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=appearance",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=invalid",
+      "exit": 0
+    },
+    {
+      "name": "kde-session-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "trayhost --self-test",
+      "exit": 0
+    },
+    {
+      "name": "shellswitch --self-test",
+      "exit": 0
+    },
+    {
+      "name": "volume-lifecycle-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-callback-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-relay-probe",
+      "exit": 0
+    },
+    {
+      "name": "kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "x86/kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-logon-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --dialog-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --invoke-self-test",
+      "exit": 0
+    },
+    {
+      "name": "konsole-conpty-probe",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --editing-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native window-events-probe",
+      "exit": 0
+    },
+    {
+      "name": "native window-actions-probe",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_startup_hotfix.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_bootstrap_diagnostic.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_plasma_error_output.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_folder_routing.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_deployment.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_integration_binaries.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_backup.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_registry_provider.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_legacy_shell_paths.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_session_log_fallback.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_cumulative_contract.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_runtime_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_dbus_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_msvc_deps.py",
+      "exit": 0
+    }
+  ],
+  "imports": {
+    "modules_checked": 646,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "source_replay": "fix25-hotfix3-source-verification.json",
+  "isolated_experiments": {
+    "private_bus": true,
+    "hidden_desktop": true,
+    "observation_deadline_seconds": 25,
+    "desktop_and_panel_script_response": true,
+    "access_violation_reproduced": false,
+    "test_tool_terminated_child_on_deadline": true,
+    "debug_source_changes_in_release": false
+  },
+  "vm_acceptance": false,
+  "known_limitation": "Screenshot contains no failing module or stack. Existing VM configuration and other processes differ from the isolated experiment."
+}

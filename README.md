@@ -74,3 +74,5 @@ Latest cumulative integration: [Fix25](docs/FIX25.md) hardens Shell backups/reco
 Fix25 startup hotfix: fixes Windows PowerShell 5.1 association-backup replacement and captures foreground Plasma startup errors. See [startup hotfix notes](docs/FIX25-STARTUP-HOTFIX.md).
 
 Fix25 startup hotfix2 captures the entire normal bootstrap in `startup-diagnostic.log` and keeps failures visible. VM startup failure is still under investigation; titlebar styling alone does not indicate a working Plasma session.
+
+Fix25 startup hotfix3 confirms the reported Plasma exit is access violation 0xC0000005. Qt errors now also reach stderr/startup logs; the VM-specific crash cause remains unresolved. See the startup hotfix notes.

@@ -637,6 +637,8 @@
     "docs/FIX25.md": "docs/FIX25.md",
     "fix25-source-verification.json": "manifests/fix25-source-verification.json",
     "docs/FIX25-STARTUP-HOTFIX.md": "docs/FIX25-STARTUP-HOTFIX.md",
-    "diagnose-startup.cmd": "upstream/plasma-windows/tools/diagnose-startup.cmd"
+    "diagnose-startup.cmd": "upstream/plasma-windows/tools/diagnose-startup.cmd",
+    "fix25-hotfix3-source-verification.json": "manifests/fix25-hotfix3-source-verification.json",
+    "fix25-hotfix3-validation.json": "manifests/fix25-hotfix3-validation.json"
   }
 }

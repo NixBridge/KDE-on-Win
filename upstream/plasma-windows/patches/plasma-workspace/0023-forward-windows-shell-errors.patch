@@ -1,0 +1,23 @@
+--- a/shell/main.cpp
++++ b/shell/main.cpp
+@@ -44,6 +44,7 @@
+ #include <KSignalHandler>
+ 
+ #include <csignal>
++#include <cstdio>
+ 
+ #if __has_include(<malloc.h>)
+ #include <malloc.h>
+@@ -74,6 +75,12 @@
+ {
+     Q_UNUSED(type)
+     Q_UNUSED(ctx)
++    // Keep diagnostics visible to the session host and bootstrap redirection.
++    // The legacy TEMP file alone is not included in service startup logs.
++    const QByteArray utf8 = msg.toUtf8();
++    std::fwrite(utf8.constData(), 1, size_t(utf8.size()), stderr);
++    std::fputc('\n', stderr);
++    std::fflush(stderr);
+     QFile f(QDir::temp().filePath(QStringLiteral("plasmashell-debug.log")));
+     if (f.open(QIODevice::Append | QIODevice::Text)) {
+         QTextStream ts(&f);
