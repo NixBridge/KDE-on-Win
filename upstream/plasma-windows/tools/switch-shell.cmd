@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 title Plasma Windows - shell switcher (Phase 0.5)
 
 rem ===========================================================================
@@ -36,10 +36,7 @@ if defined SWITCH_SHELL_DRYRUN (
 )
 
 set "KEY=HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
-if defined SWITCH_SHELL_TESTKEY (
-    set "KEY=!SWITCH_SHELL_TESTKEY!"
-    echo [TEST MODE] using registry key: !KEY!
-)
+if defined SWITCH_SHELL_TESTKEY set "KEY=%SWITCH_SHELL_TESTKEY%"
 
 set "BACKUP_DIR=%USERPROFILE%\.plasma-windows"
 if defined SWITCH_SHELL_TESTKEY set "BACKUP_DIR=%TEMP%\plasma-windows-test"
@@ -79,34 +76,35 @@ exit /b 1
 rem ---------------------------------------------------------------------------
 :status
 echo.
-echo Registry key: %KEY%
+echo Registry key: "%KEY%"
 echo.
 echo Current "Shell" value:
 reg query "%KEY%" /v Shell 2>nul
 if errorlevel 1 echo     (not set - the default explorer.exe is used)
 echo.
-if exist "!BACKUP!" (
-    echo Backup file: !BACKUP!
+if exist "%BACKUP%" (
+    echo Backup file: "%BACKUP%"
     echo Previous value:
-    set /p PREV=<"!BACKUP!"
-    echo     !PREV!
+    type "%BACKUP%"
 ) else (
-    echo Backup file: !BACKUP!
+    echo Backup file: "%BACKUP%"
     echo     ^(no backup yet^)
 )
 exit /b 0
 
 rem ---------------------------------------------------------------------------
 :install
-if "%~2"=="" goto :error_usage
+if "%~2"=="" exit /b 2
+if not "%~4"=="" exit /b 2
+if not "%~3"=="" if /i not "%~3"=="/force" exit /b 2
 set "NEW="
 for %%F in ("%~2") do set "NEW=%%~fF"
 if not exist "%NEW%" (
-    echo ERROR: file not found: !NEW!
+    echo ERROR: file not found: "%NEW%"
     exit /b 1
 )
 if exist "%NEW%\" (
-    echo ERROR: not a file: !NEW!
+    echo ERROR: not a file: "%NEW%"
     exit /b 1
 )
 set "FORCE="
@@ -119,29 +117,24 @@ if not defined FORCE (
         echo.
         echo ERROR: this machine does not look like a VMware virtual machine.
         echo   The experimental shell must only be installed inside the test VM.
-        echo   If you are certain this is the test VM, re-run with:  install !NEW! /force
+        echo   If you are certain this is the test VM, re-run with:  install "%NEW%" /force
         exit /b 2
     )
 )
 
-rem Quote the path if it contains spaces (Winlogon parses it as a command line).
-set "Q="
-if not "!NEW!"=="!NEW: =!" set "Q=""
-set "QUOTED=!Q!!NEW!!Q!"
-
-set "SHELL_VALUE=!QUOTED!"
-set "SHELL_BACKUP=!BACKUP!"
+rem Pass a path parameter; the shared PowerShell transaction quotes the registry data.
+set "SHELL_VALUE="
+set "SHELL_BACKUP=%BACKUP%"
 if defined DRYRUN (
-    echo [DRY RUN] would back up the current value to !BACKUP!
-    echo [DRY RUN] would set !KEY! Shell = !QUOTED!
+    powershell -NoProfile -Command "Write-Output ('[DRY RUN] would back up the current value to '+$env:SHELL_BACKUP); Write-Output ('[DRY RUN] would select '+$env:NEW)"
 ) else (
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action install
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action install -ShellPath "%NEW%"
     if errorlevel 1 (
         echo ERROR: failed to write the registry value.
         exit /b 3
     )
 )
-echo Installed shell: !NEW!
+echo Installed shell: "%NEW%"
 echo.
 echo Next step: log off and back on (or restart the VM).
 echo To undo: run "switch-shell.cmd restore" then log off/on again.
@@ -151,12 +144,9 @@ rem ---------------------------------------------------------------------------
 :restore
 rem The backup is restored verbatim (explicit rollback). If no backup
 rem exists, the Windows default explorer.exe is restored.
-set "PREV=explorer.exe"
-if exist "!BACKUP!" set /p PREV=<"!BACKUP!"
-
-set "SHELL_BACKUP=!BACKUP!"
+set "SHELL_BACKUP=%BACKUP%"
 if defined DRYRUN (
-    echo [DRY RUN] would set !KEY! Shell = !PREV!
+    powershell -NoProfile -Command "$value='explorer.exe'; if([IO.File]::Exists($env:SHELL_BACKUP)){$value=[IO.File]::ReadAllText($env:SHELL_BACKUP)}; Write-Output ('[DRY RUN] would restore '+$value)"
 ) else (
     powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action restore
     if errorlevel 1 (
@@ -175,6 +165,7 @@ if /i "%~1"=="help" goto :usage
 if /i "%~1"=="status" goto :status
 if /i "%~1"=="install" goto :install
 if /i "%~1"=="restore" goto :restore
-echo Unknown command: %~1
+echo Unknown command.
 echo.
-goto :usage
+call :usage
+exit /b 2

@@ -20,6 +20,7 @@ QStringList windowsProgramIconCandidates(const QString& program)
         return { QStringLiteral("system-file-manager") };
     if (value == QLatin1String("kde:text-editor"))
         return { QStringLiteral("accessories-text-editor") };
+    if (value == QLatin1String("kde:quick-actions")) return { QStringLiteral("applications-system") };
     if (value == QLatin1String("kde:system-settings"))
         return { QStringLiteral("preferences-system") };
     struct Entry {

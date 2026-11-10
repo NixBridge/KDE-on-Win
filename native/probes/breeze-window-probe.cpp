@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <QApplication>
+#include <QTimer>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QTableWidget>
@@ -75,9 +76,17 @@ int main(int argc, char** argv)
                 ok &= !dialog->isMaximized();
             }
         }
-        QTextStream(stdout)
-            << (ok ? "PASS" : "FAIL")
-            << ": Qt file/color/font/message dialogs use KDE chrome and non-native dialog policy; no dialog shown\n";
+        QDialog modal;
+        bool survivedDecoration = false;
+        QTimer::singleShot(150, &modal, [&] {
+            survivedDecoration = modal.isVisible() && modal.findChild<QWidget*>("PlasmaBreezeTitleBar");
+            modal.reject();
+        });
+        modal.exec();
+        ok &= survivedDecoration;
+        QTextStream(stdout) << (ok ? "PASS" : "FAIL")
+                            << ": Qt file/color/font/message dialogs use KDE chrome; modal exec survives deferred "
+                               "decoration; offscreen fixture\n";
         return ok ? 0 : 1;
     }
     if (app.arguments().contains(QStringLiteral("--caption-contrast-self-test"))) {

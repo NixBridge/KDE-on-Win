@@ -1,4 +1,4 @@
-param([string]$CraftRoot = 'D:\KDE\CraftRoot')
+param([string]$CraftRoot = 'D:\KDE\CraftRoot', [string]$Release = 'Fix25')
 $ErrorActionPreference = 'Stop'
 foreach ($module in 'org\kde\kirigami', 'org\kde\plasma\core', 'org\kde\plasma\activityswitcher', 'org\kde\kwindowsystem', 'org\kde\quickcharts', 'org\kde\quickcharts\controls') {
     if (-not (Test-Path -LiteralPath (Join-Path $CraftRoot "qml\$module\qmldir"))) {
@@ -45,6 +45,8 @@ foreach ($applet in 'windowsmenu', 'volumewin', 'imewin') {
     $metadata = Join-Path $CraftRoot "bin\data\plasma\plasmoids\org.kde.plasma.$applet\metadata.json"
     if (-not (Test-Path -LiteralPath $metadata)) { throw "Runtime incomplete: missing $metadata" }
 }
+& python (Join-Path $PSScriptRoot 'tools\write-release-info.py') --runtime $CraftRoot --version $Release
+if ($LASTEXITCODE) { throw 'Release metadata generation failed' }
 $out = Join-Path $PSScriptRoot ('dist\' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 $stage = Join-Path $out 'PlasmaWindows'
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -78,6 +80,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination (Join-Pa
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\build-lock.json') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\runtime-import-verification.json') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\fix22-source-verification.json') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manifests\fix25-source-verification.json') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-vm-probe.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-qml-probe.cmd') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'runtime\run-runtime-checks.cmd') -Destination $stage

@@ -1570,6 +1570,134 @@
         <source>Cannot start application</source>
         <translation>无法启动程序</translation>
     </message>
+    <message>
+        <source>Home</source>
+        <translation>用户主目录</translation>
+    </message>
+    <message>
+        <source>This PC</source>
+        <translation>此电脑</translation>
+    </message>
+    <message>
+        <source>Downloads</source>
+        <translation>下载</translation>
+    </message>
+    <message>
+        <source>Documents</source>
+        <translation>文档</translation>
+    </message>
+    <message>
+        <source>Pictures</source>
+        <translation>图片</translation>
+    </message>
+    <message>
+        <source>Recycle Bin (Windows)</source>
+        <translation>回收站（Windows）</translation>
+    </message>
+    <message>
+        <source>Windows Settings</source>
+        <translation>Windows 设置</translation>
+    </message>
+    <message>
+        <source>Display Settings</source>
+        <translation>显示设置</translation>
+    </message>
+    <message>
+        <source>Task Manager</source>
+        <translation>任务管理器</translation>
+    </message>
+    <message>
+        <source>Dolphin</source>
+        <translation>Dolphin</translation>
+    </message>
+    <message>
+        <source>Konsole</source>
+        <translation>Konsole</translation>
+    </message>
+    <message>
+        <source>System Information</source>
+        <translation>系统信息</translation>
+    </message>
+    <message>
+        <source>KDE-on-Win logs</source>
+        <translation>KDE-on-Win 日志</translation>
+    </message>
+    <message>
+        <source>Windows could not resolve this location.</source>
+        <translation>Windows 无法解析此位置。</translation>
+    </message>
+    <message>
+        <source>Unknown desktop action.</source>
+        <translation>未知的桌面操作。</translation>
+    </message>
+    <message>
+        <source>Windows could not open this action (error %1).</source>
+        <translation>Windows 无法打开此操作（错误 %1）。</translation>
+    </message>
+    <message>
+        <source>The required component is missing: %1</source>
+        <translation>缺少所需组件：%1</translation>
+    </message>
+    <message>
+        <source>The log directory could not be created.</source>
+        <translation>无法创建日志目录。</translation>
+    </message>
+    <message>
+        <source>The application could not be started.</source>
+        <translation>无法启动应用程序。</translation>
+    </message>
+    <message>
+        <source>Already registered by another shortcut (1409)</source>
+        <translation>已被其他快捷键注册（1409）</translation>
+    </message>
+    <message>
+        <source>Access denied (5)</source>
+        <translation>访问被拒绝（5）</translation>
+    </message>
+    <message>
+        <source>Windows error %1</source>
+        <translation>Windows 错误 %1</translation>
+    </message>
+    <message>
+        <source>Follow Windows light/dark mode (Breeze only)</source>
+        <translation>跟随 Windows 深浅色模式（仅 Breeze）</translation>
+    </message>
+    <message>
+        <source>Manual theme selection disables following. Custom KDE themes and high-contrast mode are left unchanged.</source>
+        <translation>手动选择主题会关闭自动跟随。自定义 KDE 主题和高对比度模式保持原样。</translation>
+    </message>
+    <message>
+        <source>Could not start desktop tools for theme following.</source>
+        <translation>无法启动桌面工具，主题自动跟随不可用。</translation>
+    </message>
+    <message>
+        <source>Preview and export diagnostics…</source>
+        <translation>预览并导出诊断信息…</translation>
+    </message>
+    <message>
+        <source>Review diagnostics before sharing</source>
+        <translation>分享前检查诊断信息</translation>
+    </message>
+    <message>
+        <source>No automatic upload. Raw logs and personal paths are excluded; review this report before saving.</source>
+        <translation>不会自动上传。报告不含原始日志和个人路径，请检查后再保存。</translation>
+    </message>
+    <message>
+        <source>Save diagnostics</source>
+        <translation>保存诊断信息</translation>
+    </message>
+    <message>
+        <source>JSON files (*.json)</source>
+        <translation>JSON 文件（*.json）</translation>
+    </message>
+    <message>
+        <source>Cannot save diagnostics</source>
+        <translation>无法保存诊断信息</translation>
+    </message>
+    <message>
+        <source>Diagnostics saved. Share only after reviewing.</source>
+        <translation>诊断信息已保存，请检查后再分享。</translation>
+    </message>
 </context>
 <context>
     <name>WindowChrome</name>
@@ -1674,6 +1802,26 @@
     <message>
         <source>Text history is disabled.</source>
         <translation>文本历史记录已关闭。</translation>
+    </message>
+    <message>
+        <source>Places</source>
+        <translation>常用位置</translation>
+    </message>
+    <message>
+        <source>Quick actions</source>
+        <translation>快速操作</translation>
+    </message>
+    <message>
+        <source>Required component missing.</source>
+        <translation>缺少所需组件。</translation>
+    </message>
+    <message>
+        <source>Duplicate project shortcuts. Shortcuts were not registered.</source>
+        <translation>项目快捷键重复，未进行注册。</translation>
+    </message>
+    <message>
+        <source>Could not start the personalization helper.</source>
+        <translation>无法启动个性化配置助手。</translation>
     </message>
 </context>
 </TS>

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Quick Actions and Places
+Name[zh_CN]=快速操作与常用位置
+Exec=plasma-kde-launcher quick-actions
+Icon=applications-system
+Categories=System;

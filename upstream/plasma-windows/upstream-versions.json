@@ -26,7 +26,8 @@
       "sha256": "5adbdf9c82b1ecbb92bda6498ea1b8f88c08f9ec57dbff70d582e2453bf16b12",
       "patches": [
         "0001-windows-backend.patch",
-        "0002-disable-windows-kwin-peek.patch"
+        "0002-disable-windows-kwin-peek.patch",
+        "0003-window-event-lifetime-and-state.patch"
       ]
     },
     "kauth": {
@@ -137,7 +138,10 @@
         "0016-windows-settings-editor-taskbar-identities.patch",
         "0017-cache-windows-task-icons-and-paths.patch",
         "0018-windows-live-desktop-appearance.patch",
-        "0019-windows-desktop-native-stacking.patch"
+        "0019-windows-desktop-native-stacking.patch",
+        "0020-windows-taskbar-commands-grouping.patch",
+        "0021-windows-panel-fullscreen-priority.patch",
+        "0022-windows-window-event-refresh.patch"
       ]
     },
     "plasma5support": {

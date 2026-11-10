@@ -12,8 +12,8 @@
 
     Switching changes only the current user's
     HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell
-    value (never system binaries, never Winlogon), kills the shell that
-    is being disabled and starts the target one.
+    value (never system binaries, never Winlogon), retains Explorer when
+    entering Plasma and stops only owned KDE processes when leaving.
 
     Safety: set SWITCH_DRYRUN=1 in the environment to log what would
     happen without killing/starting anything or writing the registry.
@@ -24,6 +24,7 @@
 #include <shellapi.h>
 #include <strsafe.h>
 #include <tlhelp32.h>
+#include <string.h>
 
 #define WM_TRAYICON (WM_APP + 1)
 #define IDM_SWITCH_PLASMA 1001
@@ -124,20 +125,15 @@ static void stopSessionProcess(const WCHAR *imageName)
         logMsg(L"[dry-run] would stop owned session process %s\n", imageName);
         return;
     }
+    /* Never terminate the native Shell or unrelated Windows programs. */
+    if (!_wcsicmp(imageName, L"explorer.exe")) return;
     WCHAR expected[32768] = {0};
-    DWORD length = 0;
-    if (!_wcsicmp(imageName, L"explorer.exe")) {
-        length = GetWindowsDirectoryW(expected, 32768);
-        if (!length || length >= 32768) return;
-        if (FAILED(StringCchCatW(expected, 32768, L"\\explorer.exe"))) return;
-    } else {
-        length = GetModuleFileNameW(NULL, expected, 32768);
-        if (!length || length >= 32768) return;
-        WCHAR *slash = wcsrchr(expected, L'\\');
-        if (!slash) return;
-        *(slash + 1) = 0;
-        if (FAILED(StringCchCatW(expected, 32768, imageName))) return;
-    }
+    DWORD length = GetModuleFileNameW(NULL, expected, 32768);
+    if (!length || length >= 32768) return;
+    WCHAR *slash = wcsrchr(expected, L'\\');
+    if (!slash) return;
+    *(slash + 1) = 0;
+    if (FAILED(StringCchCatW(expected, 32768, imageName))) return;
     DWORD currentSession = 0;
     if (!ProcessIdToSessionId(GetCurrentProcessId(), &currentSession)) return;
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -290,12 +286,25 @@ static void killPlasmaSession(void)
 
 static BOOL startExplorer(void)
 {
-    if (g_dryRun) {
-        logMsg(L"[dry-run] would start explorer.exe\n");
-        return TRUE;
-    }
+    if (g_dryRun) {logMsg(L"[dry-run] would ensure the native Explorer desktop is ready\n");return TRUE;}
     if (GetShellWindow()) return TRUE;
-    return (INT_PTR)ShellExecuteW(NULL, NULL, L"explorer.exe", NULL, NULL, SW_SHOWNORMAL) > 32;
+    WCHAR executable[32768], command[32770];
+    DWORD length=GetWindowsDirectoryW(executable,32768);
+    if (!length || length>=32768 || FAILED(StringCchCatW(executable,32768,L"\\explorer.exe"))) return FALSE;
+    if (FAILED(StringCchPrintfW(command,32770,L"\"%s\"",executable))) return FALSE;
+    STARTUPINFOW startup={sizeof(startup)};PROCESS_INFORMATION process={0};
+    if(!CreateProcessW(executable,command,NULL,NULL,FALSE,0,NULL,NULL,&startup,&process)){
+        logMsg(L"Explorer creation failed: %lu\n",GetLastError());return FALSE;
+    }
+    CloseHandle(process.hThread);CloseHandle(process.hProcess);
+    /* Bounded readiness wait, only after an explicit switch. Do not stop a
+       working Plasma desktop merely because process creation succeeded. */
+    for (int attempt=0;attempt<50;++attempt) {
+        if (GetShellWindow()) return TRUE;
+        Sleep(100);
+    }
+    logMsg(L"Explorer did not expose its desktop within five seconds; retaining Plasma.\n");
+    return FALSE;
 }
 
 static BOOL nativeSessionHost(WCHAR *path, DWORD count)
@@ -340,21 +349,63 @@ static BOOL isPlasmaValue(const WCHAR *value)
     return value && (wcsstr(value, L"session-shell.cmd") != NULL || wcsstr(value, L"plasmashell.exe") != NULL || wcsstr(value, L"kde-session-host.exe") != NULL);
 }
 
-static void doSwitchToExplorer(void)
+static BOOL doSwitchToExplorer(void)
 {
     logMsg(L"Switching to explorer...\n");
     if (writeShellValue(L"explorer.exe")) {
         if (!startExplorer()) {
             logMsg(L"Explorer creation failed; keeping Plasma running.\n");
-            return;
+            return FALSE;
         }
         killPlasmaSession();
         readShellValue(g_currentShell, 1024);
         updateTrayTip();
+        return TRUE;
     }
+    return FALSE;
 }
 
-static void doSwitchToPlasma(void)
+static BOOL validRecoveryBackup(const char *bytes, DWORD size)
+{
+    if (!bytes || !size || size > 131072 || memchr(bytes, 0, size)) return FALSE;
+    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, size, NULL, 0);
+    if (!count) return FALSE;
+    WCHAR *text = HeapAlloc(GetProcessHeap(), 0, count * sizeof(WCHAR));
+    WORD *types = HeapAlloc(GetProcessHeap(), 0, count * sizeof(WORD));
+    BOOL valid = FALSE;
+    if (text && types && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, size, text, count)
+        && GetStringTypeW(CT_CTYPE1, text, count, types)) {
+        for (int i = 0; i < count; ++i)
+            if (!(types[i] & C1_SPACE) && !(i == 0 && text[i] == 0xFEFF)) { valid = TRUE; break; }
+    }
+    if (text) HeapFree(GetProcessHeap(), 0, text);
+    if (types) HeapFree(GetProcessHeap(), 0, types);
+    return valid;
+}
+static BOOL recoveryBackupAvailable(void)
+{
+    WCHAR path[32768];
+    DWORD length = GetEnvironmentVariableW(L"USERPROFILE", path, 32768);
+    if (!length || length >= 32768 || FAILED(StringCchCatW(path,32768,L"\\.plasma-windows\\shell-backup.txt"))) return FALSE;
+    WCHAR lockPath[32768];StringCchCopyW(lockPath,32768,path);
+    if (FAILED(StringCchCatW(lockPath,32768,L".lock"))) return FALSE;
+    HANDLE lock = CreateFileW(lockPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    if (lock == INVALID_HANDLE_VALUE && GetLastError()!=ERROR_FILE_NOT_FOUND) return FALSE;
+    HANDLE file = CreateFileW(path,GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    BOOL valid=FALSE;
+    if(file!=INVALID_HANDLE_VALUE){
+        DWORD size=GetFileSize(file,NULL), read=0;
+        if(size && size<=131072){
+            char *bytes=HeapAlloc(GetProcessHeap(),0,size);
+            if(bytes){valid=ReadFile(file,bytes,size,&read,NULL) && read==size && validRecoveryBackup(bytes,size);HeapFree(GetProcessHeap(),0,bytes);}
+        }
+        CloseHandle(file);
+    }
+    if(lock!=INVALID_HANDLE_VALUE)CloseHandle(lock);
+    return valid;
+}
+
+static BOOL doSwitchToPlasma(void)
 {
     if (!g_sessionCmd[0]) {
         logMsg(L"ERROR: session-shell.cmd not found\n");
@@ -363,7 +414,14 @@ static void doSwitchToPlasma(void)
                     L"Searched: next to shellswitch.exe, PLASMA_WINDOWS_ROOT / CRAFT_ROOT,\n"
                     L"and the maintainer-local fallback paths.",
                     L"Shell Switcher", MB_ICONERROR);
-        return;
+        return FALSE;
+    }
+    if (!g_dryRun && !recoveryBackupAvailable()) {
+        const BOOL zh=PRIMARYLANGID(GetUserDefaultUILanguage())==LANG_CHINESE;
+        MessageBoxW(g_hwnd,zh?L"请先运行 deploy-vm.cmd install 建立可用的 Shell 恢复备份。当前 Shell 未更改。"
+            :L"Run deploy-vm.cmd install first to create a usable Shell recovery backup. The current Shell was not changed.",
+            L"Shell Switcher",MB_ICONWARNING);
+        return FALSE;
     }
     WCHAR regValue[MAX_PATH * 2 + 16];
     WCHAR native[MAX_PATH * 2];
@@ -375,15 +433,16 @@ static void doSwitchToPlasma(void)
             /* Preserve the working desktop and restore its configured shell. */
             writeShellValue(g_currentShell[0] ? g_currentShell : L"explorer.exe");
             logMsg(L"Keeping the current desktop after session creation failure.\n");
-            return;
+            return FALSE;
         }
-        /* Creation success is not desktop readiness. Slow or failed startup
-           must retain Explorer; the configured native host owns the next logon. */
-        if (isProcessRunning(L"plasmashell.exe")) stopSessionProcess(L"explorer.exe");
-        else logMsg(L"Plasma is still starting; retaining Explorer for recovery.\n");
+        /* Retain the existing Explorer desktop and file-manager windows.
+           A process existing is not readiness, and killing Explorer loses its open windows. */
+        logMsg(L"Retaining Explorer while starting Plasma; the configured shell applies at next logon.\n");
         readShellValue(g_currentShell, 1024);
         updateTrayTip();
+        return TRUE;
     }
+    return FALSE;
 }
 
 /* ------------------------------------------------------------------ */
@@ -569,6 +628,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
             && matchesSessionProcess(2, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"c:\\kde\\bin\\DBUS-DAEMON.EXE")
             && !matchesSessionProcess(3, 2, L"C:\\KDE\\bin\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe")
             && !matchesSessionProcess(2, 2, L"C:\\other\\dbus-daemon.exe", L"C:\\KDE\\bin\\dbus-daemon.exe");
+        ok = ok && validRecoveryBackup("explorer.exe",12) && !validRecoveryBackup(" \r\n",3)
+            && !validRecoveryBackup("\xff",1) && !validRecoveryBackup("\xef\xbb\xbf",3)
+            && !validRecoveryBackup("\xe3\x80\x80",3);
         struct RestartBudget budget={0};
         ok = ok && allowRestart(&budget,TRUE,FALSE,1) && !allowRestart(&budget,TRUE,FALSE,5001)
             && allowRestart(&budget,TRUE,FALSE,10001) && allowRestart(&budget,TRUE,FALSE,30001)
@@ -585,9 +647,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
     discoverSessionCmd();
     readShellValue(g_currentShell, 1024);
     if (mode == MODE_EXPLORER || mode == MODE_PLASMA) {
-        if (mode == MODE_EXPLORER) doSwitchToExplorer();
-        else doSwitchToPlasma();
-        return 0;
+        return (mode == MODE_EXPLORER ? doSwitchToExplorer() : doSwitchToPlasma()) ? 0 : 1;
     }
 
     /* keep the console window hidden unless running from a console */

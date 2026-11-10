@@ -78,25 +78,11 @@ echo.
 echo [INSTALL] Switching the current user's default Shell to Plasma ...
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 
-set "CURRENT_SHELL="
-for /f "usebackq skip=2 tokens=1,* delims= " %%A in (`reg query "%SHELL_KEY%" /v Shell 2^>nul`) do (
-    if "%%A"=="Shell" set "CURRENT_SHELL=%%B"
-)
-if defined CURRENT_SHELL (
-    > "%SHELL_BACKUP%" echo %CURRENT_SHELL%
-    echo           Backed up current Shell: %CURRENT_SHELL%
-) else (
-    > "%SHELL_BACKUP%" echo explorer.exe
-    echo           No previous Shell value found - restore will use explorer.exe
-)
+set "SHELL_KEY_PS=HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+set "SHELL_VALUE="
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action install
+if errorlevel 1 exit /b 1
 
-reg add "%SHELL_KEY%" /v Shell /t REG_SZ /d "cmd.exe /c \"%SESSION_LAUNCHER%\"" /f >nul
-if errorlevel 1 (
-    echo [ERROR] Failed to write the registry value.
-    pause
-    exit /b 1
-)
-echo           Installed: cmd.exe /c "%SESSION_LAUNCHER%"
 echo           Effective at the next logon.
 echo.
 echo           To roll back: run this script and pick [3].
@@ -115,18 +101,10 @@ rem ---------------------------------------------------------------------------
 :restore
 echo.
 echo [RESTORE] Restoring the default Shell ...
-set "OLD_SHELL=explorer.exe"
-if exist "%SHELL_BACKUP%" (
-    set /p OLD_SHELL=<"%SHELL_BACKUP%"
-    if not defined OLD_SHELL set "OLD_SHELL=explorer.exe"
-)
-reg add "%SHELL_KEY%" /v Shell /t REG_SZ /d "%OLD_SHELL%" /f >nul
-if errorlevel 1 (
-    echo [ERROR] Failed to write the registry value.
-    pause
-    exit /b 1
-)
-echo           Restored: %OLD_SHELL%
+set "SHELL_KEY_PS=HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action restore
+if errorlevel 1 exit /b 1
+
 echo           Effective at the next logon.
 pause
 exit /b 0

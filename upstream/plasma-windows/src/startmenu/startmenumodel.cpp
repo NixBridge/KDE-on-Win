@@ -223,6 +223,7 @@ void StartMenuModel::scan()
         };
         for (const auto& tool : { Tool { "konsole", "konsole.exe", "org.kde.konsole.desktop" },
                  Tool { "process-monitor", "plasma-process-monitor.exe", "org.nixbridge.processmonitor.desktop" },
+                 Tool { "quick-actions", "plasma-desktop-tools.exe", "org.nixbridge.quickactions.desktop" },
                  Tool { "desktop-tools", "plasma-desktop-tools.exe", "org.nixbridge.desktoptools.desktop" },
                  Tool { "dolphin", "dolphin.exe", "org.kde.dolphin.desktop" },
                  Tool { "archive", "plasma-archive-manager.exe", "org.nixbridge.archive.desktop" },

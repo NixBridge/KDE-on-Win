@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <windows.h>
+#include "../../upstream/plasma-windows/src/shared/windowsinstancelock.h"
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shlwapi.h>
@@ -226,6 +227,15 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
             && parseMode({ L"--self-test", L"extra" }) == Mode::Invalid
             && parseMode({ L"--spawn-hidden" }) == Mode::Invalid
             && parseMode({ L"--spawn-hidden", L"" }) == Mode::Invalid;
+        const auto lockName = L"Local\\KDE-SessionLock-Fixture-" + std::to_wstring(GetCurrentProcessId());
+        {
+            WindowsInstanceLock first(lockName.c_str()), duplicate(lockName.c_str());
+            ok = ok && first.valid() && !first.duplicate() && duplicate.valid() && duplicate.duplicate();
+        }
+        {
+            WindowsInstanceLock reopened(lockName.c_str());
+            ok = ok && reopened.valid() && !reopened.duplicate();
+        }
         wchar_t system[32768] {};
         GetSystemDirectoryW(system, 32768);
         DWORD consoleCode = 0;
@@ -254,6 +264,13 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
         std::vector<std::wstring> child(args.begin() + 2, args.end());
         return launch(program, child, false) ? 0 : 1;
     }
+    WindowsInstanceLock session(L"Local\\NixBridge.KDEonWin.SessionHost");
+    if (!session.valid()) {
+        explorerFallback();
+        return 1;
+    }
+    if (session.duplicate())
+        return 0;
     auto root = directory();
     root = root.substr(0, root.find_last_of(L"\\/"));
     wchar_t system[32768] {};

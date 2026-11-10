@@ -1,0 +1,99 @@
+--- a/libtaskmanager/windowswindowtasksmodel.cpp
++++ b/libtaskmanager/windowswindowtasksmodel.cpp
+@@ -148,11 +148,22 @@
+     // 500ms full dataChanged churn are gone).
+     KWindowSystemWindows *kws = KWindowSystemWindows::self();
+     connect(kws, &KWindowSystemWindows::windowAdded, q, [this](WId id) { addWindow(id); });
++    connect(kws, &KWindowSystemWindows::windowChanged, q, [this](WId id, bool geometryOnly) {
++        const int row = windows.indexOf(id);
++        if (row < 0) return;
++        if (geometryOnly) {
++            this->q->dataChanged(this->q->index(row), this->q->index(row),
++                {AbstractTasksModel::Geometry, AbstractTasksModel::ScreenGeometry, AbstractTasksModel::StackingOrder});
++        } else {
++            iconCache.remove(reinterpret_cast<HWND>(id));
++            this->q->dataChanged(this->q->index(row), this->q->index(row));
++        }
++    });
+     connect(kws, &KWindowSystemWindows::windowRemoved, q, [this](WId id) { removeWindow(id); });
+     connect(kws, &KWindowSystemWindows::activeWindowChanged, q, [this](WId id) { setActiveWindow(id); });
+ 
+-    // WinEventHook does not report title/icon/minimize changes; a slow
+-    // refresh keeps those roles current without the old 500ms full churn.
++    // Native state/name/location events refresh individual rows. Keep a slow
++    // fallback for icon changes that have no reliable WinEvent notification.
+     refreshTimer.setInterval(2000);
+     connect(&refreshTimer, &QTimer::timeout, q, [this]() { refreshData(); });
+     refreshTimer.start();
+@@ -168,9 +179,6 @@
+ 
+ void WindowsWindowTasksModel::Private::addWindow(WId id)
+ {
+-    if (windows.contains(id)) {
+-        return;
+-    }
+     const HWND hwnd = reinterpret_cast<HWND>(id);
+     if (!::IsWindow(hwnd)) {
+         return;
+@@ -179,6 +187,10 @@
+     GetWindowThreadProcessId(hwnd, &pid);
+     if (pid == GetCurrentProcessId()) {
+         return; // our own shell windows
++    }
++    if (windows.contains(id)) {
++        if (owners.value(id) == pid) return;
++        removeWindow(id); // A reused HWND must not retain the previous process identity.
+     }
+     q->beginInsertRows(QModelIndex(), windows.size(), windows.size());
+     windows.append(id);
+@@ -218,6 +230,10 @@
+             return;
+         }
+     }
++    id = reinterpret_cast<WId>(activationTask(reinterpret_cast<HWND>(id), [this](HWND window) {
++        const auto task = reinterpret_cast<WId>(window);
++        return windows.contains(task) && windowIdentity(window, owners.value(task));
++    }));
+     if (id == activeWindow) {
+         return;
+     }
+@@ -236,12 +252,15 @@
+         GetWindowThreadProcessId(reinterpret_cast<HWND>(id), &pid);
+         if (pid != shellPid) addWindow(id);
+     }
+-    activeWindow = KWindowSystemWindows::activeWindow();
++    setActiveWindow(KWindowSystemWindows::activeWindow());
+     refreshData();
+ }
+ 
+ void WindowsWindowTasksModel::Private::refreshData()
+ {
++    const auto snapshot = windows;
++    for (const auto id : snapshot)
++        if (!windowIdentity(reinterpret_cast<HWND>(id), owners.value(id))) removeWindow(id);
+     if (q->rowCount() > 0) {
+         q->dataChanged(q->index(0), q->index(q->rowCount() - 1),
+             {Qt::DisplayRole,Qt::DecorationRole,AbstractTasksModel::IsClosable,AbstractTasksModel::IsMinimizable,AbstractTasksModel::IsMaximizable,AbstractTasksModel::IsActive,
+--- a/libtaskmanager/windowswindowactions.h
++++ b/libtaskmanager/windowswindowactions.h
+@@ -2,6 +2,20 @@
+ #pragma once
+ #include <windows.h>
+ namespace TaskManager {
++// The foreground may be a modal/tool dialog that has no separate task entry.
++// Prefer a task for the exact window, then walk a bounded owner chain.
++template<typename IsTask>
++inline HWND activationTask(HWND foreground, IsTask isTask)
++{
++    for (int depth = 0; foreground && IsWindow(foreground) && depth < 32; ++depth) {
++        if (isTask(foreground)) return foreground;
++        const HWND owner = GetWindow(foreground, GW_OWNER);
++        if (owner == foreground) break;
++        foreground = owner;
++    }
++    return nullptr;
++}
++
+ inline bool windowIdentity(HWND window,DWORD expected)
+ {
+     DWORD pid=0;return expected && IsWindow(window) && GetWindowThreadProcessId(window,&pid) && pid==expected;

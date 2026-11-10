@@ -5,6 +5,9 @@ import hashlib
 import json
 import shutil
 import zipfile
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
@@ -15,6 +18,10 @@ if not args.version.replace('-', '').isalnum():
     parser.error('version must contain only letters, digits and hyphens')
 root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'manifests' / 'cumulative-patch-files.json').read_text())
+release = re.search(r'fix[0-9]+$', args.version, re.IGNORECASE)
+subprocess.run([sys.executable, str(root / 'tools/write-release-info.py'), '--runtime', str(args.runtime),
+                '--version', release.group().capitalize() if release else 'development'], check=True)
+
 out = root / 'dist' / args.version
 stage = out / 'patch'
 sources = {relative: args.runtime / relative for relative in manifest['runtime']}
@@ -55,6 +62,7 @@ for relative, source in sources.items():
     'Fix22 adds desktop menu tools, taskbar command/grouping fixes, fullscreen panel priority, safe shortcut alternatives and in-memory clipboard history. Session restore is not implemented or enabled. See docs/FIX22.md.\n'
     'Fix23 improves desktop-tools focus, empty-history feedback, hidden refresh and settings-error recovery. See docs/FIX23.md.\n'
     'Fix24 removes the fixed drive requirement and ships relocatable launch metadata and Unicode-safe menus. See docs/FIX24.md.\n'
+    'Fix25 hardens Shell recovery and native window events, and adds Places/Quick Actions, opt-in Windows theme following, shortcut failure details and private diagnostic export. See docs/FIX25.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

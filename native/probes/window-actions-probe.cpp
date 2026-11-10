@@ -27,8 +27,18 @@ int main(int argc, char** argv)
     const RECT monitor { -1920, 0, 0, 1080 }, fullscreen { -1920, 0, 0, 1080 }, normal { -1800, 10, -10, 1040 };
     const bool geometry = windowsCoversMonitor(fullscreen, monitor, false)
         && !windowsCoversMonitor(normal, monitor, false) && !windowsCoversMonitor(fullscreen, monitor, true);
+    const HWND holderWindow = reinterpret_cast<HWND>(holder.winId());
+    const HWND dialog = CreateWindowExW(WS_EX_TOOLWINDOW, L"STATIC", L"Hidden owned dialog", WS_OVERLAPPEDWINDOW, 0, 0,
+        80, 60, holderWindow, nullptr, GetModuleHandleW(nullptr), nullptr);
+    const bool activation = dialog
+        && TaskManager::activationTask(dialog, [=](HWND candidate) { return candidate == holderWindow; })
+            == holderWindow
+        && TaskManager::activationTask(dialog, [=](HWND candidate) { return candidate == dialog; }) == dialog
+        && !TaskManager::activationTask(dialog, [](HWND) { return false; });
+    if (dialog)
+        DestroyWindow(dialog);
     const DWORD pid = GetCurrentProcessId();
-    bool ok = geometry && ordinaryDesktopWindowStyle(WS_SYSMENU | WS_THICKFRAME, 0)
+    bool ok = activation && geometry && ordinaryDesktopWindowStyle(WS_SYSMENU | WS_THICKFRAME, 0)
         && !ordinaryDesktopWindowStyle(WS_POPUP, 0) && !ordinaryDesktopWindowStyle(WS_SYSMENU, WS_EX_TOOLWINDOW)
         && window && !IsWindowVisible(reinterpret_cast<HWND>(holder.winId()));
     ok &= TaskManager::windowCommandAllowed(window, pid, SC_MAXIMIZE)

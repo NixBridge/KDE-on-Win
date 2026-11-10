@@ -85,20 +85,11 @@ rem ---------------------------------------------------------------------------
 echo === Switching user shell to plasmashell ===
 if not exist "%USERPROFILE%\.plasma-windows" mkdir "%USERPROFILE%\.plasma-windows"
 
-rem Preserve the original backup across reinstall/upgrade.
-if exist "%SHELL_BACKUP%" goto :write_shell
-powershell -NoProfile -Command "$p=Join-Path $env:USERPROFILE '.plasma-windows\shell-backup.txt'; $key=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows NT\CurrentVersion\Winlogon'); $value=$null; if($key){$value=$key.GetValue('Shell');$key.Dispose()}; if([string]::IsNullOrWhiteSpace($value)){$value='explorer.exe'}; [IO.File]::WriteAllText($p,$value,[Text.UTF8Encoding]::new($false))"
+set "SHELL_KEY_PS=HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+set "SHELL_VALUE="
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action install
 if errorlevel 1 exit /b 1
-:write_shell
 
-rem Point the shell at the session launcher (starts dbus + services +
-rem plasmashell), so a plain logon gets a working plasma session.
-powershell -NoProfile -Command "$q=[char]34; $native=Join-Path $env:CRAFT_BIN 'kde-session-host.exe'; $script=Join-Path $env:CRAFT_ROOT 'session-shell.cmd'; if([IO.File]::Exists($native)){$value=$q+$native+$q}elseif([IO.File]::Exists($script)){$value='cmd.exe /c '+$q+$script+$q}else{$value=$q+(Join-Path $env:CRAFT_BIN 'plasmashell.exe')+$q}; $key=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows NT\CurrentVersion\Winlogon'); try{$key.SetValue('Shell',$value,[Microsoft.Win32.RegistryValueKind]::String)}finally{$key.Dispose()}"
-if errorlevel 1 (
-    echo ERROR: failed to write the shell registry value.
-    pause
-    exit /b 1
-)
 echo User shell configured. Native session host is preferred when available.
 echo Takes effect at next logon/restart. Starting the session now for testing...
 goto :session
@@ -108,7 +99,8 @@ rem restore: put the backed-up shell value back (explorer.exe if no backup).
 rem ---------------------------------------------------------------------------
 :restore_shell
 echo === Restoring previous user shell ===
-powershell -NoProfile -Command "$p=Join-Path $env:USERPROFILE '.plasma-windows\shell-backup.txt'; $value='explorer.exe'; if([IO.File]::Exists($p)){$value=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8)}; if([string]::IsNullOrWhiteSpace($value)){$value='explorer.exe'}; $key=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows NT\CurrentVersion\Winlogon'); try{$key.SetValue('Shell',$value,[Microsoft.Win32.RegistryValueKind]::String)}finally{$key.Dispose()}"
+set "SHELL_KEY_PS=HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -Action restore
 if errorlevel 1 exit /b 1
 echo User shell restored. Takes effect at next logon/restart.
 endlocal

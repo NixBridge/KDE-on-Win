@@ -91,7 +91,11 @@ public:
         window->setContentsMargins(m_margins.left(), m_margins.top() + m_height, m_margins.right(), m_margins.bottom());
         const bool visible = window->isVisible();
         const auto state = window->windowState();
-        window->setWindowFlag(Qt::FramelessWindowHint, true);
+        // Changing Qt flags hides a visible QDialog and terminates exec().
+        // Visible modal dialogs keep their Qt flags; the native frame below is
+        // adjusted directly, without rebuilding or hiding the dialog window.
+        if (!dialog || !visible)
+            window->setWindowFlag(Qt::FramelessWindowHint, true);
         window->installEventFilter(this);
         m_bar->installEventFilter(this);
         const HWND handle = reinterpret_cast<HWND>(window->winId());
@@ -104,7 +108,7 @@ public:
             SetWindowPos(handle, nullptr, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         }
-        if (visible) {
+        if (visible && !dialog) {
             window->setWindowState(state);
             window->show();
         }

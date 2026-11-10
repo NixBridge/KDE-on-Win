@@ -1,0 +1,320 @@
+{
+  "release": "Fix25",
+  "baseline_commit": "644ac9d010fab486c1d8cb47b17fc9f1181dc859",
+  "checks": [
+    {
+      "name": "desktop-integration-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "input-layout-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=display",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=appearance",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=invalid",
+      "exit": 0
+    },
+    {
+      "name": "kde-session-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "trayhost --self-test",
+      "exit": 0
+    },
+    {
+      "name": "shellswitch --self-test",
+      "exit": 0
+    },
+    {
+      "name": "volume-lifecycle-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-callback-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-relay-probe",
+      "exit": 0
+    },
+    {
+      "name": "kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "x86/kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-logon-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --dialog-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --invoke-self-test",
+      "exit": 0
+    },
+    {
+      "name": "konsole-conpty-probe",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --editing-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native window-events-probe",
+      "exit": 0
+    },
+    {
+      "name": "native window-actions-probe",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_folder_routing.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_deployment.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_integration_binaries.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_backup.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_registry_provider.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_legacy_shell_paths.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_session_log_fallback.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_cumulative_contract.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_runtime_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_dbus_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_msvc_deps.py",
+      "exit": 0
+    }
+  ],
+  "build": {
+    "architecture": "x64",
+    "affected_components_compiled": true,
+    "x86_login_rebuilt": false
+  },
+  "runtime_imports": {
+    "modules_checked": 646,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "dependency_closure": {
+    "modules_checked": 259,
+    "new_dlls": []
+  },
+  "source_replay": {
+    "kwindowsystem_patches": 3,
+    "plasma_workspace_patches": 22,
+    "compiled_files_compared": 7,
+    "report": "fix25-source-verification.json"
+  },
+  "candidate_artifact": {
+    "source_files": 634,
+    "previous_entries_retained": true,
+    "candidate_crc_verified": true,
+    "build_outputs_verified": [
+      "bin/plasma-desktop-tools.exe",
+      "bin/plasma-system-settings.exe",
+      "bin/plasma-kde-launcher.exe",
+      "bin/plasma-process-monitor.exe",
+      "bin/shellswitch.exe",
+      "bin/breeze-window-probe.exe",
+      "bin/startmenu-model-probe.exe",
+      "bin/window-actions-probe.exe",
+      "bin/window-events-probe.exe",
+      "bin/desktop-integration-probe.exe",
+      "bin/kde-session-host.exe",
+      "qml/org/kde/plasma/windowsmenu/startmenuplugin.dll",
+      "plugins/styles/plasmawindowsstyle.dll",
+      "bin/data/kde-on-win/translations/kdeonwin_zh_CN.qm",
+      "bin/taskmanager.dll",
+      "bin/KF6WindowSystem.dll",
+      "plugins/kf6/org.kde.kwindowsystem.platforms/KF6WindowSystemWindowsPlugin.dll"
+    ],
+    "release_stamp_check": true
+  },
+  "safety": {
+    "live_default_shell_modified": false,
+    "login_provider_installed": false,
+    "file_associations_modified": false,
+    "system_clipboard_accessed_by_history_tests": false,
+    "scratch_hkcu_guid_key_tested_and_removed": true
+  },
+  "vm_interaction_acceptance": false,
+  "final_artifact": "Generated after commit, stamping that commit and clean-tree state; SHA256 is supplied beside the ZIP.",
+  "limitations_document": "docs/FIX25.md"
+}

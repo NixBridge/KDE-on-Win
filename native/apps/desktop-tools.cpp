@@ -3,6 +3,12 @@
 #include "project-about.h"
 #include "clipboard-history.h"
 #include "desktop-toggle.h"
+#include "desktop-actions.h"
+#include "system-theme.h"
+#include "hotkey-policy.h"
+#include <QMenuBar>
+#include <QMenu>
+#include <QFileSystemWatcher>
 #include "windowsinstancelock.h"
 #include <QApplication>
 #include <QFontDatabase>
@@ -21,6 +27,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMap>
+#include <QPointer>
 #include <QUrl>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -138,6 +145,7 @@ public:
         note->setWordWrap(true);
         layout->addWidget(note);
         status = new QLabel;
+        status->setTextFormat(Qt::PlainText);
         status->setWordWrap(true);
         layout->addWidget(status);
         auto* quit = new QPushButton(tr("Quit desktop tools"));
@@ -162,7 +170,59 @@ public:
         escape->setShortcut(QKeySequence(Qt::Key_Escape));
         addAction(escape);
         connect(escape, &QAction::triggered, this, &QWidget::hide);
+        auto* places = menuBar()->addMenu(tr("Places"));
+        auto* quick = menuBar()->addMenu(tr("Quick actions"));
+        places->setObjectName("DesktopPlaces");
+        quick->setObjectName("DesktopQuickActions");
+        places->setToolTipsVisible(true);
+        quick->setToolTipsVisible(true);
+        for (const auto& group : { qMakePair(places, desktopPlaces()), qMakePair(quick, desktopQuickActions()) })
+            for (const auto& action : group.second) {
+                auto* item = group.first->addAction(QIcon::fromTheme(action.icon), action.text);
+                const auto plan = desktopActionPlan(action.id);
+                item->setEnabled(plan.error.isEmpty() && (plan.shell || QFileInfo::exists(plan.program)));
+                if (!item->isEnabled())
+                    item->setToolTip(plan.error.isEmpty() ? tr("Required component missing.") : plan.error);
+                connect(item, &QAction::triggered, this, [this, id = action.id] {
+                    const auto error = startDesktopAction(id);
+                    if (!error.isEmpty())
+                        QMessageBox::warning(this, tr("Cannot start application"), error);
+                });
+            }
         addProjectAbout(this);
+        themeTimer.setSingleShot(true);
+        themeTimer.setInterval(150);
+        connect(&themeTimer, &QTimer::timeout, this, [this] {
+            if (test)
+                return;
+            QSettings prefs(appearanceSettingsPath(), QSettings::IniFormat);
+            if (syncWindowsTheme(prefs, windowsDarkPreference(), currentThemeIsBreeze())) {
+                if (!QProcess::startDetached(
+                        QCoreApplication::applicationDirPath() + "/plasma-personalization.exe", {})) {
+                    themeProblem = tr("Could not start the personalization helper.");
+                    prefs.setValue("personalizationError", themeProblem);
+                    prefs.sync();
+                    updateStatus();
+                } else {
+                    themeProblem.clear();
+                    updateStatus();
+                }
+            }
+            const auto applyError = prefs.value("personalizationError").toString();
+            if (prefs.value("pendingPersonalization", false).toBool() && !applyError.isEmpty()) {
+                themeProblem = QObject::tr("Could not apply preferences: %1").arg(applyError.left(240));
+                updateStatus();
+            }
+            if (!themeProblem.isEmpty() && !prefs.contains("personalizationError")) {
+                themeProblem.clear();
+                updateStatus();
+            }
+            const auto path = appearanceSettingsPath();
+            if (QFileInfo::exists(path) && !themeFiles.files().contains(path))
+                themeFiles.addPath(path);
+        });
+        connect(&themeFiles, &QFileSystemWatcher::fileChanged, this, [this] { themeTimer.start(); });
+        connect(&themeFiles, &QFileSystemWatcher::directoryChanged, this, [this] { themeTimer.start(); });
         qApp->installNativeEventFilter(this);
     }
     ~DesktopTools() override
@@ -198,8 +258,11 @@ public:
                         return;
                     const auto object = QJsonDocument::fromJson(bytes.trimmed()).object();
                     socket->setProperty("handled", true);
-                    dispatch(object.value("command").toString());
+                    const auto command = object.value("command").toString();
+                    // A modal dispatch runs a nested event loop. Disconnect first: the
+                    // socket timeout/deleteLater may otherwise free it before dispatch returns.
                     socket->disconnectFromServer();
+                    dispatch(command);
                 };
                 connect(socket, &QLocalSocket::readyRead, this, consume);
                 if (socket->bytesAvailable())
@@ -213,19 +276,25 @@ public:
                 if (history.enabled && history.capture(QApplication::clipboard()->mimeData()))
                     refresh();
             });
-        if (!test)
+        if (!test) {
             registerKeys();
+            winId(); // Hidden top-level HWND receives Windows theme broadcasts.
+            themeFiles.addPath(QFileInfo(appearanceSettingsPath()).absolutePath());
+            themeTimer.start();
+        }
         return true;
     }
     void dispatch(const QString& command)
     {
-        if (test && command != "clipboard" && command != "settings" && command != "stop")
+
+        if (test && command != "clipboard" && command != "settings" && command != "actions" && command != "run"
+            && command != "stop")
             return;
         if (command == "stop" || (command == "stop-if-idle" && !desktopPresent())) {
             shutdown();
             return;
         }
-        if (command == "clipboard" || command == "settings") {
+        if (command == "clipboard" || command == "settings" || command == "actions") {
             ++requests;
             refresh(true);
             if (isMinimized())
@@ -236,6 +305,8 @@ public:
             activateWindow();
             if (command == "settings")
                 hotkeys->setFocus();
+            else if (command == "actions")
+                menuBar()->setFocus();
             else
                 items->setFocus();
         } else if (command == "dolphin")
@@ -244,10 +315,20 @@ public:
             hide();
             desktop.toggle();
         } else if (command == "run") {
-            bool accepted = false;
-            const auto text = QInputDialog::getText(
-                this, tr("Run application"), tr("Program and arguments:"), QLineEdit::Normal, {}, &accepted);
-            if (!accepted || text.trimmed().isEmpty())
+            if (runDialog) {
+                runDialog->raise();
+                runDialog->activateWindow();
+                return;
+            }
+            QInputDialog dialog(this);
+            runDialog = &dialog;
+            dialog.setWindowTitle(tr("Run application"));
+            dialog.setLabelText(tr("Program and arguments:"));
+            dialog.setInputMode(QInputDialog::TextInput);
+            const bool accepted = dialog.exec() == QDialog::Accepted;
+            const auto text = dialog.textValue();
+            runDialog.clear();
+            if (!accepted || text.trimmed().isEmpty() || test)
                 return;
             const auto parts = QProcess::splitCommand(text);
             if (parts.isEmpty() || !QProcess::startDetached(parts.first(), parts.mid(1)))
@@ -259,8 +340,9 @@ public:
     {
         history.clear();
         refresh();
-        bool ok = items->count() == 0 && !clearButton->isEnabled() && !copyButton->isEnabled()
-            && !emptyHint->isHidden();
+        bool ok = findChild<QMenu*>("DesktopPlaces")->actions().size() == 7
+            && findChild<QMenu*>("DesktopQuickActions")->actions().size() == 7;
+        ok &= items->count() == 0 && !clearButton->isEnabled() && !copyButton->isEnabled() && !emptyHint->isHidden();
         QMimeData data;
         data.setText(QStringLiteral("中文 clipboard fixture"));
         history.capture(&data);
@@ -279,6 +361,21 @@ public:
         ok &= items->count() == 2 && focusWidget() == hotkeys;
         dispatch("clipboard");
         ok &= focusWidget() == items;
+        bool singleRun = false;
+        QTimer::singleShot(0, this, [&] {
+            if (!runDialog)
+                return;
+            auto* first = runDialog.data();
+            dispatch("run");
+            singleRun = runDialog.data() == first && findChildren<QInputDialog*>().size() == 1;
+            first->reject();
+        });
+        dispatch("run");
+        ok &= singleRun && !runDialog;
+        items->setCurrentRow(1);
+        select();
+        ok &= history.entries.size() == 2 && history.entries.first() == QStringLiteral("中文 clipboard fixture");
+        dispatch("clipboard");
         requests = 0;
         MSG session {};
         session.message = WM_QUERYENDSESSION;
@@ -315,6 +412,25 @@ public:
             ok &= QFontMetrics(font()).inFontUcs4(0x5185) && windowTitle() == QStringLiteral("桌面工具与剪贴板")
                 && findChild<QLabel*>("ShortcutPolicy")->text().contains(QStringLiteral("修饰键"))
                 && findChild<QLabel*>("ClipboardPrivacy")->text().contains(QStringLiteral("内存"));
+        QLocalSocket runClient;
+        runClient.connectToServer(pipe);
+        if (!runClient.waitForConnected(1000))
+            return false;
+        bool disconnectedBeforeModalTimeout = false, modalFinished = false;
+        QTimer::singleShot(100, this,
+            [&] { disconnectedBeforeModalTimeout = runDialog && runClient.state() == QLocalSocket::UnconnectedState; });
+        QTimer::singleShot(2200, this, [&] {
+            modalFinished = bool(runDialog);
+            if (runDialog)
+                runDialog->reject();
+        });
+        runClient.write("{\"command\":\"run\"}\n");
+        runClient.flush();
+        timer.restart();
+        while (!modalFinished && timer.elapsed() < 4000)
+            QCoreApplication::processEvents();
+
+        ok &= disconnectedBeforeModalTimeout && modalFinished && !runDialog;
         const auto originalSettings = qgetenv("KDE_ON_WIN_SETTINGS");
         QTemporaryDir temporary;
         const QString blocked = temporary.filePath("blocked.ini");
@@ -356,6 +472,8 @@ protected:
     bool nativeEventFilter(const QByteArray&, void* data, qintptr* result) override
     {
         auto* message = static_cast<MSG*>(data);
+        if (message->message == WM_SETTINGCHANGE || message->message == WM_THEMECHANGED)
+            themeTimer.start();
         // This RAM-only utility must never veto Windows logoff/shutdown.
         if (message->message == WM_QUERYENDSESSION) {
             *result = TRUE;
@@ -402,7 +520,7 @@ private:
     {
         status->setText(preferenceError
                 ? tr("Settings could not be read or saved. Changes may last only for this run.")
-                : shortcutStatus);
+                : shortcutStatus + (themeProblem.isEmpty() ? QString() : QStringLiteral("\n") + themeProblem));
     }
     void launch(const QString& role, const QStringList& args)
     {
@@ -415,9 +533,8 @@ private:
     {
         if (!force && !isVisible())
             return;
-        emptyHint->setText(history.enabled
-                ? tr("No text history yet. Copy text to add it here.")
-                : tr("Text history is disabled."));
+        emptyHint->setText(
+            history.enabled ? tr("No text history yet. Copy text to add it here.") : tr("Text history is disabled."));
         emptyHint->setVisible(history.entries.isEmpty());
         clearButton->setEnabled(!history.entries.isEmpty());
         const QString selected = items->currentItem() ? items->currentItem()->data(Qt::UserRole).toString() : QString();
@@ -435,9 +552,12 @@ private:
     {
         if (!items->currentItem())
             return;
+        const auto value = items->currentItem()->data(Qt::UserRole).toString();
+        if (!history.promote(value))
+            return;
         if (!test) {
             auto* data = new QMimeData;
-            data->setText(items->currentItem()->data(Qt::UserRole).toString());
+            data->setText(value);
             data->setData("application/x-kde-on-win-history", "1");
             QApplication::clipboard()->setMimeData(data);
         }
@@ -455,18 +575,29 @@ private:
         const UINT flags = MOD_CONTROL | MOD_ALT | MOD_NOREPEAT | (hotkeys->currentIndex() ? MOD_SHIFT : 0);
         QStringList failed;
         const QString keys = "ERDV";
+        if (!uniqueHotkeys(keys)) {
+            shortcutStatus = tr("Duplicate project shortcuts. Shortcuts were not registered.");
+            updateStatus();
+            return;
+        }
+        const auto modifiers
+            = hotkeys->currentIndex() ? QStringLiteral("Ctrl+Alt+Shift+") : QStringLiteral("Ctrl+Alt+");
         for (int i = 0; i < 4; ++i) {
             if (RegisterHotKey(nullptr, hotkeyBase + i, flags, keys[i].unicode()))
                 registered.append(hotkeyBase + i);
-            else
-                failed.append(keys[i]);
+            else {
+                const DWORD error = GetLastError();
+                failed.append(modifiers + keys[i] + ": " + hotkeyFailure(error));
+            }
         }
         shortcutStatus = failed.isEmpty()
-                ? tr("Shortcuts registered.")
-                : tr("Shortcuts unavailable: %1. Choose the alternate modifiers or use the menu.")
-                      .arg(failed.join('/'));
+            ? tr("Shortcuts registered.")
+            : tr("Shortcuts unavailable: %1. Choose the alternate modifiers or use the menu.").arg(failed.join("; "));
         updateStatus();
     }
+    QPointer<QInputDialog> runDialog;
+    QTimer themeTimer;
+    QFileSystemWatcher themeFiles;
     QString pipe = channel();
     bool preferenceError = false;
     bool stopped = false;
@@ -475,7 +606,7 @@ private:
     ClipboardHistory history;
     DesktopToggle desktop;
     QLocalServer server;
-    QString shortcutStatus;
+    QString shortcutStatus, themeProblem;
     QLabel* emptyHint = nullptr;
     QPushButton* clearButton = nullptr;
     QPushButton* copyButton = nullptr;
@@ -492,6 +623,8 @@ static bool selfTest()
     bool ok = history.capture(&data) && !history.capture(&data);
     data.setText(QStringLiteral("中文"));
     ok &= history.capture(&data);
+    ok &= history.promote("alpha") && history.entries.first() == "alpha" && !history.promote("not in history");
+    history.promote(QStringLiteral("中文"));
     history.setLimit(1);
     ok &= history.entries.size() == 1 && history.entries.first() == QStringLiteral("中文");
     data.setData("application/x-kde-passwordManagerHint", "secret");
@@ -576,8 +709,8 @@ int main(int argc, char** argv)
     }
     const QString option = args.value(1, "--clipboard");
     const QMap<QString, QString> commands { { "--daemon", "daemon" }, { "--clipboard", "clipboard" },
-        { "--settings", "settings" }, { "--run", "run" }, { "--desktop", "desktop" }, { "--stop", "stop" },
-        { "--stop-if-idle", "stop-if-idle" } };
+        { "--actions", "actions" }, { "--settings", "settings" }, { "--run", "run" }, { "--desktop", "desktop" },
+        { "--stop", "stop" }, { "--stop-if-idle", "stop-if-idle" } };
     if (args.size() > 2 || !commands.contains(option))
         return 2;
     const auto name = channel().toStdWString();
@@ -590,7 +723,7 @@ int main(int argc, char** argv)
         if (!socket.waitForConnected(1500))
             return 1;
         ULONG serverPid = 0;
-        if ((option == "--clipboard" || option == "--settings" || option == "--run")
+        if ((option == "--clipboard" || option == "--settings" || option == "--actions" || option == "--run")
             && GetNamedPipeServerProcessId(reinterpret_cast<HANDLE>(socket.socketDescriptor()), &serverPid))
             AllowSetForegroundWindow(serverPid);
         const auto request

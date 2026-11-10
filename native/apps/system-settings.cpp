@@ -38,6 +38,12 @@
 #include <KIconTheme>
 #include <KIconLoader>
 #include "appearance.h"
+#include "desktop-actions.h"
+#include "system-theme.h"
+#include "diagnostics.h"
+#include <QDialogButtonBox>
+#include <QPlainTextEdit>
+#include <QSignalBlocker>
 #include "system-controls.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -131,6 +137,13 @@ int main(int argc, char** argv)
     theme->addItem(QObject::tr("Breeze Dark"), true);
     theme->setCurrentIndex(settings.value(QStringLiteral("dark"), false).toBool() ? 1 : 0);
     appearance->addWidget(theme);
+    auto* followTheme = new QCheckBox(QObject::tr("Follow Windows light/dark mode (Breeze only)"));
+    followTheme->setChecked(settings.value("followWindowsTheme", false).toBool());
+    appearance->addWidget(followTheme);
+    auto* themeHint = new QLabel(QObject::tr(
+        "Manual theme selection disables following. Custom KDE themes and high-contrast mode are left unchanged."));
+    themeHint->setWordWrap(true);
+    appearance->addWidget(themeHint);
     auto* decoration = new QCheckBox(QObject::tr("Use Breeze titlebars on standard Windows windows"));
     decoration->setChecked(settings.value(QStringLiteral("decorateWindows"), true).toBool());
     appearance->addWidget(decoration);
@@ -179,7 +192,28 @@ int main(int argc, char** argv)
         if (applyAppearance)
             applyAppearance();
     };
-    QObject::connect(theme, &QComboBox::currentIndexChanged, &window, save);
+    QObject::connect(theme, &QComboBox::currentIndexChanged, &window, [&] {
+        followTheme->setChecked(false);
+        settings.setValue("followWindowsTheme", false);
+        save();
+    });
+    QObject::connect(followTheme, &QCheckBox::toggled, &window, [&](bool checked) {
+        settings.setValue("followWindowsTheme", checked);
+        settings.sync();
+        if (app.arguments().contains("--ui-smoke-test"))
+            return;
+        if (syncWindowsTheme(settings, windowsDarkPreference(), currentThemeIsBreeze())) {
+            const QSignalBlocker block(theme);
+            theme->setCurrentIndex(settings.value("dark", false).toBool() ? 1 : 0);
+            if (applyAppearance)
+                applyAppearance();
+        }
+        if (checked
+            && !QProcess::startDetached(
+                QCoreApplication::applicationDirPath() + "/plasma-desktop-tools.exe", { "--daemon" }))
+            QMessageBox::warning(&window, QObject::tr("Cannot start application"),
+                QObject::tr("Could not start desktop tools for theme following."));
+    });
     QObject::connect(decoration, &QCheckBox::toggled, &window, save);
     auto* panel = page(QObject::tr("Panel"), QStringLiteral("preferences-desktop-plasma"));
     auto* panelForm = new QFormLayout;
@@ -384,6 +418,14 @@ int main(int argc, char** argv)
     QTimer statusTimer;
     QObject::connect(&statusTimer, &QTimer::timeout, &window, [&] {
         settings.sync();
+        if (followTheme->isChecked() != settings.value("followWindowsTheme", false).toBool()) {
+            QSignalBlocker block(followTheme);
+            followTheme->setChecked(settings.value("followWindowsTheme", false).toBool());
+        }
+        if (theme->currentData().toBool() != settings.value("dark", false).toBool()) {
+            QSignalBlocker block(theme);
+            theme->setCurrentIndex(settings.value("dark", false).toBool() ? 1 : 0);
+        }
         if (waitingForApply && !settings.value("personalizationError").toString().isEmpty())
             window.statusBar()->showMessage(
                 QObject::tr("Could not apply preferences: %1").arg(settings.value("personalizationError").toString()));
@@ -452,8 +494,43 @@ int main(int argc, char** argv)
     auto* openLogs = new QPushButton(QObject::tr("Open session logs"));
     support->addWidget(openLogs);
     QObject::connect(openLogs, &QPushButton::clicked, &window, [&] {
-        QProcess::startDetached(QCoreApplication::applicationDirPath() + QStringLiteral("/plasma-kde-launcher.exe"),
-            { QStringLiteral("dolphin"), QFileInfo(appearanceSettingsPath()).absolutePath() });
+        const auto error = startDesktopAction("logs");
+        if (!error.isEmpty())
+            QMessageBox::warning(&window, QObject::tr("Cannot start application"), error);
+    });
+    auto* exportDiagnostics = new QPushButton(QObject::tr("Preview and export diagnostics…"));
+    support->addWidget(exportDiagnostics);
+    exportDiagnostics->setObjectName("ExportDiagnostics");
+    QObject::connect(exportDiagnostics, &QPushButton::clicked, &window, [&] {
+        const auto json = QJsonDocument(diagnosticReport(app.applicationDirPath(), appearanceSettingsPath(),
+                                            QFileInfo(appearanceSettingsPath()).absolutePath() + "/logs"))
+                              .toJson(QJsonDocument::Indented);
+        QDialog preview(&window);
+        preview.setWindowTitle(QObject::tr("Review diagnostics before sharing"));
+        preview.resize(700, 500);
+        auto* contents = new QVBoxLayout(&preview);
+        auto* hint = new QLabel(QObject::tr(
+            "No automatic upload. Raw logs and personal paths are excluded; review this report before saving."));
+        hint->setWordWrap(true);
+        contents->addWidget(hint);
+        auto* text = new QPlainTextEdit(QString::fromUtf8(json));
+        text->setReadOnly(true);
+        contents->addWidget(text);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
+        contents->addWidget(buttons);
+        QObject::connect(buttons, &QDialogButtonBox::accepted, &preview, &QDialog::accept);
+        QObject::connect(buttons, &QDialogButtonBox::rejected, &preview, &QDialog::reject);
+        if (preview.exec() != QDialog::Accepted)
+            return;
+        const auto path = QFileDialog::getSaveFileName(&window, QObject::tr("Save diagnostics"),
+            "kde-on-win-diagnostics.json", QObject::tr("JSON files (*.json)"));
+        if (path.isEmpty())
+            return;
+        QSaveFile output(path);
+        if (!output.open(QIODevice::WriteOnly) || output.write(json) != json.size() || !output.commit())
+            QMessageBox::warning(&window, QObject::tr("Cannot save diagnostics"), output.errorString());
+        else
+            window.statusBar()->showMessage(QObject::tr("Diagnostics saved. Share only after reviewing."), 5000);
     });
     auto* checks = new QPushButton(QObject::tr("Run runtime diagnostics"));
     support->addWidget(checks);
@@ -505,6 +582,12 @@ int main(int argc, char** argv)
                     requested = pageNames.value(argument.mid(7));
             bool ok = pages->currentIndex() == requested && pages->count() == 14 && categories->count() == 14
                 && height->minimum() == 24 && iconSize->maximum() == 72;
+            ok &= exportDiagnostics->isEnabled();
+            const int initialTheme = theme->currentIndex();
+            followTheme->setChecked(true);
+            theme->setCurrentIndex(1 - initialTheme);
+            ok &= !followTheme->isChecked() && !settings.value("followWindowsTheme").toBool();
+            theme->setCurrentIndex(initialTheme);
             categories->setCurrentRow(3);
             ok &= pages->currentIndex() == 3;
             ok &= window.findChild<QWidget*>(QStringLiteral("PlasmaBreezeTitleBar")) != nullptr;

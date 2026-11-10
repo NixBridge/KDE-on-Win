@@ -1,0 +1,52 @@
+[
+  {
+    "component": "kwindowsystem",
+    "archive_sha256": "5adbdf9c82b1ecbb92bda6498ea1b8f88c08f9ec57dbff70d582e2453bf16b12",
+    "strict_patch_count": 3,
+    "patches": [
+      "0001-windows-backend.patch",
+      "0002-disable-windows-kwin-peek.patch",
+      "0003-window-event-lifetime-and-state.patch"
+    ],
+    "compiled_source_sha256": {
+      "src/platforms/windows/windowslist.cpp": "351b72b80d5370bad1daec5a807a5313e258382516f1680ad1d40c5e39538e6d",
+      "src/platforms/windows/windowslist.h": "e59d968dd088df03b636504c8ce7326d1aa9d9958719044a53d08ddbfd55e067",
+      "src/kwindowsystemwindows.cpp": "cd0e76bab958fe919b54d030515762b34c931615aaa30b823705313f71b3b431",
+      "src/kwindowsystemwindows.h": "8be0773268e8feaedb6063abc82821d2811f63774a7683ec9379487e73def336",
+      "src/kwindowsystemwindows_p.h": "b1c16dfd6a85db81ccaf0ac8e4bde122168fd43829b7b59e54089bccff986552"
+    }
+  },
+  {
+    "component": "plasma-workspace",
+    "archive_sha256": "21ec3c002929eb65377a1ae0eb105b9ab6f608049dac5493e188f51bd50398d5",
+    "strict_patch_count": 22,
+    "patches": [
+      "0001-windows-build-conditions.patch",
+      "0002-subdir-wayland-guards.patch",
+      "0003-minimal-shell-subsets.patch",
+      "0004-windows-m36-shell.patch",
+      "0005-windows-panel-activatable.patch",
+      "0006-windows-workarea-debounce.patch",
+      "0007-windows-session-backend.patch",
+      "0008-windows-no-libkscreen.patch",
+      "0009-windows-shell-platform-guards.patch",
+      "0010-windows-runner-notification-views.patch",
+      "0011-windows-splash-initialization.patch",
+      "0012-windows-desktop-kio-workers.patch",
+      "0013-windows-panel-above-explorer.patch",
+      "0014-windows-taskbar-icons-and-identities.patch",
+      "0015-windows-notifications-no-pulseaudio.patch",
+      "0016-windows-settings-editor-taskbar-identities.patch",
+      "0017-cache-windows-task-icons-and-paths.patch",
+      "0018-windows-live-desktop-appearance.patch",
+      "0019-windows-desktop-native-stacking.patch",
+      "0020-windows-taskbar-commands-grouping.patch",
+      "0021-windows-panel-fullscreen-priority.patch",
+      "0022-windows-window-event-refresh.patch"
+    ],
+    "compiled_source_sha256": {
+      "libtaskmanager/windowswindowtasksmodel.cpp": "325f339afeed31806f28405523fdaf3daee1c2a29498d962aab6aa7b843cf43c",
+      "libtaskmanager/windowswindowactions.h": "8b6b673ecdb73fb6ab4823b5a34550eb3ed2c843eff575142759215d074a9ffd"
+    }
+  }
+]

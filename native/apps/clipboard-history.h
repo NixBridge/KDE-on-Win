@@ -46,6 +46,14 @@ public:
         trim();
         return true;
     }
+    bool promote(const QString& value)
+    {
+        if (!enabled || !entries.contains(value))
+            return false;
+        entries.removeAll(value);
+        entries.prepend(value);
+        return true;
+    }
     void setLimit(int count)
     {
         limit = qBound(1, count, 200);
