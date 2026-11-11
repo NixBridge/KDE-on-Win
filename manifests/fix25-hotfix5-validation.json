@@ -1,0 +1,325 @@
+{
+  "release": "Fix25 startup hotfix5",
+  "observed_vm_error": {
+    "file": "DesktopEditMode.qml",
+    "missing_qml_modules": [
+      "QtQuick.Layouts",
+      "QtQuick.Effects"
+    ],
+    "desktop_qml_failed": true,
+    "following_exit": "0xC0000005"
+  },
+  "negative_reproduction": {
+    "missing_modules_component_exit": 1,
+    "same_module_errors_reproduced": true,
+    "restored_modules_component_exit": 0,
+    "private_fixture_directories_restored": true
+  },
+  "qml_overlay": {
+    "qml_files": 1623,
+    "modules_checked": 112,
+    "required_overlay_files": 1693,
+    "added_files": 4
+  },
+  "build": {
+    "plasmashell_x64_compiled": true,
+    "qml_import_probe_x64_compiled": true,
+    "desktop_editor_panel_compilation": true,
+    "shell_sha256": "4f45f60f25accf438b9948286e122fb8f9036059b0bf5ddcee276be4a45232a9"
+  },
+  "checks": [
+    {
+      "name": "plasmashell --windows-startup-self-test",
+      "exit": 0
+    },
+    {
+      "name": "desktop-integration-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-desktop-tools --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "input-layout-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=display",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=appearance",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --page=invalid",
+      "exit": 0
+    },
+    {
+      "name": "kde-session-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "trayhost --self-test",
+      "exit": 0
+    },
+    {
+      "name": "shellswitch --self-test",
+      "exit": 0
+    },
+    {
+      "name": "volume-lifecycle-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-callback-probe",
+      "exit": 0
+    },
+    {
+      "name": "notification-relay-probe",
+      "exit": 0
+    },
+    {
+      "name": "kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "x86/kde-style-host --self-test",
+      "exit": 0
+    },
+    {
+      "name": "kde-logon-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --dialog-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-open-with --invoke-self-test",
+      "exit": 0
+    },
+    {
+      "name": "konsole-conpty-probe",
+      "exit": 0
+    },
+    {
+      "name": "konsole-session-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-system-settings --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --editing-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-text-editor --ui-smoke-test --expect-chinese",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-process-monitor --self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-archive-manager --ui-smoke-test",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "breeze-window-probe --caption-contrast-self-test",
+      "exit": 0
+    },
+    {
+      "name": "plasma-window-decorations --self-test",
+      "exit": 0
+    },
+    {
+      "name": "appearance-sync-probe",
+      "exit": 0
+    },
+    {
+      "name": "personalization-probe",
+      "exit": 0
+    },
+    {
+      "name": "taskbar-icon-probe",
+      "exit": 0
+    },
+    {
+      "name": "startmenu-model-probe",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe --check-startmenu-model",
+      "exit": 0
+    },
+    {
+      "name": "qml-import-probe",
+      "exit": 0
+    },
+    {
+      "name": "plasma-notification-bridge --check-platform",
+      "exit": 0
+    },
+    {
+      "name": "native window-events-probe",
+      "exit": 0
+    },
+    {
+      "name": "native window-actions-probe",
+      "exit": 0
+    },
+    {
+      "name": "native desktop-stacking-probe",
+      "exit": 0
+    },
+    {
+      "name": "native breeze-window-probe",
+      "exit": 0
+    },
+    {
+      "name": "native plasma-window-decorations",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_archive_worker.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/taskbar-migration.cjs",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_association_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_startup_hotfix.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_bootstrap_diagnostic.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_plasma_error_output.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_folder_routing.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_plan.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_logon_deployment.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_integration_binaries.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_translation_catalog.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_settings_scripts.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_backup.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_shell_registry_provider.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_legacy_shell_paths.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_session_log_fallback.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_cumulative_contract.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_native_overlay_guard.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_qml_overlay_contract.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_runtime_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_dbus_relocation.py",
+      "exit": 0
+    },
+    {
+      "name": "tests/test_msvc_deps.py",
+      "exit": 0
+    }
+  ],
+  "imports": {
+    "modules_checked": 646,
+    "architecture": "x64",
+    "additional_architectures": [
+      "x86 control styling"
+    ],
+    "missing": []
+  },
+  "source_verification": "fix25-hotfix5-source-verification.json",
+  "vm_interactive_acceptance": false,
+  "no_user_settings_reset": true,
+  "no_manual_retest_requested": true,
+  "limitations": "Positive QML compilation and automated regressions do not establish actual VM rendering/input acceptance."
+}

@@ -97,6 +97,7 @@ for command in [['python', 'tests/test_archive_worker.py'],
  ['python', 'tests/test_session_log_fallback.py'],
  ['python', 'tests/test_cumulative_contract.py'],
  ['python', 'tests/test_native_overlay_guard.py'],
+ ['python', 'tests/test_qml_overlay_contract.py'],
  ['python', 'tests/test_runtime_relocation.py'],
  ['python', 'tests/test_dbus_relocation.py'],
  ['python', 'tests/test_msvc_deps.py']]:

@@ -1,0 +1,33 @@
+{
+  "roots": [
+    "QtQml",
+    "QtQuick/Layouts",
+    "QtQuick/Effects",
+    "QtQuick/Window",
+    "QtQuick/Controls",
+    "QtQuick/Templates",
+    "QtQuick/Dialogs",
+    "QtQuick/Shapes",
+    "QtQuick/LocalStorage",
+    "QtQuick/Timeline",
+    "Qt5Compat",
+    "Qt/labs"
+  ],
+  "include_qtquick_root_files": true,
+  "required": [
+    "qml/QtQuick/Layouts/qmldir",
+    "qml/QtQuick/Layouts/qquicklayoutsplugin.dll",
+    "bin/Qt6QuickLayouts.dll",
+    "qml/QtQuick/Effects/qmldir",
+    "qml/QtQuick/Effects/effectsplugin.dll",
+    "bin/Qt6QuickEffects.dll",
+    "plugins/platforms/qwindows.dll",
+    "plugins/platforms/qoffscreen.dll",
+    "plugins/sqldrivers/qsqlite.dll"
+  ],
+  "extra_plugins": [
+    "plugins/platforms/qwindows.dll",
+    "plugins/platforms/qoffscreen.dll",
+    "plugins/sqldrivers/qsqlite.dll"
+  ]
+}

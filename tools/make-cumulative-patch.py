@@ -31,6 +31,9 @@ if args.native_install_manifest:
             raise SystemExit('Native install product is outside the selected runtime: ' + str(product))
         if relative not in manifest['runtime']:
             raise SystemExit('Native build product is missing from cumulative overlay: ' + relative)
+qml_check = subprocess.run([sys.executable, str(root / 'tools/ensure-qml-runtime.py'), '--runtime', str(args.runtime), '--check-only'], capture_output=True, text=True)
+if qml_check.returncode:
+    raise SystemExit(qml_check.stderr.strip() or qml_check.stdout.strip())
 release = re.search(r'fix[0-9]+$', args.version, re.IGNORECASE)
 subprocess.run([sys.executable, str(root / 'tools/write-release-info.py'), '--runtime', str(args.runtime),
                 '--version', release.group().capitalize() if release else 'development'], check=True)
@@ -77,6 +80,7 @@ for relative, source in sources.items():
     'Fix24 removes the fixed drive requirement and ships relocatable launch metadata and Unicode-safe menus. See docs/FIX24.md.\n'
     'Fix25 hardens Shell recovery and native window events, and adds Places/Quick Actions, opt-in Windows theme following, shortcut failure details and private diagnostic export. See docs/FIX25.md.\n'
     'Fix25 Hotfix4 repairs panel startup null-root handling and restores omitted native applet/tray/Shell-switch binaries. See docs/FIX25-CODE-REVIEW.md.\n'
+    'Fix25 Hotfix5 includes required desktop Qt QML modules and matching DLLs; verifies Desktop/EditMode/Panel QML and guards missing desktop roots. See docs/FIX25-QML-RUNTIME.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

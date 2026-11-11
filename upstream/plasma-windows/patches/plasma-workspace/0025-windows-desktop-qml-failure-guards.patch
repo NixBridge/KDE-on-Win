@@ -1,0 +1,104 @@
+--- a/shell/main.cpp
++++ b/shell/main.cpp
+@@ -204,6 +204,8 @@
+ 
+     ShellCorona corona;
+     if (startupSelfTest) {
++        if (!QMetaObject::invokeMethod(&corona, "toggleWidgetExplorer", Qt::DirectConnection)
++            || !QMetaObject::invokeMethod(&corona, "toggleActivityManager", Qt::DirectConnection)) return 10;
+         PanelView panel(&corona);
+         if (panel.rootObject()) return 2;
+         const bool duration = QMetaObject::invokeMethod(&panel, "updateFloatingAnimationDuration", Qt::DirectConnection);
+@@ -217,18 +219,20 @@
+         const bool status = statusWithoutContainment && QMetaObject::invokeMethod(&panel, "refreshStatus", Qt::DirectConnection,
+             Q_ARG(Plasma::Types::ItemStatus, Plasma::Types::AcceptingInputStatus));
+         if (containment->status() != Plasma::Types::AcceptingInputStatus) return 5;
+-        QQmlComponent component(panel.engine().get());
+-        component.loadUrl(QUrl::fromLocalFile(QCoreApplication::applicationDirPath()
+-            + QStringLiteral("/data/plasma/shells/org.kde.plasma.desktop/contents/views/Panel.qml")), QQmlComponent::PreferSynchronous);
+         QElapsedTimer deadline;
+-        deadline.start();
+-        while (component.isLoading() && deadline.elapsed() < 5000) {
+-            app.processEvents();
+-            QThread::msleep(5);
+-        }
+-        if (!component.isReady()) {
+-            for (const auto &error : component.errors()) qWarning() << error;
+-            return 6;
++        for (const auto &file : {QStringLiteral("Desktop.qml"), QStringLiteral("DesktopEditMode.qml"), QStringLiteral("Panel.qml")}) {
++            QQmlComponent component(panel.engine().get());
++            component.loadUrl(QUrl::fromLocalFile(QCoreApplication::applicationDirPath()
++                + QStringLiteral("/data/plasma/shells/org.kde.plasma.desktop/contents/views/") + file), QQmlComponent::PreferSynchronous);
++            deadline.restart();
++            while (component.isLoading() && deadline.elapsed() < 5000) {
++                app.processEvents();
++                QThread::msleep(5);
++            }
++            if (!component.isReady()) {
++                for (const auto &error : component.errors()) qWarning() << error;
++                return 6;
++            }
+         }
+         auto pendingFocusTimers = [&panel]() {
+             int count = 0;
+@@ -254,7 +258,7 @@
+             return 8;
+         }
+         if (!QMetaObject::invokeMethod(&panel, "updateFloatingAnimationDuration", Qt::DirectConnection)) return 9;
+-        std::puts(duration && status ? "PASS: real PanelView callbacks before QML readiness, pending input replayed and shipped Panel.qml compiled; no desktop shown"
++        std::puts(duration && status ? "PASS: real PanelView callbacks before QML readiness, pending input replayed and shipped desktop/editor/panel QML compiled; no desktop shown"
+                                     : "FAIL: panel startup callback invocation");
+         return duration && status ? 0 : 1;
+     }
+--- a/shell/shellcorona.cpp
++++ b/shell/shellcorona.cpp
+@@ -1794,6 +1794,7 @@
+ 
+ void ShellCorona::toggleWidgetExplorer()
+ {
++    if (m_desktopViewForScreen.isEmpty()) return;
+     auto viewIt = m_desktopViewForScreen.cbegin();
+     if (KWindowSystem::isPlatformWayland()) {
+ #ifndef Q_OS_WIN
+@@ -1809,7 +1810,7 @@
+     } else {
+         const QPoint cursorPos = QCursor::pos();
+         viewIt = std::find_if(m_desktopViewForScreen.cbegin(), m_desktopViewForScreen.cend(), [&cursorPos](DesktopView *view) {
+-            return view->screen()->geometry().contains(cursorPos);
++            return view->screen() && view->screen()->geometry().contains(cursorPos);
+         });
+     }
+ 
+@@ -1822,18 +1823,20 @@
+         viewIt = m_desktopViewForScreen.cbegin();
+     }
+ 
++    auto *root = (*viewIt)->rootObject();
++    if (!root) return;
+     setEditMode(true);
+     // The view QML has to provide something to display the widget explorer
+-    QMetaObject::invokeMethod((*viewIt)->rootObject(), "toggleWidgetExplorer", Q_ARG(QVariant, QVariant::fromValue(sender())));
++    QMetaObject::invokeMethod(root, "toggleWidgetExplorer", Q_ARG(QVariant, QVariant::fromValue(sender())));
+ }
+ 
+ void ShellCorona::toggleActivityManager()
+ {
+     const QPoint cursorPos = QCursor::pos();
+     for (DesktopView *view : std::as_const(m_desktopViewForScreen)) {
+-        if (view->screen()->geometry().contains(cursorPos)) {
++        if (view->screen() && view->screen()->geometry().contains(cursorPos) && view->rootObject()) {
+             // The view QML has to provide something to display the activity explorer
+-            view->rootObject()->metaObject()->invokeMethod(view->rootObject(), "toggleActivityManager", Qt::QueuedConnection);
++            QMetaObject::invokeMethod(view->rootObject(), "toggleActivityManager", Qt::QueuedConnection);
+             return;
+         }
+     }
+@@ -2291,7 +2294,7 @@
+     // removing the focus from the item that is going to be destroyed
+     // fixes a crash
+     // delayout the destruction of the old containment fixes another crash
+-    (*viewIt)->rootObject()->setFocus(true, Qt::MouseFocusReason);
++    if (auto *root = (*viewIt)->rootObject()) root->setFocus(true, Qt::MouseFocusReason);
+     QTimer::singleShot(2500, oldContainment, &Plasma::Applet::destroy);
+ 
+     // Save now as we now have a screen, so lastScreen will not be -1

@@ -36,13 +36,19 @@ int main(int argc, char **argv)
     component.setData(R"(
 import QtQml
 import QtQuick
+import QtQuick.Layouts as Layouts
+import QtQuick.Effects as Effects
 import org.kde.kirigami
 import org.kde.plasma.activityswitcher
 import org.kde.kwindowsystem
 import org.kde.plasma.core
 import org.kde.quickcharts as Charts
 import org.kde.quickcharts.controls
-QtObject { property QtObject chart: Charts.BarChart {} }
+QtObject {
+    property QtObject chart: Charts.BarChart {}
+    property QtObject layouts: Layouts.RowLayout {}
+    property QtObject effects: Effects.MultiEffect {}
+}
 )", QUrl("file:///qml-import-probe.qml"));
     QElapsedTimer timer;
     timer.start();
