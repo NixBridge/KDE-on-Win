@@ -21,10 +21,18 @@
 
 param(
     [switch]$RebuildSycoca,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$WaitForPlasma
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($WaitForPlasma) {
+    $probe = Join-Path $PSScriptRoot "wait-session-service.ps1"
+    & "$PSHOME\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File $probe -TimeoutMs 10000 -Name org.kde.plasmashell
+    # Still index on a slow login; run below normal priority so rendering wins.
+    [Diagnostics.Process]::GetCurrentProcess().PriorityClass = "BelowNormal"
+}
 
 $outDir = Join-Path $env:LOCALAPPDATA "applications"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
@@ -221,7 +229,7 @@ if ($RebuildSycoca) {
     $craftRoot = if ($env:CRAFT_ROOT) { $env:CRAFT_ROOT } else { $PSScriptRoot }
     $kbuildsycoca = Join-Path $craftRoot "bin\kbuildsycoca6.exe"
     if (Test-Path -LiteralPath $kbuildsycoca) {
-        & $kbuildsycoca --noincremental 2>&1 | Out-Null
+        & $kbuildsycoca 2>&1 | Out-Null
         Write-Host "ksycoca rebuilt"
     } else {
         Write-Warning "kbuildsycoca6 not found - run it manually after this script"

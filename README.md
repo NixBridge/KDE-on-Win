@@ -21,6 +21,8 @@ After verifying the temporary session, run `install.cmd` to register Plasma as t
 
 Fix25 Hotfix10 uses D-Bus readiness checks during login. It starts the activity daemon early and proceeds once it owns its service name, with a bounded wait for slow starts. Login Shell startup writes to the same Plasma log as the temporary session.
 
+Fix25 Hotfix13 dismisses unpinned panel popups on desktop clicks. The installed login Shell refreshes Windows Start Menu entries in the background and loads full applet popups on demand. The first opening of a popup can take longer.
+
 The repository does not contain the multi-gigabyte runtime ZIP, build cache or personal VM files.
 
 ## Build

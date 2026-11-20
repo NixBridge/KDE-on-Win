@@ -163,6 +163,8 @@ exit /b 0
 
 rem Foreground desktop output is otherwise absent from hidden-service logs.
 :pc_run_plasma
+rem Defer full applet popups until first use. An explicit caller setting wins.
+if not defined PLASMA_PRELOAD_POLICY set "PLASMA_PRELOAD_POLICY=none"
 set "PLASMA_LOG_DIR=%LOCALAPPDATA%\plasma-win-session\logs"
 if defined KDE_ON_WIN_SETTINGS for %%P in ("%KDE_ON_WIN_SETTINGS%") do set "PLASMA_LOG_DIR=%%~dpPlogs"
 if not exist "%PLASMA_LOG_DIR%" mkdir "%PLASMA_LOG_DIR%" 2>nul

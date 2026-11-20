@@ -25,7 +25,8 @@ call "%~dp0plasma-common.cmd" :pc_setup_env
 call "%~dp0plasma-common.cmd" :pc_mirror_data
 call "%~dp0plasma-common.cmd" :pc_write_menu
 if errorlevel 1 exit /b 1
-call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
+rem Populate KDE entries before login; native Start Menu discovery runs in the background.
+"%CRAFT_BIN%\kbuildsycoca6.exe" >nul 2>&1
 
 call "%~dp0plasma-common.cmd" :pc_start_bus
 if errorlevel 1 exit /b 1
@@ -37,6 +38,10 @@ rem instance - the HKCU Run key covers the explorer-shell case, this
 rem covers the plasma-shell case.
 if exist "%CRAFT_BIN%\shellswitch.exe" (
     start "plasma-shellswitch" /D "%CRAFT_BIN%" "%CRAFT_BIN%\shellswitch.exe"
+)
+
+if exist "%CRAFT_ROOT%\build-startmenu-desktops.ps1" (
+    call "%~dp0plasma-common.cmd" :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\build-startmenu-desktops.ps1" -Quiet -RebuildSycoca -WaitForPlasma
 )
 
 rem Run the shell in the foreground; keep this script alive as session host.

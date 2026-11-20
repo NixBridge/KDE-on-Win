@@ -10,6 +10,7 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QWindow>
+#include <QPointer>
 #include <QTimer>
 #include <QFileInfo>
 #include <QDateTime>
@@ -281,6 +282,10 @@ public:
         QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
         QProxyStyle::polish(application);
         installProjectTranslations(application);
+        if (QFileInfo(application->applicationFilePath()).fileName().compare(
+                QStringLiteral("plasmashell.exe"), Qt::CaseInsensitive)
+            == 0)
+            application->installEventFilter(this);
         auto update = [application] {
             QSettings settings(appearanceSettingsPath(), QSettings::IniFormat);
             const bool dark = settings.value(QStringLiteral("dark"), false).toBool();
@@ -331,6 +336,30 @@ public:
         QObject::connect(timer, &QTimer::timeout, application, update);
         timer->start(1000);
         QTimer::singleShot(0, application, update);
+    }
+    void unpolish(QApplication* application) override
+    {
+        application->removeEventFilter(this);
+        QProxyStyle::unpolish(application);
+    }
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if ((event->type() == QEvent::MouseButtonPress || event->type() == QEvent::TouchBegin)
+            && watched->inherits("DesktopView")) {
+            // The wallpaper deliberately ignores activation, so clicking it
+            // does not deliver WindowDeactivate to the panel's popups.
+            QList<QPointer<QWindow>> popups;
+            for (auto* window : QGuiApplication::topLevelWindows()) {
+                if (window->isVisible() && window->inherits("PlasmaQuick::AppletPopup")
+                    && window->property("hideOnWindowDeactivate").toBool())
+                    popups.append(window);
+            }
+            for (const auto& popup : popups) {
+                if (popup)
+                    popup->hide();
+            }
+        }
+        return QProxyStyle::eventFilter(watched, event);
     }
     void polish(QWidget* widget) override
     {
