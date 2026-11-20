@@ -9,7 +9,9 @@ $directory = Join-Path $env:LOCALAPPDATA 'menus'
 $settings = [Xml.XmlWriterSettings]::new()
 $settings.Encoding = [Text.UTF8Encoding]::new($false)
 $settings.Indent = $true
-$writer = [Xml.XmlWriter]::Create((Join-Path $directory 'applications.menu'), $settings)
+$menu = Join-Path $directory 'applications.menu'
+$buffer = [IO.MemoryStream]::new()
+$writer = [Xml.XmlWriter]::Create($buffer, $settings)
 try {
     $writer.WriteStartElement('Menu')
     $writer.WriteElementString('Name', 'Applications')
@@ -25,4 +27,11 @@ try {
     $writer.WriteEndElement()
 } finally {
     $writer.Dispose()
+}
+
+$bytes = $buffer.ToArray()
+$buffer.Dispose()
+if (-not [IO.File]::Exists($menu) -or
+    [IO.File]::ReadAllText($menu) -cne $settings.Encoding.GetString($bytes)) {
+    [IO.File]::WriteAllBytes($menu, $bytes)
 }

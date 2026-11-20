@@ -52,6 +52,23 @@ with tempfile.TemporaryDirectory(prefix='relocation-', dir=root / 'work') as tem
         assert result.returncode == 0, (result.stdout, result.stderr)
         assert (profile / 'plasma/shells/Desktop.qml').read_bytes() == desktop.read_bytes()
         assert (profile / 'applications/test.desktop').is_file()
+        mirrored = profile / 'plasma/shells/Desktop.qml'
+        menu_path = profile / 'menus/applications.menu'
+        menu_time = menu_path.stat().st_mtime_ns
+        # A same-size user copy with the original timestamp is left alone on
+        # warm startup. An explicit repair restores the packaged resource.
+        mirrored.write_bytes(b'modified desktop')
+        timestamp = desktop.stat()
+        os.utime(mirrored, ns=(timestamp.st_atime_ns, timestamp.st_mtime_ns))
+        warm = subprocess.run(['cmd.exe', '/d', '/c', str(driver)],
+                              env=environment, capture_output=True, timeout=30)
+        assert warm.returncode == 0, warm
+        assert mirrored.read_bytes() == b'modified desktop'
+        assert menu_path.stat().st_mtime_ns == menu_time
+        repaired = subprocess.run(['cmd.exe', '/d', '/c', str(driver)],
+                                  env=environment | {'KDE_FORCE_DATA_SYNC': '1'},
+                                  capture_output=True, timeout=30)
+        assert repaired.returncode == 0 and mirrored.read_bytes() == desktop.read_bytes(), repaired
         shells = desktop.parent
         shells.rename(shells.with_name('unavailable-shells'))
         failed = subprocess.run(['cmd.exe', '/d', '/c', str(driver)],

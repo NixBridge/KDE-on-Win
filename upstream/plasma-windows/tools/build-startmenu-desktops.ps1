@@ -124,6 +124,9 @@ Terminal=false
 StartupNotify=false
 Categories=$category;
 "@
+    if ([IO.File]::Exists($desktopFile) -and [IO.File]::ReadAllText($desktopFile) -ceq $content) {
+        return
+    }
     [System.IO.File]::WriteAllText($desktopFile, $content, [System.Text.UTF8Encoding]::new($false))
     if (-not $Quiet) {
         Write-Host "desktop: $name [$category]"

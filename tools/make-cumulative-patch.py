@@ -83,6 +83,7 @@ for relative, source in sources.items():
     'Fix25 Hotfix5 includes required desktop Qt QML modules and matching DLLs; verifies Desktop/EditMode/Panel QML and guards missing desktop roots. See docs/FIX25-QML-RUNTIME.md.\n'
     'Fix25 Hotfix6 candidate includes KDE QML, native applets and desktop assets, and reports package data copy failures. See docs/FIX25-DESKTOP-CANDIDATE.md.\n'
     'Fix25 Hotfix7 includes QtQuick.NativeStyle for Windows Controls used by the desktop and Start Menu. See docs/FIX25-NATIVE-STYLE.md.\n'
+    'Fix25 Hotfix8 speeds up repeated startup with incremental desktop data and service cache updates.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

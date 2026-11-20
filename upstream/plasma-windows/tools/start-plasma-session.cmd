@@ -22,9 +22,6 @@ call "%~dp0plasma-common.cmd" :pc_mirror_data
 if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_write_menu
 
-rem Generate .desktop bridges for the Windows Start Menu (native apps in kickoff).
-powershell -ExecutionPolicy Bypass -File "%~dp0build-startmenu-desktops.ps1" >nul 2>&1
-
 call "%~dp0plasma-common.cmd" :pc_rebuild_ksycoca
 
 call "%~dp0plasma-common.cmd" :pc_start_bus

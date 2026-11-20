@@ -60,18 +60,20 @@ rem (QStandardPaths on Windows resolves GenericDataLocation to LOCALAPPDATA)
 rem ---------------------------------------------------------------------------
 :pc_mirror_data
 call :pc_resolve_root
+set "PLASMA_MIRROR_FORCE="
+if "%KDE_FORCE_DATA_SYNC%"=="1" set "PLASMA_MIRROR_FORCE=/IS"
 for %%S in (plasmoids shells wallpapers layout-templates desktoptheme look-and-feel) do (
     if not exist "%CRAFT_DATA%\plasma\%%S\" (
         echo ERROR: Missing packaged Plasma data "%CRAFT_DATA%\plasma\%%S".
         exit /b 1
     )
-    robocopy "%CRAFT_DATA%\plasma\%%S" "%LOCALAPPDATA%\plasma\%%S" /E /IS /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+    robocopy "%CRAFT_DATA%\plasma\%%S" "%LOCALAPPDATA%\plasma\%%S" /E %PLASMA_MIRROR_FORCE% /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
     if errorlevel 8 (
         echo ERROR: Could not mirror Plasma %%S to "%LOCALAPPDATA%\plasma\%%S".
         exit /b 1
     )
 )
-robocopy "%CRAFT_DATA%\applications" "%LOCALAPPDATA%\applications" *.desktop /IS /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+robocopy "%CRAFT_DATA%\applications" "%LOCALAPPDATA%\applications" *.desktop %PLASMA_MIRROR_FORCE% /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
 if errorlevel 8 (
     echo ERROR: Could not mirror Plasma launchers to "%LOCALAPPDATA%\applications".
     exit /b 1
@@ -95,7 +97,7 @@ if exist "%~dp0build-startmenu-desktops.ps1" (
     powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build-startmenu-desktops.ps1" -Quiet >nul 2>&1
     if errorlevel 1 echo WARNING: Windows Start Menu indexing failed.
 )
-"%CRAFT_BIN%\kbuildsycoca6.exe" --noincremental >nul 2>&1
+"%CRAFT_BIN%\kbuildsycoca6.exe" >nul 2>&1
 exit /b 0
 
 rem ---------------------------------------------------------------------------
