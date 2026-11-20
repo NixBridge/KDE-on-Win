@@ -86,6 +86,7 @@ for relative, source in sources.items():
     'Fix25 Hotfix8 speeds up repeated startup with incremental desktop data and service cache updates.\n'
     'Run install.cmd after testing a temporary session to install the current-user login Shell and restart Windows. N postpones restart.\n'
     'Fix25 Hotfix10 checks D-Bus and Activity Manager readiness during startup and captures login Shell output.\n'
+    'Fix25 Hotfix11 gives the optional local-account login tile a Breeze-style Plasma graphic. See docs/LOCAL_LOGON.md.\n'
     'Full VM interaction and stacking acceptance still require testing.\n', encoding='utf-8')
 archive = out / ('plasma-windows-' + args.version + '.zip')
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:

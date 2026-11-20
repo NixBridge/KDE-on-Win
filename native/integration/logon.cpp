@@ -18,24 +18,52 @@ static bool chinese() { return PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG
 static HRESULT copy(const wchar_t* value, PWSTR* out) { return out ? SHStrDupW(value, out) : E_POINTER; }
 static HBITMAP tile()
 {
-    HDC screen = GetDC(nullptr), dc = CreateCompatibleDC(screen);
-    HBITMAP bitmap = CreateCompatibleBitmap(screen, 192, 192);
-    auto old = SelectObject(dc, bitmap);
-    RECT rect { 0, 0, 192, 192 };
-    HBRUSH brush = CreateSolidBrush(RGB(61, 174, 233));
-    FillRect(dc, &rect, brush);
-    DeleteObject(brush);
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, RGB(255, 255, 255));
-    HFONT font = CreateFontW(
-        -62, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    auto previous = SelectObject(dc, font);
-    DrawTextW(dc, L"KDE", -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    SelectObject(dc, previous);
-    DeleteObject(font);
-    SelectObject(dc, old);
-    DeleteDC(dc);
-    ReleaseDC(nullptr, screen);
+    constexpr int size = 192;
+    BITMAPINFO info {};
+    info.bmiHeader.biSize = sizeof(info.bmiHeader);
+    info.bmiHeader.biWidth = size;
+    info.bmiHeader.biHeight = -size;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    void* pixels = nullptr;
+    HBITMAP bitmap = CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+    if (!bitmap)
+        return nullptr;
+
+    // Compose opaque Breeze colors into the tile. LogonUI can scale it
+    // directly without loading fonts, Qt, or files from the user profile.
+    auto* image = static_cast<DWORD*>(pixels);
+    constexpr int samples = 4;
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            unsigned red = 0, green = 0, blue = 0;
+            for (int row = 0; row < samples; ++row) {
+                for (int column = 0; column < samples; ++column) {
+                    const double px = x + (column + 0.5) / samples;
+                    const double py = y + (row + 0.5) / samples;
+                    const auto inCircle = [px, py](double cx, double cy, double radius) {
+                        const double dx = px - cx, dy = py - cy;
+                        return dx * dx + dy * dy <= radius * radius;
+                    };
+                    DWORD color = 0x232629; // Breeze dark
+                    if (inCircle(96, 96, 72))
+                        color = 0x3daee9; // Breeze accent
+                    if (inCircle(96, 96, 67))
+                        color = 0x31363b;
+                    const double offset = py < 96 ? 96 - py : py - 96;
+                    const bool chevron = offset <= 40 && px >= 137 - offset - 13 && px <= 137 - offset;
+                    if (chevron || inCircle(70, 69, 8) || inCircle(58, 96, 8) || inCircle(70, 123, 8))
+                        color = 0xeff0f1;
+                    red += (color >> 16) & 0xff;
+                    green += (color >> 8) & 0xff;
+                    blue += color & 0xff;
+                }
+            }
+            constexpr unsigned total = samples * samples;
+            image[y * size + x] = 0xff000000 | ((red / total) << 16) | ((green / total) << 8) | (blue / total);
+        }
+    }
     return bitmap;
 }
 
@@ -129,7 +157,7 @@ public:
         case 1:
             return copy(L"KDE-on-Win", out);
         case 2:
-            return copy(chinese() ? L"登录 KDE · 本地账户" : L"Sign in to KDE · Local account", out);
+            return copy(chinese() ? L"登录 Plasma 桌面 · 本地账户" : L"Sign in to Plasma · Local account", out);
         case 3:
             return copy(user.c_str(), out);
         case 4:
@@ -486,13 +514,21 @@ extern "C" HRESULT __stdcall KDELogonSelfTest()
 {
     // Synthetic credentials only: pack/unpack; never call LsaLogonUser.
     Credential* credential = new Credential(L"KDEFixture\\SyntheticUser", L"S-1-5-21-1-2-3-9999");
+    HBITMAP artwork = nullptr;
+    DIBSECTION image {};
+    const bool tileOk = SUCCEEDED(credential->GetBitmapValue(0, &artwork))
+        && GetObjectW(artwork, sizeof(image), &image) == sizeof(image)
+        && image.dsBm.bmWidth == 192 && image.dsBm.bmHeight == 192
+        && image.dsBm.bmBitsPixel == 32 && image.dsBm.bmBits;
+    if (artwork)
+        DeleteObject(artwork);
     credential->SetStringValue(4, L"synthetic-not-an-account-password");
     CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE response {};
     CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION data {};
     PWSTR status = nullptr;
     CREDENTIAL_PROVIDER_STATUS_ICON icon {};
     HRESULT result = credential->GetSerialization(&response, &data, &status, &icon);
-    bool ok = SUCCEEDED(result) && response == CPGSR_RETURN_CREDENTIAL_FINISHED
+    bool ok = tileOk && SUCCEEDED(result) && response == CPGSR_RETURN_CREDENTIAL_FINISHED
         && data.clsidCredentialProvider == ProviderId;
     wchar_t name[512] {}, domain[512] {}, password[512] {};
     DWORD n = 512, d = 512, p = 512;
