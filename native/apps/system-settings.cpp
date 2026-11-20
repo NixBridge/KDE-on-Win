@@ -44,6 +44,12 @@
 #include <QDialogButtonBox>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
+#include <QShortcut>
+#include <QScrollBar>
+#include <QToolButton>
+#include <QButtonGroup>
+#include <QGridLayout>
+#include <QPainter>
 #include "system-controls.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -103,13 +109,40 @@ int main(int argc, char** argv)
         QIcon(KIconLoader::global()->loadIcon(QStringLiteral("preferences-system"), KIconLoader::Desktop, 48)));
     SettingsWindow window;
     window.setWindowTitle(QObject::tr("System Settings"));
-    window.resize(880, 600);
+    window.resize(960, 640);
     auto* central = new QWidget(&window);
     auto* layout = new QHBoxLayout(central);
     window.setCentralWidget(central);
-    auto* categories = new QListWidget(central);
-    categories->setMaximumWidth(220);
-    layout->addWidget(categories);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    auto* sidebar = new QWidget(central);
+    sidebar->setFixedWidth(244);
+    auto* navigation = new QVBoxLayout(sidebar);
+    navigation->setContentsMargins(10, 10, 10, 10);
+    auto* search = new QLineEdit(sidebar);
+    search->setPlaceholderText(QObject::tr("Search settings…"));
+    search->setAccessibleName(search->placeholderText());
+    search->setClearButtonEnabled(true);
+    search->addAction(QIcon::fromTheme(QStringLiteral("edit-find")), QLineEdit::LeadingPosition);
+    navigation->addWidget(search);
+    auto* overview = new QToolButton(sidebar);
+    overview->setText(QObject::tr("Quick Settings"));
+    overview->setIcon(QIcon::fromTheme(QStringLiteral("go-home")));
+    overview->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    overview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    navigation->addWidget(overview);
+    auto* categories = new QListWidget(sidebar);
+    categories->setFrameShape(QFrame::NoFrame);
+    categories->setIconSize(QSize(24, 24));
+    navigation->addWidget(categories, 1);
+    auto* noMatches = new QLabel(QObject::tr("No matching settings"), sidebar);
+    noMatches->setWordWrap(true);
+    noMatches->hide();
+    navigation->addWidget(noMatches);
+    layout->addWidget(sidebar);
+    auto* divider = new QFrame(central);
+    divider->setFrameShape(QFrame::VLine);
+    layout->addWidget(divider);
     auto* pages = new QStackedWidget(central);
     auto* pageScroll = new QScrollArea(central);
     pageScroll->setWidgetResizable(true);
@@ -119,8 +152,10 @@ int main(int argc, char** argv)
     auto page = [&](const QString& name, const QString& icon) {
         categories->addItem(
             new QListWidgetItem(QIcon(KIconLoader::global()->loadIcon(icon, KIconLoader::Desktop, 24)), name));
+        categories->item(categories->count() - 1)->setSizeHint(QSize(0, 36));
         auto* widget = new QWidget(pages);
         auto* contents = new QVBoxLayout(widget);
+        contents->setContentsMargins(24, 18, 24, 18);
         auto* heading = new SettingsHeading(name, widget);
         contents->addWidget(heading);
         pages->addWidget(widget);
@@ -566,8 +601,105 @@ int main(int argc, char** argv)
             window.close();
     });
     support->addStretch();
-    QObject::connect(categories, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
-    categories->setCurrentRow(0);
+    auto* home = new QWidget(pages);
+    auto* quickSettings = new QVBoxLayout(home);
+    quickSettings->setContentsMargins(24, 18, 24, 18);
+    quickSettings->addWidget(new SettingsHeading(overview->text(), home));
+    auto* themeOptions = new QHBoxLayout;
+    auto* themeButtons = new QButtonGroup(home);
+    for (int index = 0; index < theme->count(); ++index) {
+        const bool dark = theme->itemData(index).toBool();
+        QPixmap preview(160, 84);
+        preview.fill(dark ? QColor(35, 38, 41) : QColor(239, 240, 241));
+        QPainter painter(&preview);
+        painter.fillRect(16, 13, 128, 58, dark ? QColor(49, 54, 59) : Qt::white);
+        painter.fillRect(16, 13, 128, 13, dark ? QColor(65, 70, 75) : QColor(218, 221, 224));
+        painter.fillRect(27, 35, 30, 25, QColor(61, 174, 233));
+        painter.fillRect(68, 38, 64, 4, dark ? QColor(216, 220, 224) : QColor(85, 92, 100));
+        painter.fillRect(68, 50, 45, 4, dark ? QColor(162, 172, 181) : QColor(131, 140, 150));
+        painter.end();
+        auto* option = new QToolButton(home);
+        option->setText(theme->itemText(index));
+        option->setIcon(QIcon(preview));
+        option->setIconSize(preview.size());
+        option->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        option->setCheckable(true);
+        option->setChecked(index == theme->currentIndex());
+        themeButtons->addButton(option, index);
+        themeOptions->addWidget(option);
+    }
+    themeOptions->addStretch();
+    quickSettings->addLayout(themeOptions);
+    QObject::connect(themeButtons, &QButtonGroup::idClicked, theme, &QComboBox::setCurrentIndex);
+    // setCurrentIndex can also be called while the combo box signals are blocked.
+    QObject::connect(pages, &QStackedWidget::currentChanged, home, [=](int) {
+        if (pages->currentWidget() == home)
+            themeButtons->button(theme->currentIndex())->setChecked(true);
+    });
+    auto* shortcuts = new QGridLayout;
+    int shortcutIndex = 0;
+    for (const int row : {0, 2, 4, 5, 6}) {
+        const auto* entry = categories->item(row);
+        auto* shortcut = new QPushButton(entry->icon(), entry->text(), home);
+        shortcut->setMinimumHeight(38);
+        shortcuts->addWidget(shortcut, shortcutIndex / 2, shortcutIndex % 2);
+        ++shortcutIndex;
+        QObject::connect(shortcut, &QPushButton::clicked, &window, [=] {
+            search->clear();
+            categories->setCurrentRow(row);
+        });
+    }
+    quickSettings->addLayout(shortcuts);
+    quickSettings->addStretch();
+    const int overviewIndex = pages->addWidget(home);
+    QObject::connect(overview, &QToolButton::clicked, &window, [=] {
+        search->clear();
+        categories->setCurrentRow(-1);
+        pages->setCurrentIndex(overviewIndex);
+    });
+    QObject::connect(categories, &QListWidget::currentRowChanged, pages, [=](int row) {
+        if (row >= 0)
+            pages->setCurrentIndex(row);
+    });
+    QObject::connect(pages, &QStackedWidget::currentChanged, pageScroll,
+        [=] { pageScroll->verticalScrollBar()->setValue(0); });
+    QStringList terms;
+    for (int row = 0; row < categories->count(); ++row) {
+        const auto* module = pages->widget(row);
+        QStringList words { categories->item(row)->text() };
+        for (const auto* label : module->findChildren<QLabel*>())
+            words.append(label->text());
+        for (const auto* button : module->findChildren<QAbstractButton*>())
+            words.append(button->text());
+        terms.append(words.join(u' '));
+    }
+    QObject::connect(search, &QLineEdit::textChanged, &window, [=](const QString& text) {
+        const auto words = text.simplified().split(u' ', Qt::SkipEmptyParts);
+        bool found = false;
+        for (int row = 0; row < categories->count(); ++row) {
+            bool matches = true;
+            for (const auto& word : words)
+                matches &= terms.at(row).contains(word, Qt::CaseInsensitive);
+            categories->item(row)->setHidden(!matches);
+            found |= matches;
+        }
+        noMatches->setVisible(!found);
+    });
+    QObject::connect(search, &QLineEdit::returnPressed, &window, [=] {
+        for (int row = 0; row < categories->count(); ++row) {
+            if (!categories->item(row)->isHidden()) {
+                categories->setCurrentRow(row);
+                categories->setFocus();
+                break;
+            }
+        }
+    });
+    auto* findShortcut = new QShortcut(QKeySequence::Find, &window);
+    QObject::connect(findShortcut, &QShortcut::activated, search, [=] {
+        search->setFocus();
+        search->selectAll();
+    });
+    pages->setCurrentIndex(overviewIndex);
     const QMap<QString, int> pageNames { { "appearance", 0 }, { "panel", 1 }, { "desktop", 2 }, { "start-menu", 3 },
         { "display", 4 }, { "sound", 5 }, { "network", 6 } };
     for (const auto& argument : app.arguments())
@@ -576,11 +708,11 @@ int main(int argc, char** argv)
     window.show();
     if (app.arguments().contains(QStringLiteral("--ui-smoke-test")))
         QTimer::singleShot(500, &window, [&] {
-            int requested = 0;
+            int requested = overviewIndex;
             for (const auto& argument : app.arguments())
                 if (argument.startsWith("--page=") && pageNames.contains(argument.mid(7)))
                     requested = pageNames.value(argument.mid(7));
-            bool ok = pages->currentIndex() == requested && pages->count() == 14 && categories->count() == 14
+            bool ok = pages->currentIndex() == requested && pages->count() == 15 && categories->count() == 14
                 && height->minimum() == 24 && iconSize->maximum() == 72;
             ok &= exportDiagnostics->isEnabled();
             const int initialTheme = theme->currentIndex();
@@ -590,6 +722,16 @@ int main(int argc, char** argv)
             theme->setCurrentIndex(initialTheme);
             categories->setCurrentRow(3);
             ok &= pages->currentIndex() == 3;
+            search->setText(QStringLiteral("no-settings-match-9cc1"));
+            ok &= !noMatches->isHidden() && categories->item(3)->isHidden();
+            search->setText(categories->item(3)->text());
+            ok &= noMatches->isHidden() && !categories->item(3)->isHidden();
+            overview->click();
+            ok &= search->text().isEmpty() && pages->currentIndex() == overviewIndex;
+            themeButtons->button(1 - initialTheme)->click();
+            ok &= theme->currentIndex() == 1 - initialTheme && themeButtons->checkedId() == 1 - initialTheme;
+            window.grab().save(QStringLiteral("system-settings-overview.png"));
+            themeButtons->button(initialTheme)->click();
             ok &= window.findChild<QWidget*>(QStringLiteral("PlasmaBreezeTitleBar")) != nullptr;
             categories->setCurrentRow(0);
             const QFont original = app.font();

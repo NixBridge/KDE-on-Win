@@ -323,6 +323,18 @@
 <context>
     <name>QObject</name>
     <message>
+      <source>Search settings…</source>
+      <translation>搜索设置…</translation>
+    </message>
+    <message>
+      <source>Quick Settings</source>
+      <translation>快速设置</translation>
+    </message>
+    <message>
+      <source>No matching settings</source>
+      <translation>没有匹配的设置</translation>
+    </message>
+    <message>
         <location filename="../apps/archive-manager.cpp" line="204"/>
         <source>Choose an archive to set its default application</source>
         <translation>选择压缩包以设置默认打开程序</translation>
