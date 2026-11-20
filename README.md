@@ -17,6 +17,8 @@ Extract the separately built runtime to a directory of your choice. Apply the la
 
 Run `deploy-vm.cmd` without arguments for a temporary session. Run `run-runtime-checks.cmd` to check QML imports and `desktop:/`. The experimental user-shell install/restore options are documented in `docs/PORTING.md`. Runtime logs include `%TEMP%\plasmashell-debug.log`.
 
+After verifying the temporary session, run `install.cmd` to register Plasma as the current user's login Shell and restart Windows after 30 seconds. Press `N` to postpone the restart. Run `deploy-vm.cmd restore` to restore the previous Shell, then sign out or restart.
+
 The repository does not contain the multi-gigabyte runtime ZIP, build cache or personal VM files.
 
 ## Build

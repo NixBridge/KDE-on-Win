@@ -3104,6 +3104,7 @@
     "docs/FIX19.md": "docs/FIX19.md",
     "docs/FIX20.md": "docs/FIX20.md",
     "deploy-vm.cmd": "upstream/plasma-windows/tools/deploy-vm.cmd",
+    "install.cmd": "runtime/install.cmd",
     "session-shell.cmd": "upstream/plasma-windows/tools/session-shell.cmd",
     "docs/FIX21.md": "docs/FIX21.md",
     "start-desktop-tools.cmd": "runtime/start-desktop-tools.cmd",

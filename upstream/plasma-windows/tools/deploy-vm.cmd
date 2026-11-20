@@ -46,7 +46,7 @@ set "PLASMA_SHELL=%CRAFT_BIN%\plasmashell.exe"
 set "SESSION_LAUNCHER=%CRAFT_ROOT%\session-shell.cmd"
 set "ACTION=%~1"
 if not "%~2"=="" exit /b 2
-if not "%ACTION%"=="" if /i not "%ACTION%"=="install" if /i not "%ACTION%"=="restore" exit /b 2
+if not "%ACTION%"=="" if /i not "%ACTION%"=="install" if /i not "%ACTION%"=="restore" if /i not "%ACTION%"=="install-only" exit /b 2
 
 if /i "%ACTION%"=="restore" goto :restore_shell
 
@@ -59,6 +59,7 @@ if not exist "%CRAFT_BIN%\plasmashell.exe" (
 )
 
 if /i "%ACTION%"=="install" goto :install_shell
+if /i "%ACTION%"=="install-only" goto :install_shell
 
 :session
 echo === 1/5 Environment ===
@@ -100,6 +101,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0shell-registry.ps1" -A
 if errorlevel 1 exit /b 1
 
 echo User shell configured. Native session host is preferred when available.
+if /i "%ACTION%"=="install-only" exit /b 0
 echo Takes effect at next logon/restart. Starting the session now for testing...
 goto :session
 
