@@ -106,7 +106,7 @@ rem ---------------------------------------------------------------------------
 :pc_start_bus
 call :pc_resolve_root
 set "DBUS_CONF=%~dp0dbus-session-plasma.conf"
-powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+"%CRAFT_BIN%\dbus-send.exe" --session --print-reply --reply-timeout=250 --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.GetId >nul 2>&1
 if not errorlevel 1 exit /b 0
 if exist "%DBUS_CONF%" (
     call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --config-file="%DBUS_CONF%" --nofork
@@ -114,7 +114,7 @@ if exist "%DBUS_CONF%" (
     call :pc_spawn "%CRAFT_BIN%\dbus-daemon.exe" --session --nofork
 )
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "$i = 0; while ($i -lt 50 -and -not (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200; $i++ }; if (Get-NetTCPConnection -LocalPort 12443 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0wait-session-service.ps1" -TimeoutMs 10000
 exit /b %errorlevel%
 
 rem ---------------------------------------------------------------------------
@@ -122,6 +122,8 @@ rem :pc_start_services - kactivitymanagerd + kded6 + trayhost in the background
 rem ---------------------------------------------------------------------------
 :pc_start_services
 call :pc_resolve_root
+call :pc_spawn "%CRAFT_BIN%\kactivitymanagerd.exe"
+call :pc_spawn "%CRAFT_BIN%\kded6.exe"
 if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" call :pc_spawn "%CRAFT_BIN%\plasma-desktop-tools.exe" --daemon
 if exist "%CRAFT_ROOT%\install-file-associations.ps1" (
     call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\install-file-associations.ps1" -CraftRoot "%CRAFT_ROOT%" -IfNeeded
@@ -138,8 +140,6 @@ if exist "%CRAFT_ROOT%\start-notifications.ps1" (
 if exist "%CRAFT_ROOT%\repair-taskbar-pins.ps1" (
     call :pc_spawn powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%CRAFT_ROOT%\repair-taskbar-pins.ps1" -CraftRoot "%CRAFT_ROOT%"
 )
-call :pc_spawn "%CRAFT_BIN%\kactivitymanagerd.exe"
-call :pc_spawn "%CRAFT_BIN%\kded6.exe"
 rem Windows tray host (SNI bridge into the Plasma system tray); its log
 rem lands next to the exe (working dir), i.e. %CRAFT_BIN%\trayhost.log.
 if exist "%CRAFT_BIN%\trayhost.exe" (
@@ -147,7 +147,9 @@ if exist "%CRAFT_BIN%\trayhost.exe" (
     call :pc_spawn "%CRAFT_BIN%\trayhost.exe"
     popd
 )
-timeout /t 3 /nobreak >nul
+if not exist "%CRAFT_BIN%\kactivitymanagerd.exe" exit /b 0
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0wait-session-service.ps1" -TimeoutMs 3000 -Name org.kde.ActivityManager
+if errorlevel 1 echo WARNING: Activity Manager is still starting.
 exit /b 0
 
 rem Native background spawning: no console windows; stdout/stderr go to user logs.

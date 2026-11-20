@@ -19,6 +19,8 @@ Run `deploy-vm.cmd` without arguments for a temporary session. Run `run-runtime-
 
 After verifying the temporary session, run `install.cmd` to register Plasma as the current user's login Shell and restart Windows after 30 seconds. Press `N` to postpone the restart. Run `deploy-vm.cmd restore` to restore the previous Shell, then sign out or restart.
 
+Fix25 Hotfix10 uses D-Bus readiness checks during login. It starts the activity daemon early and proceeds once it owns its service name, with a bounded wait for slow starts. Login Shell startup writes to the same Plasma log as the temporary session.
+
 The repository does not contain the multi-gigabyte runtime ZIP, build cache or personal VM files.
 
 ## Build

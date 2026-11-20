@@ -40,7 +40,7 @@ if exist "%CRAFT_BIN%\shellswitch.exe" (
 )
 
 rem Run the shell in the foreground; keep this script alive as session host.
-"%CRAFT_BIN%\plasmashell.exe"
+call "%~dp0plasma-common.cmd" :pc_run_plasma
 set "PLASMA_EXIT=%errorlevel%"
 if exist "%CRAFT_BIN%\plasma-desktop-tools.exe" "%CRAFT_BIN%\plasma-desktop-tools.exe" --stop-if-idle
 exit /b %PLASMA_EXIT%

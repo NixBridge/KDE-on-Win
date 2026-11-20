@@ -34,7 +34,14 @@ with tempfile.TemporaryDirectory(prefix='dbus-relocation-', dir=root / 'work') a
                                  'org.freedesktop.DBus.ListActivatableNames'], capture_output=True, timeout=10)
         assert result.returncode == 0, (result.stdout, result.stderr)
         assert b'org.nixbridge.RelocationProbe' in result.stdout, result.stdout
+        wait = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                str(root / 'upstream/plasma-windows/tools/wait-session-service.ps1'), '-TimeoutMs', '350']
+        env = os.environ | {'CRAFT_BIN': str((runtime / 'bin').resolve()), 'DBUS_SESSION_BUS_ADDRESS': address}
+        for name, expected in ((None, 0), ('org.freedesktop.DBus', 0), ('org.nixbridge.RelocationProbe', 1)):
+            command = wait if name is None else wait + ['-Name', name]
+            ready = subprocess.run(command, env=env, capture_output=True, timeout=6)
+            assert ready.returncode == expected, (name, ready.stdout, ready.stderr)
     finally:
         daemon.terminate()
         daemon.communicate(timeout=10)
-print('PASS: relative service discovery from relocated Unicode config, independent of cwd; private bus only, no services activated.')
+print('PASS: relocated Unicode D-Bus configuration, bus readiness, owned name and timeout on inactive service; no services activated.')
