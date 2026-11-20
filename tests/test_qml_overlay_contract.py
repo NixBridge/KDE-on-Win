@@ -10,7 +10,8 @@ original=root/'manifests/cumulative-patch-files.json';before=original.read_bytes
 manifest=json.loads(before)
 with tempfile.TemporaryDirectory(prefix='qml-overlay-',dir=root/'work') as temp:
     fixture=Path(temp)/'manifest.json'
-    for missing in ('qml/QtQuick/Layouts/qmldir', 'qml/org/kde/notificationmanager/qmldir',
+    for missing in ('qml/QtQuick/Layouts/qmldir', 'qml/QtQuick/NativeStyle/qmldir',
+                    'qml/org/kde/notificationmanager/qmldir',
                     'plugins/plasma/applets/org.kde.plasma.imewin.dll'):
         manifest['runtime'].remove(missing)
         fixture.write_text(json.dumps(manifest),encoding='utf-8')
