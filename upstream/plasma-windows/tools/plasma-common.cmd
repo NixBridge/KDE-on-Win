@@ -61,15 +61,21 @@ rem ---------------------------------------------------------------------------
 :pc_mirror_data
 call :pc_resolve_root
 for %%S in (plasmoids shells wallpapers layout-templates desktoptheme look-and-feel) do (
-    if exist "%CRAFT_DATA%\plasma\%%S" (
-        if not exist "%LOCALAPPDATA%\plasma\%%S" mkdir "%LOCALAPPDATA%\plasma\%%S"
-        for /d %%D in ("%CRAFT_DATA%\plasma\%%S\*") do (
-            xcopy /e /i /y "%%D" "%LOCALAPPDATA%\plasma\%%S\%%~nxD" >nul
-        )
+    if not exist "%CRAFT_DATA%\plasma\%%S\" (
+        echo ERROR: Missing packaged Plasma data "%CRAFT_DATA%\plasma\%%S".
+        exit /b 1
+    )
+    robocopy "%CRAFT_DATA%\plasma\%%S" "%LOCALAPPDATA%\plasma\%%S" /E /IS /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+    if errorlevel 8 (
+        echo ERROR: Could not mirror Plasma %%S to "%LOCALAPPDATA%\plasma\%%S".
+        exit /b 1
     )
 )
-if not exist "%LOCALAPPDATA%\applications" mkdir "%LOCALAPPDATA%\applications"
-copy /y "%CRAFT_DATA%\applications\*.desktop" "%LOCALAPPDATA%\applications\" >nul 2>&1
+robocopy "%CRAFT_DATA%\applications" "%LOCALAPPDATA%\applications" *.desktop /IS /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+if errorlevel 8 (
+    echo ERROR: Could not mirror Plasma launchers to "%LOCALAPPDATA%\applications".
+    exit /b 1
+)
 exit /b 0
 
 rem ---------------------------------------------------------------------------

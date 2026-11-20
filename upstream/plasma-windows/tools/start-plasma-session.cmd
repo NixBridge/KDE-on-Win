@@ -19,6 +19,7 @@ if errorlevel 1 goto :fail
 
 echo Preparing KDE runtime data in %LOCALAPPDATA%...
 call "%~dp0plasma-common.cmd" :pc_mirror_data
+if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_write_menu
 
 rem Generate .desktop bridges for the Windows Start Menu (native apps in kickoff).

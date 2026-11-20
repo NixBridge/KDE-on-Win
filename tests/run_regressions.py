@@ -59,6 +59,13 @@ checks = [('plasmashell', ['--windows-startup-self-test']), ('desktop-integratio
  ('qml-import-probe', ['--check-startmenu-model']),
  ('qml-import-probe', []),
  ('plasma-notification-bridge', ['--check-platform'])]
+plasma_data = options.runtime / 'bin/data/plasma'
+for relative in (
+    'plasmoids/org.kde.desktopcontainment/contents/ui/main.qml',
+    'plasmoids/org.kde.plasma.windowsmenu/contents/ui/main.qml',
+    'wallpapers/org.kde.image/contents/ui/main.qml',
+):
+    checks.append(('qml-import-probe', ['--check-component', str(plasma_data / relative)]))
 results = []
 with tempfile.TemporaryDirectory(prefix='fix25-validation-', dir=root / 'work', delete=False) as folder:
     for index, (name, args) in enumerate(checks):
@@ -81,6 +88,7 @@ with tempfile.TemporaryDirectory(prefix='fix25-validation-', dir=root / 'work', 
         print(results[-1]['name'], p.returncode, results[-1]['stdout'], flush=True)
 for command in [['python', 'tests/test_archive_worker.py'],
  ['node', 'tests/taskbar-migration.cjs'],
+ ['node', 'tests/default-panel.cjs'],
  ['python', 'tests/test_association_plan.py'],
  ['python', 'tests/test_startup_hotfix.py'],
  ['python', 'tests/test_bootstrap_diagnostic.py'],

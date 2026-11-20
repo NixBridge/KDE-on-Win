@@ -11,7 +11,8 @@
     "QtQuick/LocalStorage",
     "QtQuick/Timeline",
     "Qt5Compat",
-    "Qt/labs"
+    "Qt/labs",
+    "org/kde"
   ],
   "include_qtquick_root_files": true,
   "required": [
@@ -23,11 +24,43 @@
     "bin/Qt6QuickEffects.dll",
     "plugins/platforms/qwindows.dll",
     "plugins/platforms/qoffscreen.dll",
-    "plugins/sqldrivers/qsqlite.dll"
+    "plugins/sqldrivers/qsqlite.dll",
+    "qml/org/kde/plasma/core/qmldir",
+    "qml/org/kde/plasma/plasmoid/qmldir",
+    "qml/org/kde/plasma/components/qmldir",
+    "qml/org/kde/plasma/private/systemtray/qmldir",
+    "qml/org/kde/private/desktopcontainment/folder/qmldir",
+    "qml/org/kde/taskmanager/qmldir",
+    "qml/org/kde/notificationmanager/qmldir",
+    "qml/org/kde/quickcharts/qmldir",
+    "qml/org/kde/plasma/windowsmenu/qmldir",
+    "plugins/plasma/applets/org.kde.panel.dll",
+    "plugins/plasma/applets/org.kde.plasma.windowsmenu.dll",
+    "plugins/plasma/applets/org.kde.plasma.taskmanager.dll",
+    "plugins/plasma/applets/org.kde.plasma.marginsseparator.dll",
+    "plugins/plasma/applets/org.kde.plasma.systemtray.dll",
+    "plugins/plasma/applets/org.kde.plasma.imewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.volumewin.dll",
+    "plugins/plasma/applets/org.kde.plasma.digitalclock.dll",
+    "plugins/plasma/applets/org.kde.plasma.notifications.dll",
+    "bin/data/plasma/shells/org.kde.plasma.desktop/contents/views/Desktop.qml",
+    "bin/data/plasma/shells/org.kde.plasma.desktop/contents/views/DesktopEditMode.qml",
+    "bin/data/plasma/shells/org.kde.plasma.desktop/contents/views/Panel.qml",
+    "bin/data/plasma/wallpapers/org.kde.image/contents/ui/main.qml",
+    "bin/data/plasma/look-and-feel/org.kde.breeze.desktop/contents/layouts/org.kde.plasma.desktop-layout.js",
+    "bin/data/plasma/layout-templates/org.kde.plasma.desktop.defaultPanel/contents/layout.js"
   ],
   "extra_plugins": [
     "plugins/platforms/qwindows.dll",
     "plugins/platforms/qoffscreen.dll",
     "plugins/sqldrivers/qsqlite.dll"
+  ],
+  "desktop_asset_roots": [
+    "bin/data/plasma/shells/org.kde.plasma.desktop",
+    "bin/data/plasma/layout-templates/org.kde.plasma.desktop.defaultPanel",
+    "bin/data/plasma/plasmoids",
+    "bin/data/plasma/wallpapers/org.kde.image",
+    "plugins/plasma/applets",
+    "plugins/plasma/containmentactions"
   ]
 }

@@ -66,6 +66,7 @@ call "%~dp0plasma-common.cmd" :pc_setup_env
 
 echo === 2/5 Mirror KDE package data to %%LOCALAPPDATA%% ===
 call "%~dp0plasma-common.cmd" :pc_mirror_data
+if errorlevel 1 exit /b 1
 
 echo === 3/5 applications.menu ===
 call "%~dp0plasma-common.cmd" :pc_write_menu

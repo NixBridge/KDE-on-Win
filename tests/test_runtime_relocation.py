@@ -23,6 +23,12 @@ with tempfile.TemporaryDirectory(prefix='relocation-', dir=root / 'work') as tem
             (package / 'bin' / program).touch()
         for script in ['plasma-common.cmd', 'write-session-menu.ps1']:
             shutil.copyfile(tools / script, package / script)
+        for tree in ['plasmoids', 'shells', 'wallpapers', 'layout-templates', 'desktoptheme', 'look-and-feel']:
+            (package / 'bin/data/plasma' / tree).mkdir(parents=True)
+        desktop = package / 'bin/data/plasma/shells/Desktop.qml'
+        desktop.write_bytes(b'original desktop')
+        (package / 'bin/data/applications').mkdir()
+        (package / 'bin/data/applications/test.desktop').write_bytes(b'[Desktop Entry]')
         profile = temporary / '用户 & (profile)!'
         environment = os.environ.copy()
         environment.update(CRAFT_ROOT='Z:\\stale-build-root', LOCALAPPDATA=str(profile))
@@ -31,6 +37,8 @@ with tempfile.TemporaryDirectory(prefix='relocation-', dir=root / 'work') as tem
         driver.write_text(
             '@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\n'
             'call "%RELOCATION_ROOT%\\plasma-common.cmd" :pc_setup_env\r\n'
+            'if errorlevel 1 exit /b 1\r\n'
+            'call "%RELOCATION_ROOT%\\plasma-common.cmd" :pc_mirror_data\r\n'
             'if errorlevel 1 exit /b 1\r\n'
             'call "%RELOCATION_ROOT%\\plasma-common.cmd" :pc_write_menu\r\n'
             'if errorlevel 1 exit /b 1\r\n'
@@ -42,6 +50,13 @@ with tempfile.TemporaryDirectory(prefix='relocation-', dir=root / 'work') as tem
         result = subprocess.run(['cmd.exe', '/d', '/v:on', '/c', str(driver)],
                                 env=environment, capture_output=True, timeout=30)
         assert result.returncode == 0, (result.stdout, result.stderr)
+        assert (profile / 'plasma/shells/Desktop.qml').read_bytes() == desktop.read_bytes()
+        assert (profile / 'applications/test.desktop').is_file()
+        shells = desktop.parent
+        shells.rename(shells.with_name('unavailable-shells'))
+        failed = subprocess.run(['cmd.exe', '/d', '/c', str(driver)],
+                                env=environment, capture_output=True, timeout=30)
+        assert failed.returncode != 0 and b'Missing packaged Plasma data' in failed.stdout, failed
         actual = json.loads(output.read_text(encoding='utf-8-sig'))
         assert Path(actual['root']) == package, actual
         assert Path(actual['bin']) == package / 'bin', actual

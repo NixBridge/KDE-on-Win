@@ -20,6 +20,8 @@ with tempfile.TemporaryDirectory(prefix='bootstrap-diag-',dir=root/'work') as te
 # Exercise the real entrypoint and service dispatch using harmless executable copies.
 with tempfile.TemporaryDirectory(prefix='bootstrap-chain-',dir=root/'work') as temp:
     package=Path(temp)/'space & (test)!';(package/'bin/data/applications').mkdir(parents=True)
+    for tree in ('plasmoids', 'shells', 'wallpapers', 'layout-templates', 'desktoptheme', 'look-and-feel'):
+        (package/'bin/data/plasma'/tree).mkdir(parents=True)
     tools=root/'upstream/plasma-windows/tools'
     for name in ['deploy-vm.cmd','diagnose-startup.cmd','write-session-menu.ps1']:
         shutil.copyfile(tools/name,package/name)
@@ -42,6 +44,15 @@ with tempfile.TemporaryDirectory(prefix='bootstrap-chain-',dir=root/'work') as t
     result=subprocess.run(['cmd.exe','/d','/c',str(driver)],env=env,capture_output=True,timeout=25)
     assert result.returncode!=0,(result.stdout,result.stderr)
     log=(package/'startup-diagnostic.log').read_bytes()
-    assert b'3/5 applications.menu' in log and b'4/5 Rebuild' not in log
+    assert b'Could not mirror Plasma' in log and b'3/5 applications.menu' not in log
     assert b'Bootstrap exit code: 1' in log
+    env['LOCALAPPDATA']=str(package/'profile')
+    menu=package/'profile/menus'
+    (menu/'applications.menu').unlink()
+    menu.rmdir()
+    menu.write_text('blocked menu directory')
+    result=subprocess.run(['cmd.exe','/d','/c',str(driver)],env=env,capture_output=True,timeout=25)
+    assert result.returncode!=0,(result.stdout,result.stderr)
+    log=(package/'startup-diagnostic.log').read_bytes()
+    assert b'3/5 applications.menu' in log and b'4/5 Rebuild' not in log
 print('PASS: diagnostic retains early stdout/stderr and raw child exit, survives EXIT, handles missing script, special paths. No real session launched.')

@@ -47,6 +47,7 @@ rem ---------------------------------------------------------------------------
 call "%~dp0plasma-common.cmd" :pc_setup_env
 echo [PREP] Mirroring KDE runtime data to "%LOCALAPPDATA%" ...
 call "%~dp0plasma-common.cmd" :pc_mirror_data
+if errorlevel 1 exit /b 1
 call "%~dp0plasma-common.cmd" :pc_write_menu
 if errorlevel 1 exit /b 1
 echo [PREP] Rebuilding ksycoca database ...

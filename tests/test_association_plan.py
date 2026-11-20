@@ -3,10 +3,12 @@
 import ctypes
 import json
 import ntpath
+import os
 import subprocess
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-p=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'runtime/install-file-associations.ps1'),'-CraftRoot','D:/KDE/CraftRoot','-Plan'],capture_output=True,check=True)
+runtime=Path(os.environ.get('KDE_CRAFT_ROOT','D:/KDE/CraftRoot')).resolve()
+p=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'runtime/install-file-associations.ps1'),'-CraftRoot',str(runtime),'-Plan'],capture_output=True,check=True)
 records=json.loads(p.stdout.decode('utf-8'))
 assert not any('UserChoice' in r['Path'] for r in records)
 commands=[r['Value'] for r in records if r['Path'].endswith('nixbridge-dolphin\\command') and r['Name']=='']

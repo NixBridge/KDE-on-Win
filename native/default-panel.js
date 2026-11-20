@@ -4,8 +4,12 @@ panel.opacity = "opaque";
 panel.height = 2 * Math.ceil(gridUnit * 2.5 / 2);
 panel.addWidget("org.kde.plasma.windowsmenu");
 var tasks = panel.addWidget("org.kde.plasma.icontasks");
-tasks.currentConfigGroup = ["General"];
-tasks.writeConfig("launchers", ["applications:org.kde.konsole.desktop", "applications:org.kde.dolphin.desktop", "applications:org.nixbridge.processmonitor.desktop", "applications:org.nixbridge.texteditor.desktop", "applications:org.nixbridge.systemsettings.desktop"]);
+if (tasks && typeof tasks.writeConfig === "function") {
+    tasks.currentConfigGroup = ["General"];
+    tasks.writeConfig("launchers", ["applications:org.kde.konsole.desktop", "applications:org.kde.dolphin.desktop", "applications:org.nixbridge.processmonitor.desktop", "applications:org.nixbridge.texteditor.desktop", "applications:org.nixbridge.systemsettings.desktop"]);
+} else {
+    print("Could not initialize the Windows panel task manager");
+}
 panel.addWidget("org.kde.plasma.marginsseparator");
 panel.addWidget("org.kde.plasma.systemtray");
 panel.addWidget("org.kde.plasma.volumewin");
